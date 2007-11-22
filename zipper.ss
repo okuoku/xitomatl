@@ -1,3 +1,6 @@
+; Taken from Oleg's
+; http://okmij.org/ftp/Scheme/zipper-in-scheme.txt
+
 (library (zipper)
   (export
     zipper? zipper-thing zipper-cont
