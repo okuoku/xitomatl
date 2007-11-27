@@ -10,16 +10,8 @@
     define-syntax*)
   
   (import 
-    (except (rnrs) call-with-string-output-port)
+    (rnrs)
     (only (ikarus) gensym))
-  
-  ;;; Until Ikarus implements this.
-  (define-syntax call-with-string-output-port
-    (syntax-rules ()
-      [(_ proc)
-       (let-values ([(sop get) (open-string-output-port)])
-         (proc sop)
-         (get))]))
   
 
   (define-syntax define-values
@@ -36,13 +28,11 @@
                   (lambda vl 
                     (unless (= (length vl) idlen)
                       (apply error 'define-values
-                             (call-with-string-output-port 
-                              (lambda (op)
-                                (display "expected " op)
-                                (display idlen op)
-                                (display " values, received " op)
-                                (display (length vl) op)
-                                (display "values") op))
+                             (string-append "expected "
+                                            (number->string idlen)
+                                            " values, received "
+                                            (number->string (length vl))
+                                            " values")
                              vl))
                     vl)))
                (define id* (let ([v (car g)]) (set! g (cdr g)) v))
