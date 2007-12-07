@@ -6,24 +6,19 @@
 ;; use); and modified to minimize uses of hole-push!, hole-pop!, and
 ;; retrieving the parameter-value of hole (for speed).
 ;; This is pure R6RS except the use of the implementation's 
-;; thread-local parameters.
+;; thread-local parameters and enhanced define-syntax*.
 ;; NOTE: Ikarus does not yet have threads.  Depending on what type of 
 ;; concurrency Ikarus ends up providing, the way the holes parameter is
 ;; used might need to change.
 
 (library (delimited-control)
-  (export abort prompt control shift reset prompt0 control0 shift0 reset0)
-  (import (rename (rnrs) (define-syntax r6rs:define-syntax))
-          (only (rnrs mutable-pairs) set-cdr!)
-          (only (ikarus) make-parameter))
-  
-  (r6rs:define-syntax define-syntax
-    (syntax-rules ()
-      [(_ (name . args) expr expr* ...)
-       (r6rs:define-syntax name
-         (lambda args expr expr* ...))]
-      [(_ name expr)
-       (r6rs:define-syntax name expr)]))
+  (export 
+    abort prompt control shift reset prompt0 control0 shift0 reset0)
+  (import 
+    (except (rnrs) define-syntax)
+    (only (rnrs mutable-pairs) set-cdr!)
+    (only (ikarus) make-parameter)
+    (only (rename (enhanced-define) (define-syntax* define-syntax)) define-syntax))
   
   (define holes (make-parameter '()))
   (define (hole-push! hole) (holes (cons hole (holes))))
