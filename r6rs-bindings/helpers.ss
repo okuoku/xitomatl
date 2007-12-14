@@ -15,10 +15,12 @@
     (rnrs))
   
   ;;; The bindings specification file is expected to contain one list of the shape:
-  ;;; ([(name <binding-identifier>) 
-  ;;;   (type < 'variable or 'macro >) 
-  ;;;   (from <library-name>)
-  ;;;   (levels (<non-negative-integer> ...))] 
+  ;;; ((<library-name>
+  ;;;   [(name <binding-identifier>) 
+  ;;;    (type < 'variable or 'macro >) 
+  ;;;    (from <library-name>)
+  ;;;    (levels (<non-negative-integer> ...))] 
+  ;;;   ...)
   ;;;  ...)
   
   (define all-bindings-spec-filename "all-r6rs-bindings-from-larceny.s-expr")
