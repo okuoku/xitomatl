@@ -8,7 +8,7 @@
   (r6rs-bindings check))
 
 ;;; NOTE: This will need to change if/when Ikarus changes what exception(s)
-;;;       and/or condition(s) or used.
+;;;       and/or condition(s) are used.
 
 (print-checks 
  (run-checks (lambda (exception)
