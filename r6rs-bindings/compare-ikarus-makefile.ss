@@ -70,7 +70,7 @@
                 (printf " ~s\n" ln)))
             (map spec-name->MF (all-libs))))
 
-;;; todo has all identifiers?
+;;; makefile has all identifiers?
 (let ([makefile/ids (map car makefile/identifier->library-map)])
   (display "makefile is missing identifiers:\n")
   (for-each (lambda (id)
@@ -78,7 +78,7 @@
                 (printf " ~s\n" id)))
             (all-ids)))
 
-;;; todo's identifiers are properly classified?
+;;; makefile's identifiers are properly classified?
 (let ([lib+ids 
        (filter (lambda (l+ids)
                  (member (car l+ids) makefile/has-libs))
@@ -86,7 +86,7 @@
                       (cons (spec-name->MF (car ln+bs))
                             (map binding-name (cdr ln+bs))))
                     (read-all-bindings-specs)))])
-  (printf "make identifiers not properly classified:\n")
+  (printf "makefile identifiers not properly classified:\n")
   (for-each (lambda (l+ids)
               (define lib-cn (LN->CN (car l+ids)))
               (for-each (lambda (id)
