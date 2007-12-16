@@ -10,7 +10,9 @@
     binding-from
     binding-levels
     only-variables
-    only-macros)
+    only-macros
+    all-libs
+    all-ids)
   (import 
     (rnrs))
   
@@ -45,5 +47,22 @@
   (define (only-macros bindings-specs)
     (filter (lambda (bs) (equal? 'macro (binding-type bs))) 
             bindings-specs))
+  
+  (define (all-libs)
+    (map car (read-all-bindings-specs)))
+  
+  (define (rem-dups l)
+    (let loop ([l l] [n '()])
+      (if (null? l)
+        n
+        (loop (remove (car l) (cdr l))
+              (cons (car l) n)) )))
+  
+  (define (all-ids)
+    (list-sort (lambda (id1 id2) (string<? (symbol->string id1)
+                                           (symbol->string id2)))
+               (rem-dups (apply append 
+                                (map (lambda (ln+bs) (map binding-name (cdr ln+bs))) 
+                                     (read-all-bindings-specs))))))
   
 )
