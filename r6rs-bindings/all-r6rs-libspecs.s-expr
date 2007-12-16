@@ -1,4 +1,6 @@
-((rnrs arithmetic bitwise (6))
+(null-environment
+ scheme-report-environment
+ (rnrs arithmetic bitwise (6))
  (rnrs arithmetic fixnums (6))
  (rnrs arithmetic flonums (6))
  (rnrs base (6))
