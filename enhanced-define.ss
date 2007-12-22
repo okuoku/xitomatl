@@ -41,8 +41,8 @@
 
   (define-syntax define*
     (syntax-rules ()
-      [(d ((maybe-list . f1) . f2) expr expr* ...)
-       (d (maybe-list . f1)
+      [(_ ((maybe-list . f1) . f2) expr expr* ...)
+       (define* (maybe-list . f1)
          (lambda f2 expr expr* ...))]
       [(_ (name . formals) expr expr* ...)
        (define (name . formals) expr expr* ...)]
