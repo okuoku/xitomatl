@@ -1,4 +1,4 @@
-(library (match macro-helpers)
+(library (WD-match macro-helpers)
   (export
     match:error
     match:error-control
