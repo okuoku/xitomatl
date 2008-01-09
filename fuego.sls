@@ -20,15 +20,14 @@
           :add-parent-slot! :add-value-slot! :add-method-slot!
           :parent-slots-list :value-slots-list :method-slots-list
           ; Convenient syntaxes
-          define-values #;define-object
+          new-distinct #;define-object
           ; Exception conditions
-          &fuego? &unknown-key? &slot-already-exists? &missing-key?)
+          &fuego-error? &unknown-key? &slot-already-exists? &missing-key?)
   
   (import 
     (rnrs)
     (rnrs mutable-pairs)
-    (only (ikarus) gensym)
-    (only (enhanced-define) define-values))
+    (only (ikarus) gensym))
   
   
   (define (alist-cons key datum alist) (cons (cons key datum) alist))
@@ -101,55 +100,51 @@
   
   ;-----------------------------------------------------------------------------    
   
-  (define-condition-type &fuego &error 
-    make-&fuego &fuego?
-    (self &fuego-self))
+  (define-condition-type &fuego-error &error 
+    make-&fuego-error &fuego-error?
+    (self &fuego-error-self))
 
-  (define-condition-type &unknown-key &fuego
+  (define-condition-type &unknown-key &fuego-error
     make-&unknown-key &unknown-key?
-    (name &unknown-key-name))
+    (key &unknown-key-key))
   
-  (define-condition-type &slot-already-exists &fuego
+  (define-condition-type &slot-already-exists &fuego-error
     make-&slot-already-exists &slot-already-exists?
-    (name &slot-already-exists-name))
+    (slot &slot-already-exists-slot))
   
-  (define-condition-type &missing-key &fuego
+  (define-condition-type &missing-key &fuego-error
     make-&missing-key &missing-key?)
   
   (define-syntax error/fuego
     (syntax-rules ()
       [(_ self error-str)
-       (raise (condition (make-&fuego self)
+       (raise (condition (make-&fuego-error self)
                          (make-message-condition error-str)))]))
   
   (define-syntax error/unknown-key
     (syntax-rules ()
       [(_ self key)
-       (raise (condition (make-&unknown-key self key)
-                         (make-message-condition "unknown key")))]))
+       (raise (condition (make-&unknown-key self key)))]))
   
   (define-syntax error/slot-already-exists
     (syntax-rules ()
       [(_ self key)
-       (raise (condition (make-&slot-already-exists self key)
-                         (make-message-condition "slot already exists")))]))
+       (raise (condition (make-&slot-already-exists self key)))]))
   
   (define-syntax error/missing-key
     (syntax-rules ()
       [(_ self)
-       (raise (condition (make-&missing-key self)
-                         (make-message-condition "missing key")))]))
+       (raise (condition (make-&missing-key self)))]))
 
   ;-----------------------------------------------------------------------------
   
   ; Returns two values: a new Fuego object with the cloned object as a parent and as its only slot,
   ; a distinct value to be used as the key to access this parent slot.
   (define (standard-clone self resend)
-    (let* ([:parent (new-distinct :parent)]
-           [child (make-fuego-object (list (cons :parent self)) ; parent-slots
-                                     '()                       ; value-slots
-                                     '())])                    ; method-slots
-      (values child :parent)))
+    (make-fuego-object 
+      (list (cons (new-distinct :parent) self)) ; parent-slots
+      '()                                       ; value-slots
+      '()))                                     ; method-slots
   
   
   (define (standard-unknown-key self resend key args)

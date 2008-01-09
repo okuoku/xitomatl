@@ -690,7 +690,7 @@
        (string? (syntax->datum #'str))
        #'(let-syntax ([foo 
                        (lambda (t) 
-                         (list #'quote (pregexp-proc str)))])
+                         (list #'quote (datum->syntax #'ignore (pregexp-proc str))))])
            foo)]
       [(_ args ...) #'(pregexp-proc args ...)]
       [id (identifier? #'id) #'pregexp-proc])))
