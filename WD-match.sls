@@ -141,7 +141,7 @@
 ;; End of user visible/modifiable stuff.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(library (WD-match (1 18))
+(library (xitomatl WD-match (1 18))
   (export
     match
     match-lambda
@@ -158,9 +158,9 @@
     match:set-error-control)
   (import 
     (rnrs base)
-    (only (ikarus) gensym)
-    ;(for (match macro-helpers) expand)  ;;; Ikarus doesn't (yet?) support this <import-spec>
-    (WD-match macro-helpers))            ;;; Ikarus is implicitly phased
+    (xitomatl srfi parameters)
+    (only (xitomatl macro-utils) gensym)
+    (xitomatl WD-match macro-helpers))
   
   
   (defmacro

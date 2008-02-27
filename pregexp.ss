@@ -26,11 +26,14 @@
 ;;;   return a list of all the matches in the searched string,
 ;;;   not just the first match. 
 
-(library (pregexp (20080103))
-  (export pregexp pregexp-match-positions pregexp-match
-          pregexp-match-positions* pregexp-match*
-          pregexp-split pregexp-replace pregexp-replace*)
-  (import (ikarus))
+(library (xitomatl pregexp (20080103))
+  (export 
+    pregexp pregexp-match-positions pregexp-match
+    pregexp-match-positions* pregexp-match*
+    pregexp-split pregexp-replace pregexp-replace*)
+  (import 
+    (rnrs)
+    (rnrs mutable-pairs))
 
 (define *pregexp-comment-char* #\;)
 

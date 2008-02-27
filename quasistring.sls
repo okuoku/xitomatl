@@ -2,13 +2,13 @@
 ;;; http://people.cs.uchicago.edu/~jacobm/qstr/
 ;;; Modified to be an R6RS library by Derick Eddington.
 
-(library (quasistring)
+(library (xitomatl quasistring)
   (export 
     qs 
     current-quasistring-converter)
   (import 
     (rnrs)
-    (srfi parameters))
+    (xitomatl srfi parameters))
   
   (define current-quasistring-converter 
     (make-parameter 

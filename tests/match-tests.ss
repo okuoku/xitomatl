@@ -3,15 +3,15 @@
 (import 
   (rnrs)
   (rnrs eval)
-  (match extras)
-  (srfi lightweight-testing))
+  (xitomatl IU-match extras)
+  (xitomatl srfi lightweight-testing))
 
 (define-syntax must-be-a-syntax-error
   (syntax-rules ()
     [(_ expr)
      (check 
        (guard (ex [#t (syntax-violation? ex)])  
-         (eval 'expr (environment '(rnrs) '(match extras))))
+         (eval 'expr (environment '(rnrs) '(xitomatl IU-match extras))))
        => #t)]))
 
 

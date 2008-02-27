@@ -4,7 +4,7 @@
 
 ;;; NOTE: This library is not currently thread-safe.
 
-(library (value-file)  
+(library (xitomatl value-file)  
   (export
     value-file? value-file=?
     vf:base-dir

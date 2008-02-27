@@ -1,7 +1,7 @@
 ; By Derick Eddington.
 ; Placed in the public domain.
 
-(library (r6rs-bindings helpers)
+(library (xitomatl r6rs-bindings helpers)
   (export
     all-bindings-spec-filename
     read-all-bindings-specs

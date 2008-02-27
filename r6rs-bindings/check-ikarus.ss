@@ -5,7 +5,7 @@
 
 (import 
   (rnrs)
-  (r6rs-bindings check))
+  (xitomatl r6rs-bindings check))
 
 ;;; NOTE: This will need to change if/when Ikarus changes what exception(s)
 ;;;       and/or condition(s) are used.

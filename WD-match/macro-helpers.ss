@@ -1,4 +1,4 @@
-(library (WD-match macro-helpers)
+(library (xitomatl WD-match macro-helpers)
   (export
     match:error
     match:error-control
@@ -7,7 +7,11 @@
     match:syntax-err
     match:expanders
     defmacro)
-  (import (ikarus))
+  (import 
+    (rnrs)
+    (rnrs mutable-pairs)
+    (xitomatl srfi parameters)
+    (only (xitomatl macro-utils) gensym))
   
   (define match:error
     (lambda (val . args)

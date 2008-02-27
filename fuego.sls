@@ -9,7 +9,7 @@
 ;       methods should not cause an exception which reveals the name of the underlying.
 ;       For _real_ capability-security, this needs to be thouroughly analyzed and tamed
 
-(library (fuego)
+(library (xitomatl fuego)
   
   (export fuego-root-object send fuego-object? make-fuego-object
           ; Distinct key values for fuego-root-object's slots 
@@ -27,7 +27,7 @@
   (import 
     (rnrs)
     (rnrs mutable-pairs)
-    (only (ikarus) gensym))
+    (only (xitomatl macro-utils) gensym))
   
   
   (define (alist-cons key datum alist) (cons (cons key datum) alist))

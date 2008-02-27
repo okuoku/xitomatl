@@ -1,4 +1,4 @@
-(library (match macro-helpers)
+(library (xitomatl IU-match macro-helpers)
   (export
     find-ids/prevent-auto-recur
     check-ids/prevent-dups-across

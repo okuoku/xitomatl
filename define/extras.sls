@@ -1,23 +1,23 @@
-;;; Provides define-values, 
-;;; define* which does procedure currying and unspecified values,
-;;; and define-syntax* which does procedure style
+;;; Provides define-values, define which does procedure currying,
+;;; and define-syntax which does procedure style.
 
-(library (define extras)
+(library (xitomatl define extras)
   (export 
-    define-values
-    define*
-    define-syntax*)
+    (rename
+      (my:define-values define-values)
+      (my:define define)
+      (my:define-syntax define-syntax)))
   (import 
     (rnrs)
-    (unique-ids)
-    (only (ikarus) format))
+    (only (xitomatl macro-utils) unique-ids?/raise)
+    (only (xitomatl common-unstandard) format))
   
   (define (define-values-error expected received-vals)
     (apply assertion-violation 'define-values
       (format "expected ~a values, received ~a values" expected (length received-vals))
       received-vals))
   
-  (define-syntax define-values
+  (define-syntax my:define-values
     ;; NOTE: When Bug #162785 is fixed, the t*s won't be necessary,
     ;;       and id*s can be defined in front of dummy and set! from the case-lambda.
     (lambda (stx)
@@ -40,10 +40,10 @@
                (define id* t*) ...))])))
   
 
-  (define-syntax define*
+  (define-syntax my:define
     (syntax-rules ()
       [(_ ((maybe-list . f1) . f2) expr expr* ...)
-       (define* (maybe-list . f1)
+       (my:define (maybe-list . f1)
          (lambda f2 expr expr* ...))]
       [(_ (name . formals) expr expr* ...)
        (define (name . formals) expr expr* ...)]
@@ -53,7 +53,7 @@
        (define name #f)]))  ;; Remember, it's unspecified
 
     
-  (define-syntax define-syntax*
+  (define-syntax my:define-syntax
     (syntax-rules ()
       [(_ (name . args) expr expr* ...)
        (define-syntax name

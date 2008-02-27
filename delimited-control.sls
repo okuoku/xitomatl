@@ -11,14 +11,14 @@
 ;; concurrency Ikarus ends up providing, the way the holes parameter is
 ;; used might need to change.
 
-(library (delimited-control)
+(library (xitomatl delimited-control)
   (export 
     abort prompt control shift reset prompt0 control0 shift0 reset0)
   (import 
     (except (rnrs) define-syntax)
-    (only (rnrs mutable-pairs) set-cdr!)
-    (only (ikarus) make-parameter)
-    (only (rename (enhanced-define) (define-syntax* define-syntax)) define-syntax))
+    (only (xitomatl define extras) define-syntax)
+    (rnrs mutable-pairs)
+    (xitomatl srfi parameters))
   
   (define holes (make-parameter '()))
   (define (hole-push! hole) (holes (cons hole (holes))))

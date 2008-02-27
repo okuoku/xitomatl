@@ -1,10 +1,12 @@
-(library (unique-ids)
+(library (xitomatl macro-utils)
   (export
+    gensym
     duplicate-id
     unique-ids?
     unique-ids?/raise)
   (import
-    (rnrs))
+    (rnrs)
+    (only (xitomatl common-unstandard) gensym))
   
   (define (duplicate-id ls)
     (if (null? ls)

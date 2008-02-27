@@ -1,4 +1,4 @@
-(library (keyword-args)
+(library (xitomatl keyword-args)
   (export
     #;lambda/kw/e
     #;lambda/kw/r
@@ -6,10 +6,10 @@
     define/kw/r
     :-)
   (import
-    (define traced)
+    (xitomatl define traced)
     (rename (rnrs) (define r:define) (lambda r:lambda) (define-syntax r:define-syntax))
-    (unique-ids)
-    (keyword-args multi-phase))
+    (only (xitomatl macro-utils) unique-ids?/raise)
+    (xitomatl keyword-args multi-phase))
   
   ;; TODO: prevent duplicate keyword arguments when no kw-alist specified
   

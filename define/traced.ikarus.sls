@@ -1,27 +1,28 @@
-(library (define traced)
+(library (xitomatl define traced)
   (export
-    define
-    lambda
-    define-syntax)
+    (rename
+      (my:define define)
+      (my:lambda lambda)
+      (my:define-syntax define-syntax)))
   (import
-    (rename (rnrs) (define rnrs:define) (lambda rnrs:lambda) (define-syntax rnrs:define-syntax))
+    (rnrs)
     (only (ikarus) trace-define trace-lambda trace-define-syntax))
   
-  (rnrs:define-syntax define
+  (define-syntax my:define
     (syntax-rules ()
       [(_ (name . formals) expr0 expr* ...)
        (trace-define (name . formals) expr0 expr* ...)]
       [(_ name expr)
-       (rnrs:define name expr)]
+       (define name expr)]
       [(_ name)
-       (rnrs:define name)]))
+       (define name)]))
   
-  (rnrs:define-syntax lambda
+  (define-syntax my:lambda
     (syntax-rules ()
       [(_ formals expr0 expr* ...)
        (trace-lambda <lambda> formals expr0 expr* ...)]))
   
-  (rnrs:define-syntax define-syntax
+  (define-syntax my:define-syntax
     (syntax-rules ()
       [(_ name expr)
        (trace-define-syntax name expr)]))

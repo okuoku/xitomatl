@@ -1,4 +1,4 @@
-(library (match extras)
+(library (xitomatl IU-match extras)
   (export
     match-lambda match-lambda/lexical-context
     match-lambda* match-lambda*/lexical-context
@@ -13,8 +13,8 @@
     guard ... quasiquote unquote unquote-splicing)
   (import
     (rnrs)
-    (match)
-    (match macro-helpers))
+    (xitomatl IU-match)
+    (xitomatl IU-match macro-helpers))
   
   (define-syntax match-lambda/lexical-context
     (lambda (stx)

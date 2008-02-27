@@ -1,4 +1,4 @@
-(library (continuable-interrupts)
+(library (xitomatl ikarus continuable-interrupts)
   (export 
     with-continuable-interrupts
     with-continuable-interrupts*

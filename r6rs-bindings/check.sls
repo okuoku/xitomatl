@@ -1,7 +1,7 @@
 ; By Derick Eddington.
 ; Placed in the public domain.
 
-(library (r6rs-bindings check)
+(library (xitomatl r6rs-bindings check)
   (export
     run-checks
     print-checks)
@@ -9,7 +9,7 @@
     (rnrs)
     (only (rnrs r5rs) null-environment scheme-report-environment)
     (rnrs eval)
-    (r6rs-bindings helpers))
+    (xitomatl r6rs-bindings helpers))
   
   (define (run-checks present?)
     ;;; present? must be a procedure which takes one argument. This argument

@@ -1,7 +1,7 @@
 ; Taken from Oleg's
 ; http://okmij.org/ftp/Scheme/zipper-in-scheme.txt
 
-(library (zipper)
+(library (xitomatl zipper)
   (export
     zipper? zipper-thing zipper-cont
     zip-iterate
@@ -13,7 +13,7 @@
     locate-nth-node/df)
   (import 
     (rnrs)
-    (only (delimited-control) shift reset))
+    (only (xitomatl delimited-control) shift reset))
   
   
   (define-record-type zipper 
