@@ -1,139 +1,185 @@
 (library (keyword-args)
   (export
-    lambda/kw/e
-    lambda/kw/r
+    #;lambda/kw/e
+    #;lambda/kw/r
     define/kw/e
     define/kw/r
     :-)
   (import
-    (rnrs)
-    (indexes)
-    (unique-ids))
+    (define traced)
+    (rename (rnrs) (define r:define) (lambda r:lambda) (define-syntax r:define-syntax))
+    (unique-ids)
+    (keyword-args multi-phase))
   
-  (define-record-type kw-arg 
-    (fields name value))
+  ;; TODO: prevent duplicate keyword arguments when no kw-alist specified
   
-  (define-syntax :-
-    (lambda (stx)
+  
+  
+  (r:define-syntax :-
+    (r:lambda (stx)
       (syntax-case stx ()
         [(_ name value)
          (identifier? #'name)
-         #'(make-kw-arg 'name value)])))
+         #'(make-kw-arg (cons 'name value))])))  
   
-  (define (process-args args who kw-indexes kw-vals kw-missing-val)
-    ;; kw-indexes - ((keyword-symbol-name . kw-vals-index) ...)
-    ;; kw-vals - vector of default values, for those with defaults,
-    ;;           and vector of returned values.
-    ;; kw-missing-val - vector of #f or symbol, indicating whether an argument
-    ;;                  must be supplied a value.
-    ;; All keywords must be known.
-    ;; All arguments without defaults must be in `args'.
-    ;; TODO: prevent duplicate keyword arguments?
-    ;; TODO: variety of handling modes, like PLT keywords system?
-    (for-each
-      (lambda (arg)
-        (unless (kw-arg? arg)
-          (assertion-violation who "not a keyword argument" arg))
-        (let ([idx (cond [(assoc (kw-arg-name arg) kw-indexes) => cdr]
-                         [else (assertion-violation who "unknown keyword" (kw-arg-name arg))])])
-          (vector-set! kw-vals idx (kw-arg-value arg))
-          (vector-set! kw-missing-val idx #f)))
-      args)
-    (vector-for-each
-      (lambda (m?)
-        (when m? (assertion-violation who "required keyword argument missing" m?)))
-      kw-missing-val)
-    kw-vals)
-  
-  (define-syntax lambda/kw--meta
-    (lambda (stx)    
-      (define (kw-arg*->syntaxes kw-arg*)
-        (let ([specs
-               (map
-                 (lambda (ka i)
-                   (syntax-case ka ()
-                     [(kw default-expr)
-                      (list #'kw i #'default-expr)]
-                     [kw
-                      (list #'kw i #f)]))
-                 kw-arg*
-                 (enumerate-indexes kw-arg*))])
-          (list 
-           ;; kw-indexes
-           (map (lambda (s) (cons (car s) (cadr s))) specs)
-           ;; kw-vals-expr
-           #`(vector #,@(map (lambda (s) (caddr s)) specs))
-           ;; kw-missing-val-expr
-           #`(vector #,@(map (lambda (s) (if (caddr s) #f #`(quote #,(car s)))) specs)))))
+  #;(define-syntax lambda/kw--meta
+    (lambda (stx)
       (syntax-case stx ()      
         [(_ who orig-stx eval-time-or-run-time
-            (kw-arg* ...) body* ...)
+            (kw-arg* ... . kw-all) body* ...)
          (and (positive? (length #'(body* ...)))
-              (positive? (length #'(kw-arg* ...)))
+              (or (positive? (length #'(kw-arg* ...))) (identifier? #'kw-all))
+              (or (null? (syntax->datum #'kw-all)) (identifier? #'kw-all))
               (unique-ids?/raise  
-                (map
-                  (lambda (ka)
-                    (syntax-case ka ()
-                      [kw (identifier? #'kw) #'kw]
-                      [(kw default-expr) (identifier? #'kw) #'kw]
-                      [else (syntax-violation #f "invalid keyword argument" #'orig-stx ka)]))
-                  #'(kw-arg* ...))
+                (append
+                  (map
+                    (lambda (ka)
+                      (syntax-case ka ()
+                        [kw (identifier? #'kw) #'kw]
+                        [(kw default-expr) (identifier? #'kw) #'kw]
+                        [else (syntax-violation #f "invalid keyword argument" #'orig-stx ka)]))
+                    #'(kw-arg* ...))
+                  (if (identifier? #'kw-all) (list #'kw-all) '()))
                 #'orig-stx))
-         (with-syntax ([(kw-indexes kw-vals-expr kw-missing-val-expr) 
-                        (kw-arg*->syntaxes #'(kw-arg* ...))])
-           (with-syntax ([((arg-name* . idx*) ...)
-                          #'kw-indexes])
+         (let ([info (map (lambda (ka)
+                            (syntax-case ka ()
+                              [kw (identifier? #'kw) #'kw]
+                              [(kw default-expr) (identifier? #'kw) (cons #'kw #'default-expr)])) 
+                          #'(kw-arg* ...))])
+           (with-syntax ([(arg-name* ...) (map (lambda (i) (if (pair? i) (car i) i)) info)]
+                         [defaults-expr 
+                          (with-syntax ([((kw . dflt-expr) ...) (filter pair? info)])
+                            #'(list (cons 'kw dflt-expr) ...))]
+                         [(ret-kw-alist) 
+                          (if (identifier? #'kw-all) #'(kw-all) (generate-temporaries '(t)))])
              (syntax-case #'eval-time-or-run-time (eval-time run-time)
                [eval-time
-                #'(let ([kw-vals kw-vals-expr])
+                #'(let ([kw-alist defaults-expr])
                     (lambda args
-                      (let ([ret-kw-vals
-                             (process-args args 'who 'kw-indexes kw-vals kw-missing-val-expr)])
-                        (let ([arg-name* 
-                               (vector-ref ret-kw-vals idx*)]
+                      (let ([ret-kw-alist (process-args args 'who kw-alist)])
+                        (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
                               ...)
                           body* ...))))]
                [run-time
                 #'(lambda args
-                    (let ([ret-kw-vals
-                           (process-args args 'who 'kw-indexes kw-vals-expr kw-missing-val-expr)])
-                      (let ([arg-name* 
-                             (vector-ref ret-kw-vals idx*)]
+                    (let ([ret-kw-alist (process-args args 'who defaults-expr)])
+                      (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
                             ...)
                         body* ...)))])))]      
         [(_ _ orig-stx . _)
          (syntax-violation #f "invalid syntax" #'orig-stx)])))
   
-  (define-syntax lambda/kw/e
+  (define-syntax define/kw--meta
     (lambda (stx)
       (syntax-case stx ()
-        [(who formals body0 body* ...)
-         #`(lambda/kw--meta who #,stx eval-time
-             formals body0 body* ...)])))
+        [(_ name orig-stx eval-time-or-run-time
+                 (kw-arg* ... . kw-all) body* ...)
+         (with-syntax ([(arg-name* ...) 
+                        (map (lambda (ka)
+                               (syntax-case ka ()
+                                 [kw (identifier? #'kw) #'kw]
+                                 [(kw default-expr) (identifier? #'kw) #'kw]))
+                             #'(kw-arg* ...))]
+                       [ka 
+                        (if (identifier? #'kw-all) #'(kw-all) #'())]                       
+                       [([etime-dflt* dflt-arg-name*/outer dflt-expr*] ...) 
+                        (filter values
+                                (map (lambda (ka) 
+                                       (syntax-case ka () 
+                                         [(kw default-expr) 
+                                          (with-syntax ([(et) (generate-temporaries #'(kw))])
+                                            #'(et kw default-expr))]
+                                         [else #f]))
+                                     #'(kw-arg* ...)))])
+           (with-syntax ([def-etime-dflts
+                          (case (syntax->datum #'eval-time-or-run-time) 
+                            [(eval-time) #'((define etime-dflt* dflt-expr*) ...)]
+                            [(run-time) #'()])]
+                         [(dflt-arg-val-expr*/outer ...)
+                          (case (syntax->datum #'eval-time-or-run-time) 
+                            [(eval-time) #'(etime-dflt* ...)]
+                            [(run-time) #'(dflt-expr* ...)])])
+             #'(begin
+                 #;(define first-class                  
+                   ;; the lambda/kw--meta will: 
+                   ;;   at expand time check syntax of (kw-arg* ... . kw-all) body* ...
+                   ;;   and at run-time (when first-class called) process+check the args
+                   #;(lambda/kw--meta name orig-stx eval-time-or-run-time (kw-arg* ... . kw-all)
+                   (client-proc arg-name* ... . ka)))
+                 (define (client-proc arg-name* ... . ka) 
+                   body* ...)
+                 (r:define-syntax name
+                   (make-variable-transformer
+                    (lambda (stx)
+                      (syntax-case stx (set! :-)
+                        [(set! _ val)         ;;; set! pattern
+                         (syntax-violation #f "can not set! a define/kw binding" stx)]
+                        #;[kw                   ;;; reference pattern
+                         (identifier? #'kw) 
+                         #'first-class]
+                        [(ctxt [:- kw* val-expr*] (... ...))         ;;;; call pattern
+                         (for-all identifier? #'(kw* (... ...)))
+                         ;; Handle keyword arguments at expand-time
+                         ;; TODO: check for missing keyword arguments
+                         (with-syntax ([apply-kw-all-name 
+                                        (datum->syntax #'ctxt 'kw-all)]
+                                       [(dat* (... ...))
+                                        (generate-temporaries '(dflt-arg-name*/outer ...))]
+                                       [(dflt-arg-name* (... ...)) 
+                                        (map (lambda (an) (datum->syntax #'ctxt an))
+                                             '(dflt-arg-name*/outer ...))]
+                                       [(dflt-arg-val-expr* (... ...)) 
+                                        #'(dflt-arg-val-expr*/outer ...)])
+                           (with-syntax ([kw-all-clause
+                                          (if (symbol? 'kw-all) 
+                                            #`([apply-kw-all-name
+                                                (list #,@(reverse #'((cons 'kw* kw*) (... ...))) 
+                                                      (cons 'dflt-arg-name* dat*) (... ...))])
+                                            #'())]
+                                         [(apply-arg-name* (... ...))
+                                          (append (map (lambda (an) (datum->syntax #'ctxt an))
+                                                       '(arg-name* ...))
+                                                  (if (symbol? 'kw-all) 
+                                                    (list #'apply-kw-all-name)
+                                                    '()))])
+                             #'(let ([dat* dflt-arg-val-expr*]
+                                     (... ...))
+                                 (let ([dflt-arg-name* dat*]
+                                       (... ...))
+                                   (let ([kw* val-expr*]
+                                         (... ...))
+                                     (let kw-all-clause
+                                       (client-proc apply-arg-name* (... ...))))))))]))))
+                 . def-etime-dflts)))])))
   
-  (define-syntax lambda/kw/r
+  #;(define-syntax lambda/kw/e
     (lambda (stx)
       (syntax-case stx ()
-        [(who formals body0 body* ...)
+        [(who kw-formals body0 body* ...)
+         #`(lambda/kw--meta who #,stx eval-time
+             kw-formals body0 body* ...)])))
+  
+  #;(define-syntax lambda/kw/r
+    (lambda (stx)
+      (syntax-case stx ()
+        [(who kw-formals body0 body* ...)
          #`(lambda/kw--meta who #,stx run-time
-             formals body0 body* ...)])))
+             kw-formals body0 body* ...)])))
   
   (define-syntax define/kw/e
     (lambda (stx)
       (syntax-case stx ()
-        [(_ (who . formals) body0 body* ...)
-         (identifier? #'who)
-         #`(define who
-             (lambda/kw--meta who #,stx eval-time
-               formals body0 body* ...))])))
+        [(_ (name . kw-formals) body0 body* ...)
+         (identifier? #'name)
+         #`(define/kw--meta name #,stx eval-time
+             kw-formals body0 body* ...)])))
   
   (define-syntax define/kw/r
     (lambda (stx)
       (syntax-case stx ()
-        [(_ (who . formals) body0 body* ...)
-         (identifier? #'who)
-         #`(define who
-             (lambda/kw--meta who #,stx run-time
-               formals body0 body* ...))])))
+        [(_ (name . kw-formals) body0 body* ...)
+         (identifier? #'name)
+         #`(define/kw--meta name #,stx run-time
+             kw-formals body0 body* ...)])))
   
 )
