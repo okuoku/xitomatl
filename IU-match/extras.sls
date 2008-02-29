@@ -6,7 +6,7 @@
     match-let* match-let*/lexical-context    
     match-letrec match-letrec/lexical-context
     match-define match-define/lexical-context
-    ;;; All of (match)
+    ;;; All of (xitomatl IU-match)
     match trace-match 
     match/lexical-context trace-match/lexical-context
     match-equality-test

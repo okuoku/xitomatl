@@ -15,7 +15,7 @@
   
   (define match:error
     (lambda (val . args)
-      (apply error '(library (match)) "no matching clause" val args)))
+      (apply error '(library (xitomatl WD-match)) "no matching clause" val args)))
   (define match:andmap for-all)
   (define match:syntax-err
     (lambda (obj msg) (syntax-violation #f msg obj)))
