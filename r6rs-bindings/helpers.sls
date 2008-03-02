@@ -25,7 +25,7 @@
   ;;;   ...)
   ;;;  ...)
   
-  (define all-bindings-spec-filename "all-r6rs-bindings-from-larceny.s-expr")
+  (define all-bindings-spec-filename "all-r6rs-bindings.s-expr")
 
   (define read-all-bindings-specs
     (case-lambda
