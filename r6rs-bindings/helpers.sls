@@ -1,6 +1,6 @@
 ; By Derick Eddington.
 ; Placed in the public domain.
-
+#!r6rs
 (library (xitomatl r6rs-bindings helpers)
   (export
     all-bindings-spec-filename
@@ -25,11 +25,15 @@
   ;;;   ...)
   ;;;  ...)
   
-  (define all-bindings-spec-filename "all-r6rs-bindings.s-expr")
+  (define all-bindings-spec-filename 
+    (let ([x "all-r6rs-bindings.s-expr"])
+      (case-lambda
+        [() x]
+        [(v) (set! x v)])))
 
   (define read-all-bindings-specs
     (case-lambda
-      [() (read-all-bindings-specs all-bindings-spec-filename)]
+      [() (read-all-bindings-specs (all-bindings-spec-filename))]
       [(filename) (call-with-input-file filename read)]))
   
   (define (binding-name bs) (cadar bs))

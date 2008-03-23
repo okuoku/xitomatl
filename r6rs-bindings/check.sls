@@ -1,6 +1,6 @@
 ; By Derick Eddington.
 ; Placed in the public domain.
-
+#!r6rs
 (library (xitomatl r6rs-bindings check)
   (export
     run-checks

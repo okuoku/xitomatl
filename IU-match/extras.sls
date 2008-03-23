@@ -137,7 +137,7 @@
          (with-syntax ([(id* ...) (find-ids/prevent-auto-recur stx #'match-define #'pat)])
            (with-syntax ([(t* ...) (generate-temporaries #'(id* ...))])
              #'(begin
-                 (define t* #f) ...
+                 (define t*) ...
                  (define dummy
                    (match/lexical-context ctxt expr [pat (set! t* id*) ... #f]))
                  (define id* t*) ...)))])))

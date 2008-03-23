@@ -6,7 +6,8 @@
     (rename
       (my:define-values define-values)
       (my:define define)
-      (my:define-syntax define-syntax)))
+      (my:define-syntax define-syntax))
+    define/AV)
   (import 
     (rnrs)
     (only (xitomatl macro-utils) unique-ids?/raise)
@@ -61,4 +62,14 @@
       [(_ name expr)
        (define-syntax name expr)]))
   
+  (define-syntax define/AV
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ (name . formals) . body)
+         (positive? (length (syntax->datum #'body)))
+         (with-syntax ([AV (datum->syntax #'name 'AV)])
+           #'(define (name . formals)
+               (let ([AV (lambda (msg . irrts) 
+                           (apply assertion-violation 'name msg irrts))])
+                 . body)))])))
 )
