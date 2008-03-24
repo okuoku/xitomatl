@@ -138,7 +138,7 @@
     with-exception-handler with-input-from-file with-output-to-file with-syntax
     write write-char zero?
     ;;; xitomatl bindings
-    define define-syntax define-values define/AV
+    define define-syntax define-values lambda/AV define/AV lambda/? define/?
     add1 sub1 format printf fprintf make-list last-pair
     read-all
     gensym duplicate-id unique-ids? unique-ids?/raise

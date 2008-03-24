@@ -1,9 +1,8 @@
+#!r6rs
 (library (xitomatl macro-utils)
   (export
     gensym
-    duplicate-id
-    unique-ids?
-    unique-ids?/raise)
+    duplicate-id unique-ids? unique-ids?/raise)
   (import
     (rnrs)
     (only (xitomatl common-unstandard) gensym))
