@@ -14,7 +14,7 @@
     (rnrs)
     (only (xitomatl macro-utils) unique-ids?/raise)
     (only (xitomatl common-unstandard) format)
-    (only (xitomatl conditions) make-argument-name-condition make-predicate-condition))
+    (xitomatl conditions))
   
   (define (define-values-error expected received-vals)
     (apply assertion-violation 'define-values
@@ -31,7 +31,7 @@
               (unique-ids?/raise #'(id* ...) stx))
          (with-syntax ([(t* ...) (generate-temporaries #'(id* ...))])
            #`(begin
-               (define t* #f) ...
+               (define t*) ...
                (define dummy 
                  (call-with-values 
                   (lambda () #f expr) ;; #f first to prevent internal defines
@@ -85,12 +85,9 @@
              (lambda/AV--meta kw fname frmls body0 body* ...))])))
   
   (define (argument-check-failed who pred arg-name arg-value)
-    (with-exception-handler
-      (lambda (ex)
-        (raise (condition ex (make-argument-name-condition arg-name) 
-                          (make-predicate-condition pred))))
-      (lambda ()
-        (assertion-violation who "argument check failed" arg-value))))
+    (assertion-violation/conditions who "argument check failed" (list arg-value)
+      (make-argument-name-condition arg-name) 
+      (make-predicate-condition pred)))
   
   (define-syntax lambda/?--meta
     ;;; NOTE: remember, frmlN is not checked
