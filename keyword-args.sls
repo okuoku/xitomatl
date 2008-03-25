@@ -186,22 +186,21 @@
                                                            a))))]
                                             [(akan)
                                              (if (identifier? #'kw-rest) #'apply-kw-rest #'(#f))])
-                                (with-syntax ([dt-clause  ;; so kw-rest-clause can capture defaults
-                                               (if (identifier? #'kw-rest)
-                                                 #'([dt* dflt-temp*] ...)
-                                                 #'())]
-                                              [kw-rest-clause
-                                               (if (identifier? #'kw-rest) 
-                                                 #`([akan (list (cons 'kw* kwt*) (... ...) 
-                                                                (cons 'dflt-name* dt*) ...)])
-                                                 #'())])
-                                  #'(let ([dflt-temp* dflt-val-expr*]
+                                #'(let-syntax ([maybe-let  
+                                                (lambda (stx)
+                                                  (syntax-case stx ()
+                                                    [(_ clause body) 
+                                                     (if (identifier? #'kw-rest)
+                                                       #'(let clause body)
+                                                       #'body)]))]) 
+                                    (let ([dflt-temp* dflt-val-expr*]
                                           ...)
-                                      (let dt-clause
-                                        (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
-                                              (... ...))
-                                          (let kw-rest-clause
-                                            (the-proc apply-arg-name* ... . apply-kw-rest)))))))]))))
+                                      (maybe-let ([dt* dflt-temp*] ...)
+                                       (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
+                                             (... ...))
+                                         (maybe-let ([akan (list (cons 'kw* kwt*) (... ...) 
+                                                                 (cons 'dflt-name* dt*) ...)])
+                                          (the-proc apply-arg-name* ... . apply-kw-rest)))))))]))))
                      . def-etime-dflts)))))])))
   
   #;(define-syntax lambda/kw/e
