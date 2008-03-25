@@ -11,9 +11,6 @@
     (xitomatl conditions)
     #;(xitomatl keyword-args multi-phase))
   
-  ;; TODO: prevent duplicate keyword arguments when no kw-alist specified
-  
-  
   
   #;(define-syntax :-
     (lambda (stx)
@@ -125,7 +122,9 @@
                              [(dflt-val-expr* ...)
                               (case (syntax->datum #'eval-time-or-run-time) 
                                 [(eval-time) #'(etime-dflt* ...)]
-                                [(run-time) #'(dflt-expr* ...)])])
+                                [(run-time) #'(dflt-expr* ...)])]                             
+                             [(dt* ...)  ;; used when kw-rest-clause needs to capture defaults
+                              (generate-temporaries #'(dflt-temp* ...))])
                  #'(begin
                      #;(define first-class                  
                      ;; the lambda/kw--meta will: 
@@ -144,59 +143,65 @@
                              #;[kw                   ;;; reference pattern
                              (identifier? #'kw) 
                              #'first-class]
-                             [(kw)         ;; so it gets checked
-                              #'(kw [:-])]
+                             [(s)         ;; so it gets checked
+                              #'(s [:-])]
                              [(_ [:- [kw* val-expr*] (... ...)])         ;;;; call pattern
                               (and (for-all identifier? #'(kw* (... ...)))
                                    (check-kw-args (syntax->datum #'(kw* (... ...)))
                                                   '(input-arg-name* ...)
                                                   '(dflt-name* ...)
-                                                  (not (null? 'apply-kw-rest))
-                                                  'name)                                   
-                                   #|;; Check for missing required keyword arguments
-                                   (let ([no-dflts (remp (lambda (ian) 
-                                                           (memp (lambda (dn) (symbol=? ian dn)) 
-                                                                 '(dflt-name* ...))) 
-                                                         '(input-arg-name* ...))])
-                                     (for-all (lambda (nd)
-                                                (or (member nd (syntax->datum #'(kw* (... ...))))
-                                                    (assertion-violation/conditions 'name 
-                                                      "missing required keyword argument" '()
-                                                      (make-argument-name-condition nd))))
-                                              no-dflts))
-                                   ;; Check for unknown keyword arguments, if no kw-rest
-                                   (or (not (null? 'apply-kw-rest))
-                                       (for-all (lambda (kw)
-                                                  (or (member kw '(input-arg-name* ...))
-                                                      (assertion-violation/conditions 'name 
-                                                        "unknown keyword argument" (list kw))))
-                                                (syntax->datum #'(kw* (... ...)))))|#)
+                                                  (identifier? #'kw-rest)
+                                                  'name))
                               ;; Process keyword arguments at expand-time
                               (with-syntax ([(kwt* (... ...))
-                                             (map (lambda (kw)
-                                                    (cond [(assp (lambda (ian) (symbol=? kw ian))
-                                                                 (list (cons 'input-arg-name*
-                                                                             #'apply-arg-name*)
-                                                                       ...))
-                                                           => cdr]
-                                                          [else 
-                                                           (assert (not (null? 'apply-kw-rest)))
-                                                           (car (generate-temporaries (list kw)))]))
-                                                  (syntax->datum #'(kw* (... ...))))]
-                                            [akan 
-                                             (syntax-case #'apply-kw-rest ()
-                                               [(id) #'id] [else #f])])
-                                (with-syntax ([kw-rest-clause
-                                               (if (identifier? #'akan) 
+                                             (let f ([l (map (lambda (kw)
+                                                               (cond [(assp (lambda (ian) 
+                                                                              (free-identifier=? kw
+                                                                                                 ian))
+                                                                            (list
+                                                                              (cons #'input-arg-name*
+                                                                                    #'apply-arg-name*)
+                                                                              ...))
+                                                                      => cdr]
+                                                                     [else  ;; kw is unknown
+                                                                      (assert (identifier? #'kw-rest))
+                                                                      ;; Give this unknown kw-arg a
+                                                                      ;; new temp id so that it will
+                                                                      ;; be put in kw-rest
+                                                                      (car (generate-temporaries 
+                                                                             (list kw)))]))
+                                                             #'(kw* (... ...)))]
+                                                     [a '()])
+                                                (if (null? l) (reverse a)
+                                                  ;; Give dup kw-args a new temp id, so that the last
+                                                  ;; one is captured and passed to the-proc, and so all
+                                                  ;; the dups can be put in kw-rest
+                                                  (f (cdr l)
+                                                     (cons (let ([x (car l)])
+                                                             (if (memp (lambda (y)
+                                                                         (free-identifier=? x y))
+                                                                       (cdr l))
+                                                               (car (generate-temporaries (list x)))
+                                                               x)) 
+                                                           a))))]
+                                            [(akan)
+                                             (if (identifier? #'kw-rest) #'apply-kw-rest #'(#f))])
+                                (with-syntax ([dt-clause  ;; so kw-rest-clause can capture defaults
+                                               (if (identifier? #'kw-rest)
+                                                 #'([dt* dflt-temp*] ...)
+                                                 #'())]
+                                              [kw-rest-clause
+                                               (if (identifier? #'kw-rest) 
                                                  #`([akan (list (cons 'kw* kwt*) (... ...) 
-                                                                (cons 'dflt-name* dflt-temp*) ...)])
+                                                                (cons 'dflt-name* dt*) ...)])
                                                  #'())])
                                   #'(let ([dflt-temp* dflt-val-expr*]
                                           ...)
-                                      (let ([kwt* val-expr*]
-                                            (... ...))
-                                        (let kw-rest-clause
-                                          (the-proc apply-arg-name* ... . apply-kw-rest))))))]))))
+                                      (let dt-clause
+                                        (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
+                                              (... ...))
+                                          (let kw-rest-clause
+                                            (the-proc apply-arg-name* ... . apply-kw-rest)))))))]))))
                      . def-etime-dflts)))))])))
   
   #;(define-syntax lambda/kw/e
