@@ -28,149 +28,302 @@
        (message-condition? ex)
        (string=? "unknown keyword argument" (condition-message ex))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Expand-time keyword argument processing
 
-(define/kw/e (f0 a [b 123])
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Expand-time keyword argument processing: define/kw/e and define/kw/r
+
+;;;; define/kw/e does:
+;;;; Evaluation of default value expressions once at the time of 
+;;;; evaluation of the define/kw/e
+
+(define/kw/e (fde0 a [b 123])
   (list a b))
-(check (f0 [:- [a 'foo]]) => '(foo 123))
-(check (f0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
+(check (fde0 [:- [a 'foo]]) => '(foo 123))
+(check (fde0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
 (check-raised (let ()
-                (define/kw/e (f0 a [b 123])
+                (define/kw/e (fde0 a [b 123])
                   (list a b))
-                (f0)) 
+                (fde0)) 
   => missing-kw-arg?)
 (check-raised (let ()
-                (define/kw/e (f0 a [b 123])
+                (define/kw/e (fde0 a [b 123])
                   (list a b))
-                (f0 [:- [c 'hmm]])) 
-  => missing-kw-arg?)
-(check-raised (let ()
-                (define/kw/e (f0 a [b 123])
-                  (list a b))
-                (f0 [:- [a 'foo] [c 'hmm]])) 
+                (fde0 [:- [a 'foo] [c 'hmm]])) 
   => unknown-kw-arg?)
 
-(define/kw/e (f1 [a 1] b c [d 2] [e 3] f)
+(define/kw/e (fde1 [a 1] b c [d 2] [e 3] f)
   (list f e d c b a))
-(check (f1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
+(check (fde1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
        => '(2 4 1 5 6 3))
-(check (f1 [:- [b 1] [c 2] [f 3] [b 4]])  ;; duplicate b
+(check (fde1 [:- [b 1] [c 2] [f 3] [b 4]])  ;; duplicate b
        => '(3 3 2 2 4 1))
-(check (f1 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
+(check (fde1 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
        => '(42 3 -2 2 5 -1))
 
 ;; kw-rest tests
 
-(define/kw/e (f2 [a 1] b . kw-rest) 
+(define/kw/e (fde2 [a 1] b . kw-rest) 
   kw-rest)
-(check (f2 [:- [b 2]])
-       => '((b . 2) (a . 1)))
-(check (f2 [:- [b 2] [a 3]])
-       => '((b . 2) (a . 3) (a . 1)))
-(check (f2 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
-       => '((b . 1) (c . 2) (f . 3) (b . 4) (b . 5) (a . -1) (f . 42) (d . -2) (a . 1)))
-(check-raised (let ()
-                (define/kw/e (f2 [a 1] b . kw-rest) 
-                  kw-rest)
-                (f2)) 
-  => missing-kw-arg?)
-(check-raised (let ()
-                (define/kw/e (f2 [a 1] b . kw-rest) 
-                  kw-rest)
-                (f2 [:- [c 'hmm]])) 
-  => missing-kw-arg?)
+(check (fde2 [:- [b 2]])
+       => '((b . 2) (a . 1)))  ;; supplieds always preceed defaults
+(check (cdr (assoc 'a (fde2 [:- [b 2] [a 3]])))
+       => 3)
 ;; unknown okay when there's a kw-rest
-(check (f2 [:- [b 'foo] [c 'bar]]) 
-       => '((b . foo) (c . bar) (a . 1)))
+(check (cdr (assoc 'c (fde2 [:- [b 'foo] [c 'bar]]))) 
+       => 'bar)
+(check (let ([r  ;; duplicate b (twice) and f
+              (fde2 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])])
+         (map (lambda (n) (cdr (assoc n r))) '(a b c d f)))  
+       ;; last dup is the primary one
+       => '(-1 5 2 -2 42))
+(check-raised (let ()
+                (define/kw/e (fde2 [a 1] b . kw-rest) 
+                  kw-rest)
+                (fde2)) 
+  => missing-kw-arg?)
+(check-raised (let ()
+                (define/kw/e (fde2 [a 1] b . kw-rest) 
+                  kw-rest)
+                (fde2 [:- [c 'hmm]])) 
+  => missing-kw-arg?)
 
-;; More extensive eval-time default argument values tests
+;; eval-time default argument values tests
 
 (define x0 "adsf") (define y0 (list 1))
 
-(define/kw/e (f3 [a x0] b [c y0])
+(define/kw/e (fde3 [a x0] b [c y0])
   (list a b c))
-(check (f3 [:- [b 'zzz]]) 
+(check (fde3 [:- [b 'zzz]]) 
        (=> (lambda (v0 v1) (for-all eq? v0 v1)))
        (list x0 'zzz y0))
 
-(define/kw/e (f4 [a (vector x0 y0)])
+(define/kw/e (fde4 [a (vector x0 y0)])
   (vector-ref a 1))
-(check (f4) (=> eq?) y0)
+(check (fde4) (=> eq?) y0)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Run-time keyword argument processing
+;;;; define/kw/r does:
+;;;; Evaluation of default value expressions every time 
+;;;; the body of the procedure is run.
 
-(define/kw/r (f5 a [b 123])
+(define/kw/r (fdr0 a [b 123])
   (list a b))
-(check (f5 [:- [a 'foo]]) => '(foo 123))
-(check (f5 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
+(check (fdr0 [:- [a 'foo]]) => '(foo 123))
+(check (fdr0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
 (check-raised (let ()
-                (define/kw/r (f5 a [b 123])
+                (define/kw/r (fdr0 a [b 123])
                   (list a b))
-                (f5)) 
+                (fdr0)) 
   => missing-kw-arg?)
 (check-raised (let ()
-                (define/kw/r (f5 a [b 123])
+                (define/kw/r (fdr0 a [b 123])
                   (list a b))
-                (f5 [:- [c 'hmm]])) 
-  => missing-kw-arg?)
-(check-raised (let ()
-                (define/kw/r (f5 a [b 123])
-                  (list a b))
-                (f5 [:- [a 'foo] [c 'hmm]])) 
+                (fdr0 [:- [a 'foo] [c 'hmm]])) 
   => unknown-kw-arg?)
 
-(define/kw/r (f6 [a 1] b c [d 2] [e 3] f)
+(define/kw/r (fdr1 [a 1] b c [d 2] [e 3] f)
   (list f e d c b a))
-(check (f6 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
+(check (fdr1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
        => '(2 4 1 5 6 3))
-(check (f6 [:- [b 1] [c 2] [f 3] [b 4]])  ;; duplicate b
+(check (fdr1 [:- [b 1] [c 2] [f 3] [b 4]])  ;; duplicate b
        => '(3 3 2 2 4 1))
-(check (f6 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
+(check (fdr1 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
        => '(42 3 -2 2 5 -1))
 
 ;; kw-rest tests
 
-(define/kw/r (f7 [a 1] b . kw-rest) 
+(define/kw/r (fdr2 [a 1] b . kw-rest) 
   kw-rest)
-(check (f7 [:- [b 2]])
+(check (fdr2 [:- [b 2]])
        => '((b . 2) (a . 1)))
-(check (f7 [:- [b 2] [a 3]])
-       => '((b . 2) (a . 3) (a . 1)))
-(check (f7 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
-       => '((b . 1) (c . 2) (f . 3) (b . 4) (b . 5) (a . -1) (f . 42) (d . -2) (a . 1)))
-(check-raised (let ()
-                (define/kw/r (f7 [a 1] b . kw-rest) 
-                  kw-rest)
-                (f7)) 
-  => missing-kw-arg?)
-(check-raised (let ()
-                (define/kw/r (f7 [a 1] b . kw-rest) 
-                  kw-rest)
-                (f7 [:- [c 'hmm]])) 
-  => missing-kw-arg?)
+(check (cdr (assoc 'a (fdr2 [:- [b 2] [a 3]])))
+       => 3)
 ;; unknown okay when there's a kw-rest
-(check (f7 [:- [b 'foo] [c 'bar]]) 
-       => '((b . foo) (c . bar) (a . 1)))
+(check (cdr (assoc 'c (fdr2 [:- [b 'foo] [c 'bar]]))) 
+       => 'bar)
+(check (let ([r  ;; duplicate b (twice) and f
+              (fdr2 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])])
+         (map (lambda (n) (cdr (assoc n r))) '(a b c d f)))  
+       ;; last dup is the primary one
+       => '(-1 5 2 -2 42))
+(check-raised (let ()
+                (define/kw/r (fdr2 [a 1] b . kw-rest) 
+                  kw-rest)
+                (fdr2)) 
+  => missing-kw-arg?)
+(check-raised (let ()
+                (define/kw/r (fdr2 [a 1] b . kw-rest) 
+                  kw-rest)
+                (fdr2 [:- [c 'hmm]])) 
+  => missing-kw-arg?)
 
 ;; More extensive run-time default argument values tests
 
 (define x1 "adsf") (define y1 (list 1))
 
-(define/kw/r (f8 [a x1] b [c y1])
+(define/kw/r (fdr3 [a x1] b [c y1])
   (list a b c))
-(check (f8 [:- [b 'zzz]]) 
+(check (fdr3 [:- [b 'zzz]]) 
        (=> (lambda (v0 v1) (for-all eq? v0 v1)))
        (list x1 'zzz y1))
 (set! x1 "qwerty") (set! y1 (vector 42))
-(check (f8 [:- [b 'zzz]]) 
+(check (fdr3 [:- [b 'zzz]]) 
        (=> (lambda (v0 v1) (for-all eq? v0 v1)))
        (list x1 'zzz y1))
 
-(define/kw/r (f9 [a (vector x1 y1)])
+(define/kw/r (fdr4 [a (vector x1 y1)])
   (vector-ref a 1))
-(check (f9) (=> eq?) y1)
+(check (fdr4) (=> eq?) y1)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Run-time keyword argument processing: lambda/kw/e and lambda/kw/r
+
+;;;; lambda/kw/e does:
+;;;; Evaluation of default value expressions once at the time of 
+;;;; evaluation of the lambda/kw/e
+
+(define fle0 
+  (lambda/kw/e (a [b 123])
+    (list a b)))
+(check (fle0 [:- [a 'foo]]) => '(foo 123))
+(check (fle0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
+(check-raised (let ()
+                ((lambda/kw/e (a [b 123])
+                   (list a b)))) 
+  => missing-kw-arg?)
+(check-raised (let ()
+                ((lambda/kw/e (a [b 123])
+                   (list a b))
+                 [:- [a 'foo] [c 'hmm]])) 
+  => unknown-kw-arg?)
+
+(define fle1 
+  (lambda/kw/e ([a 1] b c [d 2] [e 3] f)
+    (list f e d c b a)))
+(check (fle1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
+       => '(2 4 1 5 6 3))
+(check (fle1 [:- [b 1] [c 2] [f 3] [b 4]])  ;; duplicate b
+       => '(3 3 2 2 4 1))
+(check (fle1 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
+       => '(42 3 -2 2 5 -1))
+
+;; kw-rest tests
+
+(define fle2 
+  (lambda/kw/e ([a 1] b . kw-rest) 
+    kw-rest))
+(check (fle2 [:- [b 2]])
+       => '((b . 2) (a . 1)))  ;; supplieds always preceed defaults
+(check (cdr (assoc 'a (fle2 [:- [b 2] [a 3]])))
+       => 3)
+;; unknown okay when there's a kw-rest
+(check (cdr (assoc 'c (fle2 [:- [b 'foo] [c 'bar]]))) 
+       => 'bar)
+(check (let ([r  ;; duplicate b (twice) and f
+              (fle2 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])])
+         (map (lambda (n) (cdr (assoc n r))) '(a b c d f)))  
+       ;; last dup is the primary one
+       => '(-1 5 2 -2 42))
+(check-raised (let ()
+                ((lambda/kw/e ([a 1] b . kw-rest) 
+                   kw-rest))) 
+  => missing-kw-arg?)
+(check-raised (let ()
+                ((lambda/kw/e ([a 1] b . kw-rest) 
+                   kw-rest)
+                 [:- [c 'hmm]])) 
+  => missing-kw-arg?)
+
+;; eval-time default argument values tests
+
+(define lx0 "adsf") (define ly0 (list 1))
+
+(define fle3 
+  (lambda/kw/e ([a lx0] b [c ly0])
+    (list a b c)))
+(check (fle3 [:- [b 'zzz]]) 
+       (=> (lambda (v0 v1) (for-all eq? v0 v1)))
+       (list lx0 'zzz ly0))
+
+(check ((lambda/kw/e ([a (vector lx0 ly0)])
+          (vector-ref a 1)))
+       (=> eq?) ly0)
+
+;;;; lambda/kw/r does:
+;;;; Evaluation of default value expressions every time 
+;;;; the body of the procedure is run.
+
+(define flr0 
+  (lambda/kw/r (a [b 123])
+    (list a b)))
+(check (flr0 [:- [a 'foo]]) => '(foo 123))
+(check (flr0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
+(check-raised (let ()
+                ((lambda/kw/r (a [b 123])
+                  (list a b)))) 
+  => missing-kw-arg?)
+(check-raised (let ()                
+                ((lambda/kw/r (a [b 123])
+                   (list a b)) 
+                 [:- [a 'foo] [c 'hmm]])) 
+  => unknown-kw-arg?)
+
+(define flr1 
+  (lambda/kw/r ([a 1] b c [d 2] [e 3] f)
+    (list f e d c b a)))
+(check (flr1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
+       => '(2 4 1 5 6 3))
+(check (flr1 [:- [b 1] [c 2] [f 3] [b 4]])  ;; duplicate b
+       => '(3 3 2 2 4 1))
+(check (flr1 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])  ;; duplicate b (twice) and f
+       => '(42 3 -2 2 5 -1))
+
+;; kw-rest tests
+
+(define flr2 
+  (lambda/kw/r ([a 1] b . kw-rest) 
+    kw-rest))
+(check (flr2 [:- [b 2]])
+       => '((b . 2) (a . 1)))
+(check (cdr (assoc 'a (flr2 [:- [b 2] [a 3]])))
+       => 3)
+;; unknown okay when there's a kw-rest
+(check (cdr (assoc 'c (flr2 [:- [b 'foo] [c 'bar]]))) 
+       => 'bar)
+(check (let ([r  ;; duplicate b (twice) and f
+              (flr2 [:- [b 1] [c 2] [f 3] [b 4] [b 5] [a -1] [f 42] [d -2]])])
+         (map (lambda (n) (cdr (assoc n r))) '(a b c d f)))  
+       ;; last dup is the primary one
+       => '(-1 5 2 -2 42))
+(check-raised (let ()
+                ((lambda/kw/r (flr2 [a 1] b . kw-rest) 
+                  kw-rest))) 
+  => missing-kw-arg?)
+(check-raised (let ()                
+                ((lambda/kw/r (flr2 [a 1] b . kw-rest) 
+                   kw-rest)
+                 [:- [c 'hmm]])) 
+  => missing-kw-arg?)
+
+;; More extensive run-time default argument values tests
+
+(define x2 "adsf") (define y2 (list 1))
+
+(define flr3 
+  (lambda/kw/r ([a x2] b [c y2])
+    (list a b c)))
+(check (flr3 [:- [b 'zzz]]) 
+       (=> (lambda (v0 v1) (for-all eq? v0 v1)))
+       (list x2 'zzz y2))
+(set! x2 "qwerty") (set! y2 (vector 42))
+(check (flr3 [:- [b 'zzz]]) 
+       (=> (lambda (v0 v1) (for-all eq? v0 v1)))
+       (list x2 'zzz y2))
+
+(check ((lambda/kw/r ([a (vector x2 y2)])
+          (vector-ref a 1)))
+       (=> eq?) y2)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TODO: using kw-proc as 1st-class

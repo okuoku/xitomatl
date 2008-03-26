@@ -1,91 +1,117 @@
 #!r6rs
 (library (xitomatl keyword-args)
   (export
-    #;lambda/kw/e
-    #;lambda/kw/r
+    lambda/kw/e
+    lambda/kw/r
     define/kw/e
     define/kw/r
-    #;:-)
+    :-)
   (import
     (rnrs)
-    (xitomatl conditions)
-    #;(xitomatl keyword-args multi-phase))
+    (xitomatl conditions))
   
+  (define-record-type kw-arg (fields name.value))  
   
-  #;(define-syntax :-
+  (define-syntax :-
     (lambda (stx)
       (syntax-case stx ()
-        [(_ name value)
-         (identifier? #'name)
-         #'(make-kw-arg (cons 'name value))])))
+        [(_ [name* expr*] ...)
+         (for-all identifier? #'(name* ...))
+         #'(list (make-kw-arg (cons 'name* expr*)) ...)])))
+  
+  (define (missing who arg-name)
+    (assertion-violation/conditions who 
+      "missing required keyword argument" '()
+      (make-argument-name-condition arg-name)))
+  
+  (define (unknown who arg-name)
+    (assertion-violation who "unknown keyword argument" arg-name))
+  
+  (define (process-args args who default-vals known has-kw-rest)
+    (if (null? args)
+      default-vals
+      (let* ([arg (car args)]
+             [arg-nv (kw-arg-name.value arg)]) 
+        (if (kw-arg? arg)
+          (if (or has-kw-rest (member (car arg-nv) known))
+            (process-args (cdr args) who (cons arg-nv default-vals) known has-kw-rest)
+            (unknown who (car arg-nv)))
+          (assertion-violation who "not a keyword argument" arg)))))
+  
+  (define (get-kw-val who arg-name default-vals)
+    (if (null? default-vals)
+      (missing who arg-name)
+      (let ([kw.val (car default-vals)])
+        (if (eq? arg-name (car kw.val))
+          (cdr kw.val)
+          (get-kw-val who arg-name (cdr default-vals))))))
+  
+  (define-syntax lambda/kw--meta
+    (lambda (stx)
+      (syntax-case stx ()      
+        [(_ who eval-time-or-run-time
+            (kw-arg* ... . kw-rest) body* ...)
+         (let ([info 
+                (map (lambda (ka)
+                       (syntax-case ka ()
+                         [(kw de) (cons #'kw #'de)]
+                         [kw #'kw])) 
+                     #'(kw-arg* ...))])
+           (with-syntax ([(arg-name* ...) 
+                          (map (lambda (i) (if (pair? i) (car i) i)) info)]
+                         [defaults-expr 
+                          (with-syntax ([((kw . de) ...) (filter pair? info)])
+                            #'(list (cons 'kw de) ...))]
+                         [ret-kw-alist 
+                          (if (identifier? #'kw-rest)
+                            #'kw-rest
+                            (car (generate-temporaries #'(kw-rest))))]
+                         [has-kw-rest
+                          (identifier? #'kw-rest)])             
+             (case (syntax->datum #'eval-time-or-run-time)
+               [(eval-time)
+                #'(let ([kw-alist defaults-expr])
+                    (define the-lambda
+                      (case-lambda 
+                        [(args)
+                         (let ([ret-kw-alist 
+                                (process-args args 'who kw-alist '(arg-name* ...) has-kw-rest)])
+                           (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
+                                 ...)
+                             body* ...))]
+                        [() 
+                         (the-lambda '())]))
+                    the-lambda)]
+               [(run-time)
+                #'(letrec ([the-lambda
+                            (case-lambda 
+                              [(args)
+                               (let ([ret-kw-alist 
+                                      (process-args args 'who defaults-expr '(arg-name* ...) has-kw-rest)])
+                                 (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
+                                       ...)
+                                   body* ...))]
+                              [() 
+                               (the-lambda '())])])
+                    the-lambda)])))])))
   
   (define (check-kw-args incoming input-arg-names dflt-names has-kw-rest who)
-    (and 
+    ;; NOTE: Called at expand-time.
+    (and
+      ;; Check for unknown keyword arguments, if no kw-rest
+      (or has-kw-rest
+          (for-all (lambda (kw)
+                     (or (member kw input-arg-names) (unknown who kw)))
+                   incoming)) 
       ;; Check for missing required keyword arguments
-      (let ([no-dflts (remp (lambda (ian) 
+      (let ([no-dflts (remp (lambda (ian)
                               (memp (lambda (dn) (symbol=? ian dn)) 
                                     dflt-names)) 
                             input-arg-names)])
         (for-all (lambda (nd)
-                   (or (member nd incoming)
-                       (assertion-violation/conditions who 
-                         "missing required keyword argument" '()
-                         (make-argument-name-condition nd))))
-                 no-dflts))
-      ;; Check for unknown keyword arguments, if no kw-rest
-      (or has-kw-rest
-          (for-all (lambda (kw)
-                     (or (member kw input-arg-names)
-                         (assertion-violation who "unknown keyword argument" kw)))
-                   incoming))))
-  
-  #;(define-syntax lambda/kw--meta
-    (lambda (stx)
-      (syntax-case stx ()      
-        [(_ who orig-stx eval-time-or-run-time
-            (kw-arg* ... . kw-rest) body* ...)
-         (and (positive? (length #'(body* ...)))
-              (or (positive? (length #'(kw-arg* ...))) (identifier? #'kw-rest))
-              (or (null? (syntax->datum #'kw-rest)) (identifier? #'kw-rest))
-              (unique-ids?/raise  
-                (append
-                  (map
-                    (lambda (ka)
-                      (syntax-case ka ()
-                        [kw (identifier? #'kw) #'kw]
-                        [(kw default-expr) (identifier? #'kw) #'kw]
-                        [else (syntax-violation #f "invalid keyword argument" #'orig-stx ka)]))
-                    #'(kw-arg* ...))
-                  (if (identifier? #'kw-rest) (list #'kw-rest) '()))
-                #'orig-stx))
-         (let ([info (map (lambda (ka)
-                            (syntax-case ka ()
-                              [kw (identifier? #'kw) #'kw]
-                              [(kw default-expr) (identifier? #'kw) (cons #'kw #'default-expr)])) 
-                          #'(kw-arg* ...))])
-           (with-syntax ([(arg-name* ...) (map (lambda (i) (if (pair? i) (car i) i)) info)]
-                         [defaults-expr 
-                          (with-syntax ([((kw . dflt-expr) ...) (filter pair? info)])
-                            #'(list (cons 'kw dflt-expr) ...))]
-                         [(ret-kw-alist) 
-                          (if (identifier? #'kw-rest) #'(kw-rest) (generate-temporaries '(t)))])
-             (syntax-case #'eval-time-or-run-time (eval-time run-time)
-               [eval-time
-                #'(let ([kw-alist defaults-expr])
-                    (lambda args
-                      (let ([ret-kw-alist (process-args args 'who kw-alist)])
-                        (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
-                              ...)
-                          body* ...))))]
-               [run-time
-                #'(lambda args
-                    (let ([ret-kw-alist (process-args args 'who defaults-expr)])
-                      (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
-                            ...)
-                        body* ...)))])))]      
-        [(_ _ orig-stx . _)
-         (syntax-violation #f "invalid syntax" #'orig-stx)])))
-  
+                   (or (member nd incoming) (missing who nd)))
+                 no-dflts))))
+    
   (define-syntax define/kw--meta
     (lambda (stx)
       (syntax-case stx ()
@@ -119,7 +145,7 @@
                               (case (syntax->datum #'eval-time-or-run-time) 
                                 [(eval-time) #'(etime-dflt* ...)]
                                 [(run-time) #'(dflt-expr* ...)])]                             
-                             [(dt* ...)  ;; used when kw-rest-clause needs to capture defaults
+                             [(dt* ...)  ;; used when kw-rest expression needs to capture defaults
                               (generate-temporaries #'(dflt-temp* ...))])
                  #'(begin
                      #;(define first-class                  
@@ -180,45 +206,49 @@
                                                                (car (generate-temporaries (list x)))
                                                                x)) 
                                                            a))))])
-                                #'(let-syntax ([maybe-dt  
-                                                (lambda (stx)
-                                                  (syntax-case stx ()
-                                                    [(_ clause expr) 
-                                                     (if (identifier? #'kw-rest)
-                                                       #'(let clause expr)
-                                                       #'expr)]))]
-                                               [call-tp
-                                                (lambda (stx)
-                                                  (syntax-case stx (kwr)
-                                                    [(_ p a* ((... ...) (... ...)) 
-                                                        (kwr e* ((... ...) (... ...))))
-                                                     (if (identifier? #'kw-rest)
-                                                       #'(p a* ((... ...) (... ...)) 
-                                                            e* ((... ...) (... ...)))
-                                                       #'(p a* ((... ...) (... ...))))]))])     
-                                    (let ([dflt-temp* dflt-val-expr*]
-                                          ...)
-                                      (maybe-dt ([dt* dflt-temp*] 
-                                                 ...)
-                                        (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
-                                              (... ...))
-                                          (call-tp the-proc apply-arg-name* ...
-                                                   (kwr (cons 'kw* kwt*) (... ...) 
-                                                        (cons 'dflt-name* dt*) ...)))))))]))))
+                                (with-syntax ([(kw*.kwt*-r (... ...))
+                                               ;; so last dup is returned by assoc/assv/assq
+                                               (reverse #'((cons 'kw* kwt*) (... ...)))])
+                                  #'(let-syntax ([maybe-dt  
+                                                  (lambda (stx)
+                                                    (syntax-case stx ()
+                                                      [(_ clause expr) 
+                                                       (if (identifier? #'kw-rest)
+                                                         #'(let clause expr)
+                                                         #'expr)]))]
+                                                 [call-tp
+                                                  (lambda (stx)
+                                                    (syntax-case stx (kwr)
+                                                      [(_ p a* ((... ...) (... ...)) 
+                                                          (kwr e* ((... ...) (... ...))))
+                                                       (if (identifier? #'kw-rest)
+                                                         #'(p a* ((... ...) (... ...)) 
+                                                              e* ((... ...) (... ...)))
+                                                         #'(p a* ((... ...) (... ...))))]))])     
+                                      (let ([dflt-temp* dflt-val-expr*]
+                                            ...)
+                                        (maybe-dt ([dt* dflt-temp*] 
+                                                   ...)
+                                                  (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
+                                                        (... ...))
+                                                    (call-tp the-proc apply-arg-name* ...
+                                                             (kwr kw*.kwt*-r (... ...) 
+                                                                  (cons 'dflt-name* dt*)
+                                                                  ...))))))))]))))
                      . def-etime-dflts)))))])))
   
-  #;(define-syntax lambda/kw/e
+  (define-syntax lambda/kw/e
     (lambda (stx)
       (syntax-case stx ()
         [(who kw-formals body0 body* ...)
-         #`(lambda/kw--meta who #,stx eval-time
+         #`(lambda/kw--meta who eval-time
              kw-formals body0 body* ...)])))
   
-  #;(define-syntax lambda/kw/r
+  (define-syntax lambda/kw/r
     (lambda (stx)
       (syntax-case stx ()
         [(who kw-formals body0 body* ...)
-         #`(lambda/kw--meta who #,stx run-time
+         #`(lambda/kw--meta who run-time
              kw-formals body0 body* ...)])))
   
   (define-syntax define/kw/e
