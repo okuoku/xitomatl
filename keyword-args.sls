@@ -147,26 +147,33 @@
                              [(dt* ...)  ;; used when kw-rest expression needs to capture defaults
                               (generate-temporaries #'(dflt-temp* ...))])
                  #'(begin
-                     #;(define first-class                  
-                     ;; the lambda/kw--meta will: 
-                     ;;   at expand time check syntax of (kw-arg* ... . kw-rest) body* ...
-                     ;;   and at run-time (when first-class called) process+check the args
-                     #;(lambda/kw--meta name orig-stx eval-time-or-run-time (kw-arg* ... . kw-rest)
-                     (the-proc arg-name* ... . ka)))
+                     (define first-class                  
+                       ;; The lambda/kw--meta will at run-time (when first-class called) 
+                       ;; check and process the kw-args
+                       (lambda/kw--meta name eval-time-or-run-time (kw-arg* ... . kw-rest)
+                         (let-syntax ([call-tp
+                                       (lambda (stx)
+                                         (syntax-case stx ()
+                                           [(_ p ian* (... ...) kwr)
+                                            (if (identifier? #'kwr)
+                                              #'(apply p ian* (... ...) kwr)
+                                              #'(p ian* (... ...)))]))])
+                           (call-tp the-proc input-arg-name* ... kw-rest))))
                      (define (the-proc input-arg-name* ... . kw-rest) 
                        body* ...)
                      (define-syntax name
                        (make-variable-transformer
                          (lambda (stx)
                            (syntax-case stx (set! :-)
-                             [(set! _ val)         ;;; set! pattern
-                              (syntax-violation #f "can not set! a define/kw binding" stx)]
-                             #;[kw                   ;;; reference pattern
-                             (identifier? #'kw) 
-                             #'first-class]
-                             [(s)
+                             [(set! id val)
+                              (syntax-violation #f 
+                                "can not set! a define/kw or define/kw/r binding" stx #'id)]
+                             [ref                  ;; reference pattern
+                              (identifier? #'ref) 
+                              #'first-class]
+                             [(s)                  ;; call pattern
                               #'(s [:-])]
-                             [(_ [:- [kw* val-expr*] (... ...)])         ;;;; call pattern
+                             [(_ [:- [kw* val-expr*] (... ...)])         ;; call pattern
                               (and (for-all identifier? #'(kw* (... ...)))
                                    (check-kw-args (syntax->datum #'(kw* (... ...)))
                                                   '(input-arg-name* ...)

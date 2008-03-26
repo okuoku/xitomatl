@@ -326,11 +326,51 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TODO: using kw-proc as 1st-class
+;;; Using a define/kw or define/kw/r as 1st-class
 
-;;; TODO: attempting to set! a kw-proc binding
+(define/kw (fc0 a [b 1])
+  (list a b))
+(check (procedure? fc0) => #t)
+(define fc0* fc0)
+(check (fc0* [:- [a 2]]) => '(2 1))
 
+(define xfc1 1)
+(define/kw/r (fc1 [a xfc1] b)
+  (list a b))
+(check (procedure? fc1) => #t)
+(define fc1* fc1)
+(check (fc1* [:- [b 2]]) => '(1 2))
+(set! xfc1 "asdf")
+(check (fc1* [:- [b 2]]) => '("asdf" 2))
 
+(define/kw (fc2 a [b 1] . kw-rest)
+  kw-rest)
+(check (procedure? fc2) => #t)
+(define fc2* fc2)
+(check (cdr (assoc 'c (fc2* [:- [c 3] [a 2]]))) => 3)
+(check (cdr (assoc 'b (fc2* [:- [b 5] [c 3] [a 2] [b 4]]))) => 4)
+
+(define xfc3 1)
+(define/kw/r (fc3 [a xfc3] b . kw-rest)
+  kw-rest)
+(check (procedure? fc3) => #t)
+(define fc3* fc3)
+(check (cdr (assoc 'a (fc3* [:- [b 2]]))) => 1)
+(check (cdr (assoc 'c (fc3* [:- [b 2] [c 3]]))) => 3)
+(check (cdr (assoc 'b (fc3* [:- [b 5] [c 3] [a 2] [b 4]]))) => 4)
+(set! xfc3 "asdf")
+(check (cdr (assoc 'a (fc3* [:- [b 2] [z 4]]))) => "asdf")
+
+;;; Attempting to set! a define/kw or define/kw/r binding
+
+(check-raised (let ()
+                (define/kw (ds0 a) a)
+                (set! ds0 'foo)) 
+  => syntax-violation?)
+(check-raised (let ()
+                (define/kw/r (ds1 a) a)
+                (set! ds1 'foo)) 
+  => syntax-violation?)
 
 
 
