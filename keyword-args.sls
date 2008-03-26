@@ -93,13 +93,9 @@
          (with-syntax ([(input-arg-name* ...) 
                         (map (lambda (ka)
                                (syntax-case ka () [(kw de) #'kw] [kw #'kw]))
-                             #'(kw-arg* ...))]
-                       [input-kw-rest 
-                        (if (identifier? #'kw-rest) #'(kw-rest) #'())])
+                             #'(kw-arg* ...))])
            (with-syntax ([(apply-arg-name* ...)
-                          (generate-temporaries #'(input-arg-name* ...))]
-                         [apply-kw-rest 
-                          (generate-temporaries #'input-kw-rest)])
+                          (generate-temporaries #'(input-arg-name* ...))])
              (with-syntax ([([etime-dflt* dflt-temp* dflt-name* dflt-expr*] ...) 
                             (filter values
                                     (map (lambda (ka)
@@ -132,7 +128,7 @@
                      ;;   and at run-time (when first-class called) process+check the args
                      #;(lambda/kw--meta name orig-stx eval-time-or-run-time (kw-arg* ... . kw-rest)
                      (the-proc arg-name* ... . ka)))
-                     (define (the-proc input-arg-name* ... . input-kw-rest) 
+                     (define (the-proc input-arg-name* ... . kw-rest) 
                        body* ...)
                      (define-syntax name
                        (make-variable-transformer
@@ -143,7 +139,7 @@
                              #;[kw                   ;;; reference pattern
                              (identifier? #'kw) 
                              #'first-class]
-                             [(s)         ;; so it gets checked
+                             [(s)
                               #'(s [:-])]
                              [(_ [:- [kw* val-expr*] (... ...)])         ;;;; call pattern
                               (and (for-all identifier? #'(kw* (... ...)))
@@ -183,24 +179,32 @@
                                                                        (cdr l))
                                                                (car (generate-temporaries (list x)))
                                                                x)) 
-                                                           a))))]
-                                            [(akan)
-                                             (if (identifier? #'kw-rest) #'apply-kw-rest #'(#f))])
-                                #'(let-syntax ([maybe-let  
+                                                           a))))])
+                                #'(let-syntax ([maybe-dt  
                                                 (lambda (stx)
                                                   (syntax-case stx ()
-                                                    [(_ clause body) 
+                                                    [(_ clause expr) 
                                                      (if (identifier? #'kw-rest)
-                                                       #'(let clause body)
-                                                       #'body)]))]) 
+                                                       #'(let clause expr)
+                                                       #'expr)]))]
+                                               [call-tp
+                                                (lambda (stx)
+                                                  (syntax-case stx (kwr)
+                                                    [(_ p a* ((... ...) (... ...)) 
+                                                        (kwr e* ((... ...) (... ...))))
+                                                     (if (identifier? #'kw-rest)
+                                                       #'(p a* ((... ...) (... ...)) 
+                                                            e* ((... ...) (... ...)))
+                                                       #'(p a* ((... ...) (... ...))))]))])     
                                     (let ([dflt-temp* dflt-val-expr*]
                                           ...)
-                                      (maybe-let ([dt* dflt-temp*] ...)
-                                       (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
-                                             (... ...))
-                                         (maybe-let ([akan (list (cons 'kw* kwt*) (... ...) 
-                                                                 (cons 'dflt-name* dt*) ...)])
-                                          (the-proc apply-arg-name* ... . apply-kw-rest)))))))]))))
+                                      (maybe-dt ([dt* dflt-temp*] 
+                                                 ...)
+                                        (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
+                                              (... ...))
+                                          (call-tp the-proc apply-arg-name* ...
+                                                   (kwr (cons 'kw* kwt*) (... ...) 
+                                                        (cons 'dflt-name* dt*) ...)))))))]))))
                      . def-etime-dflts)))))])))
   
   #;(define-syntax lambda/kw/e
