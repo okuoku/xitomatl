@@ -11,14 +11,14 @@
     (xitomatl conditions)
     (for (xitomatl keyword-args macro-helpers) expand))
   
-  (define-record-type kw-arg (fields name.value))  
+  (define-record-type kw-args-grp (fields kw-alist))  
   
   (define-syntax :-
     (lambda (stx)
       (syntax-case stx ()
         [(_ [name* expr*] ...)
          (for-all identifier? #'(name* ...))
-         #'(list (make-kw-arg (cons 'name* expr*)) ...)])))
+         #'(make-kw-args-grp (list (cons 'name* expr*) ...))])))
   
   (define (missing who arg-name)
     (assertion-violation/conditions who 
@@ -28,16 +28,20 @@
   (define (unknown who arg-name)
     (assertion-violation who "unknown keyword argument" arg-name))
   
+  (define (not-kw-args-grp who arg0 . arg*)
+    (apply assertion-violation who "not a keyword arguments group" arg0 arg*))
+  
   (define (process-args args who default-vals known has-kw-rest)
-    (if (null? args)
-      default-vals
-      (let* ([arg (car args)]
-             [arg-nv (kw-arg-name.value arg)]) 
-        (if (kw-arg? arg)
-          (if (or has-kw-rest (member (car arg-nv) known))
-            (process-args (cdr args) who (cons arg-nv default-vals) known has-kw-rest)
-            (unknown who (car arg-nv)))
-          (assertion-violation who "not a keyword argument" arg)))))
+    (unless (kw-args-grp? args)
+      (not-kw-args-grp who args))
+    (let loop ([args (kw-args-grp-kw-alist args)] [who who] [default-vals default-vals] 
+               [known known] [has-kw-rest has-kw-rest])
+      (if (null? args)
+        default-vals
+        (let ([arg (car args)]) 
+          (if (or has-kw-rest (member (car arg) known))
+            (loop (cdr args) who (cons arg default-vals) known has-kw-rest)
+            (unknown who (car arg)))))))
   
   (define (get-kw-val who arg-name default-vals)
     (if (null? default-vals)
@@ -80,7 +84,9 @@
                                  ...)
                              body* ...))]
                         [() 
-                         (kw-lambda '())]))
+                         (kw-lambda [:-])]
+                        [oops
+                         (apply not-kw-args-grp 'who oops)]))
                     kw-lambda)]
                [(run-time)
                 #'(letrec ([kw-lambda
@@ -93,7 +99,9 @@
                                        ...)
                                    body* ...))]
                               [() 
-                               (kw-lambda '())])])
+                               (kw-lambda [:-])]
+                              [oops
+                               (apply not-kw-args-grp 'who oops)])])
                     kw-lambda)])))])))
   
   (define (check-kw-args incoming input-arg-names dflt-names has-kw-rest who)
@@ -240,7 +248,9 @@
                                                     (call-tp the-proc apply-arg-name* ...
                                                              (kwr kw*.kwt*-r (... ...) 
                                                                   (cons 'dflt-name* dt*)
-                                                                  ...))))))))]))))
+                                                                  ...))))))))]
+                             [(_ any0 any* (... ...))        ;; call pattern
+                              #'(not-kw-args-grp 'name any0 any* (... ...))]))))
                      . def-etime-dflts)))))])))
   
   (define-syntax lambda/kw
