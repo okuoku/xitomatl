@@ -1,14 +1,15 @@
 #!r6rs
 (library (xitomatl keyword-args)
   (export
-    lambda/kw/e
+    lambda/kw
     lambda/kw/r
-    define/kw/e
+    define/kw
     define/kw/r
     :-)
   (import
     (rnrs)
-    (xitomatl conditions))
+    (xitomatl conditions)
+    (for (xitomatl keyword-args macro-helpers) expand))
   
   (define-record-type kw-arg (fields name.value))  
   
@@ -49,8 +50,7 @@
   (define-syntax lambda/kw--meta
     (lambda (stx)
       (syntax-case stx ()      
-        [(_ who eval-time-or-run-time
-            (kw-arg* ... . kw-rest) body* ...)
+        [(_ who eval-time-or-run-time (kw-arg* ... . kw-rest) body* ...)
          (let ([info 
                 (map (lambda (ka)
                        (syntax-case ka ()
@@ -71,7 +71,7 @@
              (case (syntax->datum #'eval-time-or-run-time)
                [(eval-time)
                 #'(let ([kw-alist defaults-expr])
-                    (define the-lambda
+                    (define kw-lambda
                       (case-lambda 
                         [(args)
                          (let ([ret-kw-alist 
@@ -80,20 +80,21 @@
                                  ...)
                              body* ...))]
                         [() 
-                         (the-lambda '())]))
-                    the-lambda)]
+                         (kw-lambda '())]))
+                    kw-lambda)]
                [(run-time)
-                #'(letrec ([the-lambda
+                #'(letrec ([kw-lambda
                             (case-lambda 
                               [(args)
                                (let ([ret-kw-alist 
-                                      (process-args args 'who defaults-expr '(arg-name* ...) has-kw-rest)])
+                                      (process-args args 'who defaults-expr '(arg-name* ...) 
+                                                    has-kw-rest)])
                                  (let ([arg-name* (get-kw-val 'who 'arg-name* ret-kw-alist)]
                                        ...)
                                    body* ...))]
                               [() 
-                               (the-lambda '())])])
-                    the-lambda)])))])))
+                               (kw-lambda '())])])
+                    kw-lambda)])))])))
   
   (define (check-kw-args incoming input-arg-names dflt-names has-kw-rest who)
     ;; NOTE: Called at expand-time.
@@ -117,9 +118,7 @@
       (syntax-case stx ()
         [(_ name eval-time-or-run-time (kw-arg* ... . kw-rest) body* ...)
          (with-syntax ([(input-arg-name* ...) 
-                        (map (lambda (ka)
-                               (syntax-case ka () [(kw de) #'kw] [kw #'kw]))
-                             #'(kw-arg* ...))])
+                        (kw-arg*->ids #'(kw-arg* ...))])
            (with-syntax ([(apply-arg-name* ...)
                           (generate-temporaries #'(input-arg-name* ...))])
              (with-syntax ([([etime-dflt* dflt-temp* dflt-name* dflt-expr*] ...) 
@@ -237,32 +236,36 @@
                                                                   ...))))))))]))))
                      . def-etime-dflts)))))])))
   
-  (define-syntax lambda/kw/e
+  (define-syntax lambda/kw
     (lambda (stx)
       (syntax-case stx ()
-        [(who kw-formals body0 body* ...)
-         #`(lambda/kw--meta who eval-time
+        [(_ kw-formals body0 body* ...)
+         (check-kw-formals #'kw-formals stx)
+         #'(lambda/kw--meta <a-lambda/kw> eval-time
              kw-formals body0 body* ...)])))
   
   (define-syntax lambda/kw/r
     (lambda (stx)
       (syntax-case stx ()
-        [(who kw-formals body0 body* ...)
-         #`(lambda/kw--meta who run-time
+        [(_ kw-formals body0 body* ...)
+         (check-kw-formals #'kw-formals stx)
+         #'(lambda/kw--meta <a-lambda/kw/r> run-time
              kw-formals body0 body* ...)])))
   
-  (define-syntax define/kw/e
+  (define-syntax define/kw
     (lambda (stx)
       (syntax-case stx ()
         [(_ (name . kw-formals) body0 body* ...)
-         (identifier? #'name)
+         (and (identifier? #'name)
+              (check-kw-formals #'kw-formals stx))
          #'(define/kw--meta name eval-time kw-formals body0 body* ...)])))
   
   (define-syntax define/kw/r
     (lambda (stx)
       (syntax-case stx ()
         [(_ (name . kw-formals) body0 body* ...)
-         (identifier? #'name)
+         (and (identifier? #'name)
+              (check-kw-formals #'kw-formals stx))
          #'(define/kw--meta name run-time kw-formals body0 body* ...)])))
   
 )

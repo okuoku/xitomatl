@@ -142,7 +142,7 @@
     add1 sub1 format printf fprintf make-list last-pair
     read-all
     gensym duplicate-id unique-ids? unique-ids?/raise
-    ;lambda/kw/e lambda/kw/r define/kw/e define/kw/r :-
+    lambda/kw lambda/kw/r define/kw define/kw/r :-
     enumerate-indexes
     )
   (import
@@ -151,6 +151,6 @@
     (xitomatl common-unstandard)
     (xitomatl port-utils)
     (xitomatl macro-utils)
-    #;(xitomatl keyword-args)
+    (xitomatl keyword-args)
     (xitomatl indexes))  
 )

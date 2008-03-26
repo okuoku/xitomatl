@@ -30,28 +30,28 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Expand-time keyword argument processing: define/kw/e and define/kw/r
+;;;; Expand-time keyword argument processing: define/kw and define/kw/r
 
-;;;; define/kw/e does:
+;;;; define/kw does:
 ;;;; Evaluation of default value expressions once at the time of 
-;;;; evaluation of the define/kw/e
+;;;; evaluation of the define/kw
 
-(define/kw/e (fde0 a [b 123])
+(define/kw (fde0 a [b 123])
   (list a b))
 (check (fde0 [:- [a 'foo]]) => '(foo 123))
 (check (fde0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
 (check-raised (let ()
-                (define/kw/e (fde0 a [b 123])
+                (define/kw (fde0 a [b 123])
                   (list a b))
                 (fde0)) 
   => missing-kw-arg?)
 (check-raised (let ()
-                (define/kw/e (fde0 a [b 123])
+                (define/kw (fde0 a [b 123])
                   (list a b))
                 (fde0 [:- [a 'foo] [c 'hmm]])) 
   => unknown-kw-arg?)
 
-(define/kw/e (fde1 [a 1] b c [d 2] [e 3] f)
+(define/kw (fde1 [a 1] b c [d 2] [e 3] f)
   (list f e d c b a))
 (check (fde1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
        => '(2 4 1 5 6 3))
@@ -62,7 +62,7 @@
 
 ;; kw-rest tests
 
-(define/kw/e (fde2 [a 1] b . kw-rest) 
+(define/kw (fde2 [a 1] b . kw-rest) 
   kw-rest)
 (check (fde2 [:- [b 2]])
        => '((b . 2) (a . 1)))  ;; supplieds always preceed defaults
@@ -77,12 +77,12 @@
        ;; last dup is the primary one
        => '(-1 5 2 -2 42))
 (check-raised (let ()
-                (define/kw/e (fde2 [a 1] b . kw-rest) 
+                (define/kw (fde2 [a 1] b . kw-rest) 
                   kw-rest)
                 (fde2)) 
   => missing-kw-arg?)
 (check-raised (let ()
-                (define/kw/e (fde2 [a 1] b . kw-rest) 
+                (define/kw (fde2 [a 1] b . kw-rest) 
                   kw-rest)
                 (fde2 [:- [c 'hmm]])) 
   => missing-kw-arg?)
@@ -91,13 +91,13 @@
 
 (define x0 "adsf") (define y0 (list 1))
 
-(define/kw/e (fde3 [a x0] b [c y0])
+(define/kw (fde3 [a x0] b [c y0])
   (list a b c))
 (check (fde3 [:- [b 'zzz]]) 
        (=> (lambda (v0 v1) (for-all eq? v0 v1)))
        (list x0 'zzz y0))
 
-(define/kw/e (fde4 [a (vector x0 y0)])
+(define/kw (fde4 [a (vector x0 y0)])
   (vector-ref a 1))
 (check (fde4) (=> eq?) y0)
 
@@ -176,29 +176,29 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Run-time keyword argument processing: lambda/kw/e and lambda/kw/r
+;;;; Run-time keyword argument processing: lambda/kw and lambda/kw/r
 
-;;;; lambda/kw/e does:
+;;;; lambda/kw does:
 ;;;; Evaluation of default value expressions once at the time of 
-;;;; evaluation of the lambda/kw/e
+;;;; evaluation of the lambda/kw
 
 (define fle0 
-  (lambda/kw/e (a [b 123])
+  (lambda/kw (a [b 123])
     (list a b)))
 (check (fle0 [:- [a 'foo]]) => '(foo 123))
 (check (fle0 [:- [b "asdf"] [a 'bar]]) => '(bar "asdf"))
 (check-raised (let ()
-                ((lambda/kw/e (a [b 123])
+                ((lambda/kw (a [b 123])
                    (list a b)))) 
   => missing-kw-arg?)
 (check-raised (let ()
-                ((lambda/kw/e (a [b 123])
+                ((lambda/kw (a [b 123])
                    (list a b))
                  [:- [a 'foo] [c 'hmm]])) 
   => unknown-kw-arg?)
 
 (define fle1 
-  (lambda/kw/e ([a 1] b c [d 2] [e 3] f)
+  (lambda/kw ([a 1] b c [d 2] [e 3] f)
     (list f e d c b a)))
 (check (fle1 [:- [d 1] [f 2] [a 3] [e 4] [c 5] [b 6]]) 
        => '(2 4 1 5 6 3))
@@ -210,7 +210,7 @@
 ;; kw-rest tests
 
 (define fle2 
-  (lambda/kw/e ([a 1] b . kw-rest) 
+  (lambda/kw ([a 1] b . kw-rest) 
     kw-rest))
 (check (fle2 [:- [b 2]])
        => '((b . 2) (a . 1)))  ;; supplieds always preceed defaults
@@ -225,11 +225,11 @@
        ;; last dup is the primary one
        => '(-1 5 2 -2 42))
 (check-raised (let ()
-                ((lambda/kw/e ([a 1] b . kw-rest) 
+                ((lambda/kw ([a 1] b . kw-rest) 
                    kw-rest))) 
   => missing-kw-arg?)
 (check-raised (let ()
-                ((lambda/kw/e ([a 1] b . kw-rest) 
+                ((lambda/kw ([a 1] b . kw-rest) 
                    kw-rest)
                  [:- [c 'hmm]])) 
   => missing-kw-arg?)
@@ -239,13 +239,13 @@
 (define lx0 "adsf") (define ly0 (list 1))
 
 (define fle3 
-  (lambda/kw/e ([a lx0] b [c ly0])
+  (lambda/kw ([a lx0] b [c ly0])
     (list a b c)))
 (check (fle3 [:- [b 'zzz]]) 
        (=> (lambda (v0 v1) (for-all eq? v0 v1)))
        (list lx0 'zzz ly0))
 
-(check ((lambda/kw/e ([a (vector lx0 ly0)])
+(check ((lambda/kw ([a (vector lx0 ly0)])
           (vector-ref a 1)))
        (=> eq?) ly0)
 

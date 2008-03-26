@@ -2,7 +2,8 @@
 (library (xitomatl macro-utils)
   (export
     gensym
-    duplicate-id unique-ids? unique-ids?/raise)
+    duplicate-id unique-ids? unique-ids?/raise
+    formals-ok?)
   (import
     (rnrs)
     (only (xitomatl common-unstandard) gensym))
@@ -22,9 +23,30 @@
   (define (unique-ids? ls)
     (not (duplicate-id ls)))
   
-  (define (unique-ids?/raise ls stx-form)
-    (define dup (duplicate-id ls))
-    (if dup
-      (syntax-violation #f "duplicate identifier" stx-form dup)
-      #t))
+  (define unique-ids?/raise
+    (case-lambda
+      [(ids stx msg)
+       (let ([dup (duplicate-id ids)])
+         (if dup
+           (syntax-violation #f msg stx dup)
+           #t))]
+      [(ids stx)
+       (unique-ids?/raise ids stx "duplicate identifier")]))
+  
+  (define (formals-ok? frmls-stx orig-stx)
+    (syntax-case frmls-stx ()
+      [(arg* ... . rest)
+       (and (or (null? (syntax->datum #'rest))
+                (identifier? #'rest)
+                (syntax-violation #f "not an identifier" orig-stx #'rest))
+            (for-all (lambda (id)
+                       (or (identifier? id)
+                           (syntax-violation #f "not an identifier" orig-stx id)))
+                     #'(arg* ...))
+            (unique-ids?/raise 
+              (append
+                #'(arg* ...)
+                (if (identifier? #'rest) (list #'rest) '())) 
+              orig-stx
+              "duplicate binding"))]))
 )
