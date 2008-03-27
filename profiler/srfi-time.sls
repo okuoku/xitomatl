@@ -10,36 +10,14 @@
     (xitomatl srfi time)
     (xitomatl profiler meta))
   
-  (def--case-lambda/profiled case-lambda/profiled current-time time-difference)
+  (def--case-lambda/profiled case-lambda/profiled 
+    current-time add-duration time-difference)
   
-  (def--lambda/profiled lambda/profiled current-time time-difference)
+  (def--lambda/profiled lambda/profiled
+    current-time add-duration time-difference)
   
-  (def--define/profiled define/profiled current-time time-difference)
-  
-  #|(define-syntax case-lambda/profiled
-    (syntax-rules ()
-      [(_ [formals . body] ...)
-       (case-lambda/profiled--meta 
-         '(case-lambda [formals . body] ...)
-         current-time time-difference
-         [formals . body] ...)]))
-  
-  (define-syntax lambda/profiled
-    (syntax-rules ()
-      [(_ formals . body)
-       (case-lambda/profiled--meta 
-         '(lambda formals . body)
-         current-time time-difference
-         [formals . body])]))
-  
-  (define-syntax define/profiled
-    (syntax-rules ()
-      [(_ (name . formals) . body)
-       (define name 
-         (case-lambda/profiled--meta 
-           '(define (name . formals) . body)
-           current-time time-difference
-           [formals . body]))]))|#
+  (def--define/profiled define/profiled 
+    current-time add-duration time-difference)
   
   #;(define (generate-report)
     ;;

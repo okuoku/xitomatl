@@ -12,7 +12,7 @@
     procedure-use?
     procedure-use-start 
     procedure-use-stop 
-    procedure-use-called? 
+    procedure-use-called?
     procedure-use-args-num 
     procedure-use-returned?
     procedure-use-retvals-num
@@ -28,60 +28,44 @@
   
   (define-syntax def--case-lambda/profiled
     (syntax-rules ()
-      [(_ name current-info current-info-diff)
+      [(_ name current-info current-info-add current-info-sub)
        (define-syntax name
          (syntax-rules ()
            [(_ [formals . body] (... ...))
             (case-lambda/profiled--meta 
              '(case-lambda [formals . body] (... ...))
-             current-info current-info-diff
+             current-info current-info-add current-info-sub
              [formals . body] (... ...))]))]))
   
   (define-syntax def--lambda/profiled
     (syntax-rules ()
-      [(_ name current-info current-info-diff)
+      [(_ name current-info current-info-add current-info-sub)
        (define-syntax name
          (syntax-rules ()
            [(_ formals . body)
             (case-lambda/profiled--meta 
              '(lambda formals . body)
-             current-info current-info-diff
+             current-info current-info-add current-info-sub
              [formals . body])]))]))
   
   (define-syntax def--define/profiled
     (syntax-rules ()
-      [(_ name current-info current-info-diff)
+      [(_ name current-info current-info-add current-info-sub)
        (define-syntax name
          (syntax-rules ()
            [(_ (n . formals) . body)
             (define n 
               (case-lambda/profiled--meta 
                '(define (n . formals) . body)
-               current-info current-info-diff
+               current-info current-info-add current-info-sub
                [formals . body]))]))]))
-  
-  #;(define (calc-adjust current-info current-info-diff)
-    ;;; TODO: redo to match new changes
-    #;(let ([start #f] [stop #f] [retvals-num #f])
-      (dynamic-wind
-        (lambda () 
-          (set! start (current-info)))
-        (lambda ()
-          (call-with-values
-            (lambda () #f)
-            (lambda rv
-              (set! returned? #t)
-              (set! retvals-num (length rv))
-              (apply values rv))))
-        (lambda ()
-          (set! stop (current-info))))
-      (current-info-diff stop start)))
   
   (define-syntax case-lambda/profiled--meta
     (lambda (stx)
       (syntax-case stx ()
-        [(_ source-code current-info current-info-diff [formals . body] ...)
-         (for-all identifier? (list #'current-info #'current-info-diff))
+        [(_ source-code current-info current-info-add current-info-sub 
+            [formals . body] ...)
+         (for-all identifier? (list #'current-info #'current-info-add #'current-info-sub))
          #'(let ([calls-num (make-box 0)] 
                  [returns-num (make-box 0)]
                  [entries/exits-num (make-box 0)])
@@ -89,32 +73,42 @@
                (case-lambda [formals . body] ...))
              (define (profiled-proxy . args)
                (box-value+1 calls-num)
-               (let ([adjust #f] [start #f] [stop #f] [retvals-num #f]
-                     [called? #t] [returned? #f])
+               (let ([enter-info-adj #f] [enter-info #f] [exit-info #f]
+                     [call-info-adj #f] [call-info #f] [return-info #f]
+                     [called? #t] [returned? #f] [retvals-num #f])
                  (dynamic-wind
                    (lambda () 
                      (box-value+1 entries/exits-num)
-                     #;(set! adjust (calc-adjust current-info current-info-diff))
-                     (set! start (current-info)))
+                     (set! enter-info-adj (current-info))
+                     (set! enter-info (current-info)))
                    (lambda ()
                      (call-with-values
                        (lambda ()
-                         (apply the-proc args))
+                         (set! call-info-adj (current-info))
+                         (set! call-info (current-info))
+                         (apply the-proc args))                         
                        (lambda rv
-                         ;; TODO: better adjustment based on whether the-proc returned or not
+                         (set! return-info (current-info))
                          (box-value+1 returns-num)
                          (set! returned? #t)
                          (set! retvals-num (length rv))
                          (apply values rv))))
                    (lambda ()
-                     (set! stop (current-info))
-                     #;XXX ;; TODO: use calculated adjustment to adjust start (or stop)
-                     (record-procedure-use profiled-proxy start stop
-                       called? (if called? (length args) #f) 
-                       returned? (if returned? retvals-num #f))
+                     (set! exit-info (current-info))
+                     (let ([start (let-values ([(i ia) (if called? 
+                                                         (values call-info call-info-adj)
+                                                         (values enter-info enter-info-adj))])
+                                    (current-info-add i (current-info-sub i ia)))]
+                           [stop (if returned? return-info exit-info)])
+                       (record-procedure-use profiled-proxy start stop
+                         called? (if called? (length args) #f) 
+                         returned? (if returned? retvals-num #f)))
                      ;; reset incase a continuation from the-proc is re-entered
                      (set! called? #f)
-                     (set! returned? #f)))))
+                     (set! returned? #f)
+                     (set! call-info-adj #f)
+                     (set! call-info #f)
+                     (set! return-info #f)))))
              (register-procedure profiled-proxy source-code 
                calls-num returns-num entries/exits-num)
              profiled-proxy)])))
