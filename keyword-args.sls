@@ -131,27 +131,19 @@
                           (generate-temporaries #'(input-arg-name* ...))])
              (with-syntax ([([etime-dflt* dflt-temp* dflt-name* dflt-expr*] ...) 
                             (filter values
-                                    (map (lambda (ka)
+                                    (map (lambda (ka aan t)
                                            (syntax-case ka () 
-                                             [(kw de) 
-                                              (list (car (generate-temporaries #'(kw)))
-                                                    (cdr (assp (lambda (ian)
-                                                                 (bound-identifier=? #'kw ian))
-                                                               (map cons 
-                                                                    #'(input-arg-name* ...)
-                                                                    #'(apply-arg-name* ...))))
-                                                    #'kw
-                                                    #'de)]
+                                             [(kw de) (list t aan #'kw #'de)]
                                              [else #f]))
-                                         #'(kw-arg* ...)))])
-               (with-syntax ([def-etime-dflts
-                               (case (syntax->datum #'eval-time-or-run-time) 
-                                 [(eval-time) #'((define etime-dflt* dflt-expr*) ...)]
-                                 [(run-time) #'()])]
-                             [(dflt-val-expr* ...)
+                                         #'(kw-arg* ...)
+                                         #'(apply-arg-name* ...)
+                                         (generate-temporaries #'(input-arg-name* ...))))])
+               (with-syntax ([(def-etime-dflts 
+                               dflt-val-expr* ...)
                               (case (syntax->datum #'eval-time-or-run-time) 
-                                [(eval-time) #'(etime-dflt* ...)]
-                                [(run-time) #'(dflt-expr* ...)])]                             
+                                 [(eval-time) #'(((define etime-dflt* dflt-expr*) ...)
+                                                 etime-dflt* ...)]
+                                 [(run-time) #'(() dflt-expr* ...)])]                             
                              [(dt* ...)  ;; used when kw-rest expression needs to capture defaults
                               (generate-temporaries #'(dflt-temp* ...))])
                  #'(begin
@@ -223,14 +215,7 @@
                                 (with-syntax ([(kw*.kwt*-r (... ...))
                                                ;; so last dup is returned by assoc/assv/assq
                                                (reverse #'((cons 'kw* kwt*) (... ...)))])
-                                  #'(let-syntax ([maybe-dt  
-                                                  (lambda (stx)
-                                                    (syntax-case stx ()
-                                                      [(_ clause expr) 
-                                                       (if (identifier? #'kw-rest)
-                                                         #'(let clause expr)
-                                                         #'expr)]))]
-                                                 [call-tp
+                                  #'(let-syntax ([call-tp
                                                   (lambda (stx)
                                                     (syntax-case stx (kwr)
                                                       [(_ p a* ((... ...) (... ...)) 
@@ -241,14 +226,15 @@
                                                          #'(p a* ((... ...) (... ...))))]))])     
                                       (let ([dflt-temp* dflt-val-expr*]
                                             ...)
-                                        (maybe-dt ([dt* dflt-temp*] 
+                                        (let ([dt* dflt-temp*] 
                                                    ...)
-                                                  (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
-                                                        (... ...))
-                                                    (call-tp the-proc apply-arg-name* ...
-                                                             (kwr kw*.kwt*-r (... ...) 
-                                                                  (cons 'dflt-name* dt*)
-                                                                  ...))))))))]
+                                          (let ([kwt* val-expr*]  ;; these shadow dflt-temp*
+                                                (... ...))
+                                            ;; apply-arg-name* captures kwt* and/or dflt-temp*
+                                            (call-tp the-proc apply-arg-name* ...
+                                                     (kwr kw*.kwt*-r (... ...) 
+                                                          (cons 'dflt-name* dt*)
+                                                          ...))))))))]
                              [(_ any0 any* (... ...))        ;; call pattern
                               #'(not-kw-args-grp 'name any0 any* (... ...))]))))
                      . def-etime-dflts)))))])))
