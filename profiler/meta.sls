@@ -60,6 +60,48 @@
                current-info current-info-add current-info-sub
                [formals . body]))]))]))
   
+  (define (make-profiled-proxy proc current-info current-info-add current-info-sub
+                               calls-num returns-num entries/exits-num)
+    (define (profiled-proxy . args)
+      (box-value+1 calls-num)
+      (let ([enter-info-adj #f] [enter-info #f] [exit-info #f]
+            [call-info-adj #f] [call-info #f] [return-info #f]
+            [called? #t] [returned? #f] [retvals-num #f])
+        (dynamic-wind
+          (lambda () 
+            (box-value+1 entries/exits-num)
+            (set! enter-info-adj (current-info))
+            (set! enter-info (current-info)))
+          (lambda ()
+            (call-with-values
+              (lambda ()
+                (set! call-info-adj (current-info))
+                (set! call-info (current-info))
+                (apply proc args))                         
+              (lambda rv
+                (set! return-info (current-info))
+                (box-value+1 returns-num)
+                (set! returned? #t)
+                (set! retvals-num (length rv))
+                (apply values rv))))
+          (lambda ()
+            (set! exit-info (current-info))
+            (let ([start (let-values ([(i ia) (if called? 
+                                                (values call-info call-info-adj)
+                                                (values enter-info enter-info-adj))])
+                           (current-info-add i (current-info-sub i ia)))]
+                  [stop (if returned? return-info exit-info)])
+              (record-procedure-use profiled-proxy start stop
+                                    called? (if called? (length args) #f) 
+                                    returned? (if returned? retvals-num #f)))
+            ;; reset incase a continuation from proc is re-entered
+            (set! called? #f)
+            (set! returned? #f)
+            (set! call-info-adj #f)
+            (set! call-info #f)
+            (set! return-info #f)))))
+    profiled-proxy)
+  
   (define-syntax case-lambda/profiled--meta
     (lambda (stx)
       (syntax-case stx ()
@@ -71,46 +113,11 @@
                  [entries/exits-num (make-box 0)])
              (define the-proc
                (case-lambda [formals . body] ...))
-             (define (profiled-proxy . args)
-               (box-value+1 calls-num)
-               (let ([enter-info-adj #f] [enter-info #f] [exit-info #f]
-                     [call-info-adj #f] [call-info #f] [return-info #f]
-                     [called? #t] [returned? #f] [retvals-num #f])
-                 (dynamic-wind
-                   (lambda () 
-                     (box-value+1 entries/exits-num)
-                     (set! enter-info-adj (current-info))
-                     (set! enter-info (current-info)))
-                   (lambda ()
-                     (call-with-values
-                       (lambda ()
-                         (set! call-info-adj (current-info))
-                         (set! call-info (current-info))
-                         (apply the-proc args))                         
-                       (lambda rv
-                         (set! return-info (current-info))
-                         (box-value+1 returns-num)
-                         (set! returned? #t)
-                         (set! retvals-num (length rv))
-                         (apply values rv))))
-                   (lambda ()
-                     (set! exit-info (current-info))
-                     (let ([start (let-values ([(i ia) (if called? 
-                                                         (values call-info call-info-adj)
-                                                         (values enter-info enter-info-adj))])
-                                    (current-info-add i (current-info-sub i ia)))]
-                           [stop (if returned? return-info exit-info)])
-                       (record-procedure-use profiled-proxy start stop
-                         called? (if called? (length args) #f) 
-                         returned? (if returned? retvals-num #f)))
-                     ;; reset incase a continuation from the-proc is re-entered
-                     (set! called? #f)
-                     (set! returned? #f)
-                     (set! call-info-adj #f)
-                     (set! call-info #f)
-                     (set! return-info #f)))))
+             (define profiled-proxy
+               (make-profiled-proxy the-proc current-info current-info-add current-info-sub
+                                    calls-num returns-num entries/exits-num))
              (register-procedure profiled-proxy source-code 
-               calls-num returns-num entries/exits-num)
+                                 calls-num returns-num entries/exits-num)
              profiled-proxy)])))
     
   (define-record-type profiled-procedure
