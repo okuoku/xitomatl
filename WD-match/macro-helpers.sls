@@ -1,3 +1,4 @@
+#!r6rs
 (library (xitomatl WD-match macro-helpers)
   (export
     match:error

@@ -1,3 +1,4 @@
+#!r6rs
 ;; By Derick Eddington.
 ;; Taken from Oleg's http://okmij.org/ftp/Scheme/delim-control-n.scm
 ;; Modified to parameterize with syntax at expansion-time vs. with 

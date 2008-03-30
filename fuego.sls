@@ -1,3 +1,4 @@
+#!r6rs
 ; Fuego -- A prototype-based object system supporting capability-based security.
 ;          By Derick Eddington.
 ;          Inspired by Prometheus by Jorgen Schaefer.

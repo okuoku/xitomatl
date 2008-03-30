@@ -1,3 +1,4 @@
+#!r6rs
 ;;; Original implementation by Jacob Matthews.
 ;;; http://people.cs.uchicago.edu/~jacobm/qstr/
 ;;; Modified to be an R6RS library by Derick Eddington.

@@ -1,3 +1,4 @@
+#!r6rs
 (library (xitomatl profiler meta)
   (export
     def--case-lambda/profiled def--lambda/profiled def--define/profiled

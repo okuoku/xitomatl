@@ -1,3 +1,4 @@
+#!r6rs
 ;pregexp.scm
 ;Portable regular expressions for Scheme
 ;Dorai Sitaram

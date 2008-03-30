@@ -1,3 +1,4 @@
+#!r6rs
 ;; Modified by Derick Eddington to be an Ikarus R6RS library.
 ;; Custom structure stuff from the original implementation
 ;; is disabled, and R6RS/Ikarus structures are not supported.

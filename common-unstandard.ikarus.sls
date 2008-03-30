@@ -1,3 +1,4 @@
+#!r6rs
 (library (xitomatl common-unstandard)
   (export
     add1 sub1
@@ -9,4 +10,3 @@
   (import
     (ikarus))
 )
-

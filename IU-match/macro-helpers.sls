@@ -1,3 +1,4 @@
+#!r6rs
 (library (xitomatl IU-match macro-helpers)
   (export
     find-ids/prevent-auto-recur

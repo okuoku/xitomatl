@@ -1,3 +1,4 @@
+#!r6rs
 (library (xitomatl profiler srfi-time)
   (export
     case-lambda/profiled

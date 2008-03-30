@@ -1,3 +1,4 @@
+#!r6rs
 ;;; match.ss
 
 ;;; This program was originally designed and implemented by Dan
@@ -89,9 +90,6 @@
 ;; Cata   ::= Exp
 
 ;; YOU'RE NOT ALLOWED TO REFER TO CATA VARS IN GUARDS. (reasonable!)
-
-
-
 
 (library (xitomatl IU-match)
   (export 

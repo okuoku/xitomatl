@@ -1,3 +1,4 @@
+#!r6rs
 (library (xitomatl port-utils)
   (export
     read-all)

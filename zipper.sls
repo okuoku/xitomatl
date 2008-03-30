@@ -1,3 +1,4 @@
+#!r6rs
 ; Taken from Oleg's
 ; http://okmij.org/ftp/Scheme/zipper-in-scheme.txt
 
