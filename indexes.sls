@@ -4,16 +4,16 @@
     iota
     enumerate)
   (import
-    (rnrs))
+    (rnrs)
+    (only (xitomatl define extras) define/?)
+    (only (xitomatl predicates) exact-non-negative-integer?))
   
   (define (_iota n l)
     (if (= n -1)
       l
       (_iota (- n 1) (cons n l))))
   
-  (define (iota n)
-    (unless (and (integer? n) (exact? n) (not (negative? n)))
-      (assertion-violation 'iota "not an exact non-negative integer" n))
+  (define/? (iota [n exact-non-negative-integer?])
     (_iota (- n 1) '()))
   
   (define (enumerate x)
