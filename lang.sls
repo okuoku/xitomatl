@@ -137,16 +137,19 @@
     vector-sort vector-sort! vector? violation? warning? when who-condition?
     with-exception-handler with-input-from-file with-output-to-file with-syntax
     write write-char zero?
+    ;;; (rnrs) aliases
+    λ
     ;;; xitomatl bindings
     define define-syntax define-values lambda/AV define/AV lambda/? define/?
     add1 sub1 format printf fprintf make-list last-pair
     read-all
     gensym duplicate-id unique-ids? unique-ids?/raise
     lambda/kw lambda/kw/r define/kw define/kw/r :-
-    enumerate-indexes
+    iota enumerate
     )
   (import
     (except (rnrs) define define-syntax)
+    (rename (only (rnrs base) lambda) (lambda λ))
     (xitomatl define extras)
     (xitomatl common-unstandard)
     (xitomatl port-utils)
