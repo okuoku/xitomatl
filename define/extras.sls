@@ -12,7 +12,7 @@
     lambda/? define/?)
   (import 
     (rnrs)
-    (only (xitomatl macro-utils) unique-ids?/raise)
+    (for (only (xitomatl macro-utils) unique-ids?/raise) expand)
     (only (xitomatl common-unstandard) format)
     (xitomatl conditions))
   

@@ -21,7 +21,7 @@
       (cond
         [(not (eq? x :zip-keep-val:)) x]
         ; the node was not handled -- descend
-        [(null? tree) tree]
+        [(null? tree) '()]
         [(not (pair? tree)) tree] ; an atom
         [else
          (let ([t (map/left-right/preserving (lambda (kid) (depth-first proc kid)) 

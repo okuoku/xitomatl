@@ -1,9 +1,8 @@
+#!/usr/bin/env mzscheme
 #!r6rs
 
 ; By Derick Eddington.
 ; Placed in the public domain.
-
-;; NOTE: not working yet.
 
 (import 
   (rnrs)
@@ -14,8 +13,8 @@
 
 (print-checks 
  (run-checks (lambda (exception)
-               (display "\n*** Got exception:\n")
-               (write exception) (newline)
+               #;(begin (display "\n*** Got exception:\n")
+                      (write exception) (newline))
                (cond
                  [(syntax-violation? exception)
                   #t]

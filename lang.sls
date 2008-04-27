@@ -146,6 +146,7 @@
     gensym duplicate-id unique-ids? unique-ids?/raise
     lambda/kw lambda/kw/r define/kw define/kw/r :-
     iota enumerate
+    map/left-right/preserving rem-dups
     )
   (import
     (except (rnrs) define define-syntax)
@@ -155,5 +156,6 @@
     (xitomatl port-utils)
     (xitomatl macro-utils)
     (xitomatl keyword-args)
-    (xitomatl indexes))  
+    (xitomatl indexes)
+    (xitomatl lists))  
 )

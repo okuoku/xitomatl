@@ -14,7 +14,8 @@
     all-libs
     all-ids)
   (import 
-    (rnrs))
+    (rnrs)
+    (only (xitomatl lists) rem-dups))
   
   ;;; The bindings specification file is expected to contain one list of the shape:
   ;;; ((<library-name>
@@ -54,13 +55,6 @@
   
   (define (all-libs)
     (map car (read-all-bindings-specs)))
-  
-  (define (rem-dups l)
-    (let loop ([l l] [n '()])
-      (if (null? l)
-        n
-        (loop (remove (car l) (cdr l))
-              (cons (car l) n)) )))
   
   (define (all-ids)
     (list-sort (lambda (id1 id2) (string<? (symbol->string id1)
