@@ -38,7 +38,7 @@
       (reset-state)
       (abs (fxmin leftover 0))))
 
-  (define (do-return/oops . args)
+  (define (do-return/oops args)
     (apply die 'do-return/oops "internal bug" args))
   (define (do-complete/oops ticks value)
     (die 'do-complete/oops "internal bug" ticks value))

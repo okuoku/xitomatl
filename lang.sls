@@ -142,18 +142,18 @@
     ;;; xitomatl bindings
     define define-syntax define-values lambda/AV define/AV lambda/? define/?
     add1 sub1 format printf fprintf make-list last-pair
-    read-all
+    read-all get-lines-all port-for-each port-map
     gensym duplicate-id unique-ids? unique-ids?/raise
     lambda/kw lambda/kw/r define/kw define/kw/r :-
     iota enumerate
-    map/left-right/preserving rem-dups
+    map/left-right/preserving rem-dups list-of list-match
     )
   (import
     (except (rnrs) define define-syntax)
     (rename (only (rnrs base) lambda) (lambda λ))
     (xitomatl define extras)
     (xitomatl common-unstandard)
-    (xitomatl port-utils)
+    (xitomatl ports)
     (xitomatl macro-utils)
     (xitomatl keyword-args)
     (xitomatl indexes)
