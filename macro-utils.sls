@@ -47,6 +47,5 @@
               (append
                 #'(arg* ...)
                 (if (identifier? #'rest) (list #'rest) '())) 
-              orig-stx
-              "duplicate binding"))]))
+              orig-stx))]))
 )

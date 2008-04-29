@@ -140,7 +140,9 @@
     ;;; (rnrs) aliases
     λ
     ;;; xitomatl bindings
-    define define-syntax define-values lambda/AV define/AV lambda/? define/?
+    define define-syntax define-values 
+    case-lambda/AV lambda/AV λ/AV define/AV 
+    case-lambda/? lambda/? λ/? define/?
     add1 sub1 format printf fprintf make-list last-pair
     read-all get-lines-all port-for-each port-map
     gensym duplicate-id unique-ids? unique-ids?/raise
