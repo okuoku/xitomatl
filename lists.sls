@@ -49,44 +49,41 @@
   (define-syntax list-of-aux
     ;;; Modified from Phil Bewig's list-of, from:
     ;;; http://groups.google.com/group/comp.lang.scheme/msg/18df0b4cc3939ef0
-    (lambda (stx)
-      (syntax-case stx (:range :in :is)
-        [(_ expr base)
-         #'(cons expr base)]
-        [(_ expr base (x :range first past step) clauses ...)
-         (identifier? #'x)
-         #'(let ([f first] [p past])
-             (let* ([s (let-syntax ([SM (syntax-rules ()
-                                          [(_ #f) (if (< f p) 1 -1)]
-                                          [(_ s) s])]) 
-                         (SM step))]
-                    [more? (if (positive? s) < >)])
-               (let loop ([z f])
-                 (if (more? z p)
-                   (let ([x z])
-                     (list-of-aux expr (loop (+ z s)) clauses ...))
-                   base))))]
-        [(_ expr base (x :range first past) clauses ...)
-         #'(list-of-aux expr base (x :range first past #f) clauses ...)]
-        [(_ expr base (x :range past) clauses ...)
-         #'(list-of-aux expr base (x :range 0 past) clauses ...)]
-        [(_ expr base (x :in xs) clauses ...)
-         (identifier? #'x)
-         #'(let loop ([z xs])
-             (if (null? z)
-               base
-               (let ([x (car z)])
-                 (list-of-aux expr (loop (cdr z)) clauses ...))))]
-        [(_ expr base (x :is y) clauses ...)
-         (identifier? #'x)
-         #'(let ([x y])
-             (list-of-aux expr base clauses ...))]
-        [(_ expr base (pred pe pe* ...) clauses ...)
-         #'(if (pred pe pe* ...)
-             (list-of-aux expr base clauses ...)
-             base)]
-        [(_ expr base clauses ...)
-         (syntax-violation #f "invalid syntax" #'(list-of expr clauses ...))])))
+    (syntax-rules (:range :in :is)
+      [(_ expr base)
+       (cons expr base)]
+      [(_ expr base (x :range first past step) clauses ...)
+       (let ([f first] [p past])
+         (let* ([s (let-syntax ([SM (syntax-rules ()
+                                      [(_ #f) (if (< f p) 1 -1)]
+                                      [(_ s) s])]) 
+                     (SM step))]
+                [more? (cond [(positive? s) <] 
+                             [(negative? s) >]
+                             [else (assertion-violation 'list-of 
+                                     "step must not be zero" s)])])
+           (let loop ([z f])
+             (if (more? z p)
+               (let ([x z])
+                 (list-of-aux expr (loop (+ z s)) clauses ...))
+               base))))]
+      [(_ expr base (x :range first past) clauses ...)
+       (list-of-aux expr base (x :range first past #f) clauses ...)]
+      [(_ expr base (x :range past) clauses ...)
+       (list-of-aux expr base (x :range 0 past) clauses ...)]
+      [(_ expr base (x :in xs) clauses ...)
+       (let loop ([z xs])
+         (if (null? z)
+           base
+           (let ([x (car z)])
+             (list-of-aux expr (loop (cdr z)) clauses ...))))]
+      [(_ expr base (x :is y) clauses ...)
+       (let ([x y])
+         (list-of-aux expr base clauses ...))]
+      [(_ expr base pred clauses ...)
+       (if pred
+         (list-of-aux expr base clauses ...)
+         base)]))
   
   (define (list-match-failed obj)
     (assertion-violation 'list-match "failed to match" obj))
