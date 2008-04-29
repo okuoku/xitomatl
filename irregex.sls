@@ -673,7 +673,7 @@
                       (lp (car ls) n 0 0
                           (lambda (lo3 hi3)
                             (lp2 (cdr ls)
-                                 (+ n (sre-count-submatchs (car sre)))
+                                 (+ n (sre-count-submatchs (car ls)))
                                  (+ lo2 lo3)
                                  (and hi2 hi3 (+ hi2 hi3))))))))
                ((or)
@@ -683,7 +683,7 @@
                       (lp (car ls) n 0 0
                           (lambda (lo3 hi3)
                             (lp2 (cdr ls)
-                                 (+ n (sre-count-submatchs (car sre)))
+                                 (+ n (sre-count-submatchs (car ls)))
                                  (if lo2 (min lo2 lo3) lo3)
                                  (and hi2 hi3 (max hi2 hi3))))))))
                ((dsm)
