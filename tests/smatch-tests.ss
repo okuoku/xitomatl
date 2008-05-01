@@ -67,6 +67,7 @@
 (check (smatch "asdf" ["asdf" #t]) => #t)
 
 ;;; everything
+
 (check (smatch '(#("zzeee") #(((ign . #\c)) (a #(1 b #\p))))
          [(`#(,zzz) #(((_ . x)) ('a #(1 y #\p))))
           (cons y x)])
@@ -85,7 +86,17 @@
 (check-dups-error 
  (smatch-let ([(a b c) '(1 2 3)]
               [#(d (b (f))) '#(4 (5 (6)))])
-   'adsf))
+   (list a b c d f)))
+
+(check (smatch-let* ([(a b) '(1 (2 3))]
+                     [(a b) b]
+                     (#(#(b) "s" a) `#(#(,(- a)) "s" ,(* 2 b))))
+         (list a b))
+       => '(6 -2))
+(check-dups-error
+ (smatch-let* ([(a b a) '(1 (2 3))]
+               [(a b) b])
+   (list a b)))
 
 
 (check-report)

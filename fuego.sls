@@ -27,8 +27,7 @@
   
   (import 
     (rnrs)
-    (rnrs mutable-pairs)
-    (only (xitomatl macro-utils) gensym))
+    (rnrs mutable-pairs))
   
   
   (define (alist-cons key datum alist) (cons (cons key datum) alist))
@@ -257,13 +256,13 @@
             (send self :method-slots-list)))
   
   ;-----------------------------------------------------------------------------    
-  ; new-distinct doesn't have to use gensym; it can use anything which will yield
+  ; new-distinct can use anything which will yield
   ; distinct values which are not eq? and will not be eq? to any other value.
   
   (define-syntax new-distinct 
     (syntax-rules () 
       [(_ identifier) 
-       (gensym 'identifier)]))
+       (cons 'fuego-key 'identifier)]))
   
   (define-syntax define-distincts
     (syntax-rules ()

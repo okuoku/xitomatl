@@ -140,16 +140,27 @@
     ;;; (rnrs) aliases
     λ
     ;;; xitomatl bindings
+    ;; define extras
     define define-syntax define-values 
     case-lambda/AV lambda/AV λ/AV define/AV 
     case-lambda/? lambda/? λ/? define/?
-    add1 sub1 format printf fprintf make-list last-pair
+    ;; common-unstandard
+    add1 sub1 format printf fprintf make-list last-pair gensym
+    ;; ports
     read-all get-lines-all port-for-each port-map
-    gensym duplicate-id unique-ids? unique-ids?/raise
+    ;; macro-utils
+    gen-temp duplicate-id unique-ids? unique-ids?/raise
+    formals-ok? identifier-append unwrap syntax->list
+    ;; keyword-args
     lambda/kw lambda/kw/r define/kw define/kw/r :-
+    ;; indexes
     iota enumerate
+    ;; lists
     map/left-right/preserving rem-dups list-of
-    smatch smatch-lambda smatch-let
+    ;; strings
+    string-intersperse string-split
+    ;; smatch
+    smatch smatch-lambda smatch-let smatch-let*
     )
   (import
     (except (rnrs) define define-syntax)
@@ -161,5 +172,6 @@
     (xitomatl keyword-args)
     (xitomatl indexes)
     (xitomatl lists)
+    (xitomatl strings)
     (xitomatl smatch))  
 )

@@ -3,8 +3,7 @@
   (export
     smatch
     smatch-lambda smatch-lambda*
-    smatch-let #;smatch-let*
-    #;smatch-define)
+    smatch-let smatch-let*)
   (import
     (rnrs)
     (for (only (xitomatl indexes) enumerate) expand)
@@ -75,11 +74,19 @@
        (lambda x (smatch x clause ...))]))
   
   (define-syntax smatch-let
-    (lambda (stx)
-      (syntax-case stx ()
-        [(_ ([pat* expr*] ...) body0 body* ...) 
-         #'(smatch (vector expr* ...) 
-             [#(pat* ...) 
-              (let () body0 body* ...)])])))
+    (syntax-rules ()
+      [(_ ([pat* expr*] ...) body0 body* ...) 
+       (smatch (vector expr* ...) 
+         [#(pat* ...) 
+          (let () body0 body* ...)])]))
   
+  (define-syntax smatch-let*
+    (syntax-rules ()
+      [(_ () body0 body* ...)
+       (let () body0 body* ...)]
+      [(_ ([pat expr] [pat* expr*] ...) body0 body* ...)
+       (smatch expr 
+         [pat 
+          (smatch-let* ([pat* expr*] ...) body0 body* ...)])]))
+
 )

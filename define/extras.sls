@@ -12,7 +12,7 @@
     case-lambda/? lambda/? (rename (lambda/? λ/?)) define/?)
   (import 
     (rnrs)
-    (for (only (xitomatl macro-utils) formals-ok?) expand)
+    (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
     (only (xitomatl common-unstandard) format)
     (xitomatl conditions))
   
@@ -111,23 +111,23 @@
                                  [(f* ... . #(r)) (identifier? #'r) f]
                                  [(f* ... . #(r p)) #'(f* ... . #([r p]))]))
                              #'(frmls ...))])
-           (let ([fsl (map (lambda (f* fR) (append f* (list fR)))
-                           #'((frmls* ...) ...)
-                           #'(frmlR ...))])
-             (with-syntax ([((id* ... idR) ...)
-                            (map (lambda (f) (map frml-id f)) fsl)]
-                           [(([cid* pred*] ...) ...) 
-                            (map (lambda (f) (remp (lambda (x) (or (identifier? x)
-                                                                   (null? (syntax->datum x))))
-                                                   f)) 
-                                 fsl)])
-               #'(let ([acf (make-arg-check-failed 'fname)])
-                   (case-lambda 
-                     [(id* ... . idR)
-                      (unless (pred* cid*) (acf 'pred* 'cid* cid*))
-                      ...
-                      (let () . body)]
-                     ...)))))])))
+           (with-syntax ([((id* ... idR) ...)
+                          (map (lambda (f) (map frml-id (syntax->list f)))
+                               #'((frmls* ... frmlR) ...))]
+                         [(([cid* pred*] ...) ...) 
+                          (map 
+                            (lambda (f) 
+                              (remp (lambda (x) (or (identifier? x)
+                                                    (null? (syntax->datum x))))
+                                    (syntax->list f))) 
+                            #'((frmls* ... frmlR) ...))])
+             #'(let ([acf (make-arg-check-failed 'fname)])
+                 (case-lambda 
+                   [(id* ... . idR)
+                    (unless (pred* cid*) (acf 'pred* 'cid* cid*))
+                    ...
+                    (let () . body)]
+                   ...))))])))
   
   (define-syntax case-lambda/?
     (syntax-rules ()
