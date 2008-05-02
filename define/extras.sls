@@ -22,8 +22,6 @@
       received-vals))
   
   (define-syntax my:define-values
-    ;; NOTE: When Bug #162785 is fixed, the t*s won't be necessary,
-    ;;       and id*s can be defined in front of dummy and set! from the case-lambda.
     (lambda (stx)
       (syntax-case stx ()
         [(_ (id* ...) expr)
@@ -40,8 +38,9 @@
                      #f]
                     [otherwise 
                      (define-values-error #,(length #'(id* ...)) otherwise)])))
-               (define id* t*) ...
-               (set! t* #f) ...))])))
+               (define id* 
+                 (let ([v t*]) (set! t* #f) v)) 
+               ...))])))
   
 
   (define-syntax my:define

@@ -3,7 +3,7 @@
 (import 
   (rnrs)
   (xitomatl irregex)
-  (only (xitomatl lists) list-match)
+  (xitomatl smatch)
   (only (xitomatl strings) string-split)
   (only (xitomatl common-unstandard) format)
   (only (xitomatl ports) port-for-each)
@@ -16,10 +16,10 @@
                    (make-message-condition msg)
                    (make-irritants-condition irrts))))
 
-(define (subst-matches matches str subst)
+(define (subst-matches matches subst)
   (define (submatch n)
     (if (vector? matches)
-        (irregex-match-substring matches str n)
+        (irregex-match-substring matches n)
         (list-ref matches n)))
   (and
    matches
@@ -46,7 +46,7 @@
                  (lp)))))))))))
 
 (define (test-re matcher line)
-  (list-match (string-split line "\t" #t)
+  (smatch (string-split line "\t" #t)
     [(pattern input result subst output)
      (let ((name (format "~a  ~a  ~a" pattern input result)))
        (cond
@@ -56,7 +56,7 @@
           (test-assert name (not (matcher pattern input))))
          (else
           (test name output
-                (subst-matches (matcher pattern input) input subst)))))]
+                (subst-matches (matcher pattern input) subst)))))]
     [else
      (warning "invalid regex test line" line)]))
 

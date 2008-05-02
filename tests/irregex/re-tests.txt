@@ -118,7 +118,6 @@ a[bcd]+dcdcde	adcdcde	n	-	-
 (bc+d$|ef*g.|h?i(j|k))	effg	n	-	-
 (bc+d$|ef*g.|h?i(j|k))	bcdd	n	-	-
 (bc+d$|ef*g.|h?i(j|k))	reffgz	y	&-\1-\2	effgz-effgz-
-((((((((((a))))))))))	-	c	-	-
 (((((((((a)))))))))	a	y	&	a
 multiple words of text	uh-uh	n	-	-
 multiple words	multiple words, yeah	y	&	multiple words

@@ -151,6 +151,7 @@
     ;; macro-utils
     gen-temp duplicate-id unique-ids? unique-ids?/raise
     formals-ok? identifier-append unwrap syntax->list
+    with-syntax*
     ;; keyword-args
     lambda/kw lambda/kw/r define/kw define/kw/r :-
     ;; indexes

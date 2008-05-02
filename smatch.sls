@@ -45,11 +45,10 @@
            #'(and (equal? obj (quasiquote datum)) fender body)]
           [(obj (pat-car . pat-cdr) fender body)
            (with-syntax ([(obj-car obj-cdr) (generate-temporaries '(1 2))])
-             (with-syntax ([inner (T #'(obj-cdr pat-cdr fender body))])
-               (with-syntax ([outer (T #'(obj-car pat-car inner))])
-                 #'(and (pair? obj)
-                        (let ([obj-car (car obj)] [obj-cdr (cdr obj)])
-                          outer)))))]
+             #`(and (pair? obj)
+                    (let ([obj-car (car obj)] [obj-cdr (cdr obj)])
+                      #,(T #`(obj-car pat-car 
+                               #,(T #'(obj-cdr pat-cdr fender body)))))))]
           [(obj #(pat* ...) fender body)
            #`(and (vector? obj)
                   (= (vector-length obj) #,(length #'(pat* ...)))

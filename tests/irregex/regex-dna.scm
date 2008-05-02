@@ -22,7 +22,7 @@
        (let lp ((start 0) (i 0))
          (let ((m (irregex-search irx content start)))
            (cond
-            (m (lp (irregex-match-end m content 0) (+ i 1)))
+            (m (lp (irregex-match-end m 0) (+ i 1)))
             (else (display pattern) (display " ") (write i) (newline))))))) 
    '("agggtaaa|tttaccct"
      "[cgt]gggtaaa|tttaccc[acg]"
@@ -49,8 +49,8 @@
           (irregex-replace/all
            irx
            content
-           (lambda (m str)
-             (cdr (assv (string-ref str (irregex-match-start m str 0))
+           (lambda (m)
+             (cdr (assv (string-ref content (irregex-match-start m 0))
                         codes))))))
 
     ;; final output

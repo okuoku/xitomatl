@@ -5,7 +5,8 @@
     duplicate-id unique-ids? unique-ids?/raise
     formals-ok?
     identifier-append
-    unwrap syntax->list #;syntax-map)
+    unwrap syntax->list #;syntax-map
+    with-syntax*)
   (import
     (rnrs))
   
@@ -100,7 +101,7 @@
       [(ls ...) #'(ls ...)]
       [_ (assertion-violation 'syntax->list "not a syntax list" ls)]))
   
-  #;(define-syntax with-syntax*
+  (define-syntax with-syntax*
     (syntax-rules ()
       [(_ (pc0 pc1 pc* ...) b b* ...)
        (with-syntax (pc0)

@@ -130,8 +130,6 @@
          #'(match-letrec/lexical-context ctxt ([pat* expr*] ...) body0 body* ...)])))
   
   (define-syntax match-define/lexical-context
-    ;; NOTE: When Bug #162785 is fixed, the t*s won't be necessary,
-    ;;       and id*s can be defined in front of dummy and set! from the match clause body.
     (lambda (stx)
       (syntax-case stx ()
         [(_ ctxt pat expr)
@@ -141,7 +139,9 @@
                  (define t*) ...
                  (define dummy
                    (match/lexical-context ctxt expr [pat (set! t* id*) ... #f]))
-                 (define id* t*) ...)))])))
+                 (define id* 
+                   (let ([v t*]) (set! t* #f) v)) 
+                 ...)))])))
   
   (define-syntax match-define
     (lambda (stx)

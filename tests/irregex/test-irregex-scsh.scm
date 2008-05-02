@@ -45,16 +45,12 @@
 (test "caaadadr"
     (let ((str "(caaadadr ..."))
       (irregex-match-substring
-       (irregex-search '(: "c" (+ (or "a" "d")) "r") str)
-       str
-       0)))
+       (irregex-search '(: "c" (+ (or "a" "d")) "r") str))))
 
 (test "caaadadr"
     (let ((str "(caaadadr ..."))
       (irregex-match-substring
-       (irregex-search '(: "c" (** 1 6 ("ad")) "r") str)
-       str
-       0)))
+       (irregex-search '(: "c" (** 1 6 ("ad")) "r") str))))
 
 (test-assert
  (not (irregex-search '(: "c" (** 1 4 ("ad")) "r") "(caaadadr ...")))
@@ -63,33 +59,26 @@
   (test "hello"
       (irregex-match-substring
        (irregex-search (rx (dsm 1 0 (submatch "hello"))) str)
-       str
        2))
   (test-assert
    (not (irregex-match-substring
          (irregex-search (rx (dsm 1 0 (submatch "hello"))) str)
-         str
          1)))
   (test "hello"
     (irregex-match-substring
      (irregex-search (rx (dsm 2 0 (submatch "hello"))) str)
-     str
      3))
   (test-assert
    (not (irregex-match-substring
          (irregex-search (rx (dsm 2 0 (submatch "hello"))) str)
-         str
          1)))
   (test-assert
    (not (irregex-match-substring
          (irregex-search (rx (dsm 2 0 (submatch "hello"))) str)
-         str
          2))))
 
 (test "erstellt."
-    (irregex-match-substring (irregex-search (rx "erstellt.") test-string)
-                             test-string
-                             0))
+    (irregex-match-substring (irregex-search (rx "erstellt.") test-string)))
 
 (test-assert (not (irregex-search (rx "Erstellt.") test-string)))
 
@@ -98,54 +87,40 @@
 
 (test "1234"
     (irregex-match-substring
-     (irregex-search (rx (: "1" any any "4")) test-string)
-     test-string
-     0))
+     (irregex-search (rx (: "1" any any "4")) test-string)))
 
 (test (irregex-search (rx (or "erstellt." "xxx")) test-string)
     (irregex-search (rx (or "xxx" "erstellt.")) test-string))
 
 (test ""
-    (irregex-match-substring (irregex-search (rx (* "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (* "y")) test-string)))
 (test "D"
-    (irregex-match-substring (irregex-search (rx (* "D")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (* "D")) test-string)))
 (test "yyyyyyyyyy"
-    (irregex-match-substring (irregex-search (rx (+ "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (+ "y")) test-string)))
 (test "D"
-    (irregex-match-substring (irregex-search (rx (+ "D")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (+ "D")) test-string)))
 (test ""
-    (irregex-match-substring (irregex-search (rx (? "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (? "y")) test-string)))
 (test "D"
-    (irregex-match-substring (irregex-search (rx (? "D")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (? "D")) test-string)))
 (test "yyyyy"
-    (irregex-match-substring (irregex-search (rx (= 5 "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (= 5 "y")) test-string)))
 (test-assert (not (irregex-search (rx (= 11 "y")) test-string)))
 
 (test "yyyyyyyyyy"
-    (irregex-match-substring (irregex-search (rx (>= 5 "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (>= 5 "y")) test-string)))
 (test "yyyyyyyyyy"
-    (irregex-match-substring (irregex-search (rx (>= 10 "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (>= 10 "y")) test-string)))
 (test-assert (not (irregex-search (rx (>= 11 "y")) test-string)))
 (test "yyyyyyyyyy"
-    (irregex-match-substring (irregex-search (rx (** 1 30 "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (** 1 30 "y")) test-string)))
 (test "yyyyy"
-    (irregex-match-substring (irregex-search (rx (** 1 5 "y")) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (** 1 5 "y")) test-string)))
 (test-assert (not (irregex-search (rx (** 11 12 "y")) test-string)))
 (test-assert (not (irregex-search (rx (** 12 11 any)) test-string)))
 (test "" 
-    (irregex-match-substring (irregex-search (rx (** 0 0 any)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (** 0 0 any)) test-string)))
 
 (test (irregex-search (rx ("abcd")) test-string)
     (irregex-search (rx (or #\a #\b #\c #\d)) test-string))
@@ -153,49 +128,36 @@
     (irregex-search (rx (or #\x #\y)) test-string))
 
 (test "D"
-    (irregex-match-substring (irregex-search (rx (/ #\A #\Z #\a #\z #\0 #\9)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (/ #\A #\Z #\a #\z #\0 #\9)) test-string)))
 (test "D"
-    (irregex-match-substring (irregex-search (rx (/ #\A "Zaz0" #\9)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (/ #\A "Zaz0" #\9)) test-string)))
 (test "i"
-    (irregex-match-substring (irregex-search (rx (/ #\a #\z #\0 #\9)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (/ #\a #\z #\0 #\9)) test-string)))
 (test "i"
-    (irregex-match-substring (irregex-search (rx (/ #\a "z0" #\9)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (/ #\a "z0" #\9)) test-string)))
 (test "2"
-    (irregex-match-substring (irregex-search (rx (/ #\0 #\9)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (/ #\0 #\9)) test-string)))
 (test "2"
-    (irregex-match-substring (irregex-search (rx (/ "0" #\9)) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx (/ "0" #\9)) test-string)))
 (test (irregex-search (rx lower-case) test-string)
     (irregex-search (rx (- alphabetic upper-case)) test-string))
 (test (irregex-search (rx upper-case) test-string)
     (irregex-search (rx (- alphabetic lower-case)) test-string))
 
 (test "2"
-    (irregex-match-substring (irregex-search (rx numeric) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx numeric) test-string)))
 (test "-"
-    (irregex-match-substring (irregex-search (rx punctuation) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx punctuation) test-string)))
 (test " "
-    (irregex-match-substring (irregex-search (rx blank) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx blank) test-string)))
 (test " "
-    (irregex-match-substring (irregex-search (rx whitespace) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx whitespace) test-string)))
 (test "\n"
-    (irregex-match-substring (irregex-search (rx control) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx control) test-string)))
 (test "D"
-    (irregex-match-substring (irregex-search (rx hex-digit) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx hex-digit) test-string)))
 (test "D"
-    (irregex-match-substring (irregex-search (rx ascii) test-string)
-                             test-string 0))
+    (irregex-match-substring (irregex-search (rx ascii) test-string)))
 
 (test-assert (not (irregex-search (rx (w/nocase (~ "a"))) "aA")))
 
@@ -216,15 +178,13 @@
                                                       ,(if (> me 1) 
                                                            "geese" 
                                                            "goose")))
-                                               str)
-                               str 0))
+                                               str)))
   (test "feeding the geese"
       (irregex-match-substring (irregex-search (rx (: "feeding the "
                                                       ,(if (> you 1) 
                                                            "geese" 
                                                            "goose")))
-                                               str)
-                               str 0)))
+                                               str))))
 
 (let* ((ws (rx (+ whitespace)))
        (date (rx (: (or "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul")
@@ -236,15 +196,12 @@
        (str1 "it was on Mar 14 ...")
        (str2 "it was on May 31 ..."))
   (test "on Mar 14"
-      (irregex-match-substring (irregex-search (rx (: "on " ,date)) str1)
-                               str1 0))
+      (irregex-match-substring (irregex-search (rx (: "on " ,date)) str1)))
   (test "on May 31"
-      (irregex-match-substring (irregex-search (rx (: "on " ,date)) str2)
-                               str2 0)))
+      (irregex-match-substring (irregex-search (rx (: "on " ,date)) str2))))
 
 (test "abc"
-    (irregex-match-substring (irregex-search (rx "abc") "abcdefg")
-                             "abcdefg" 0))
+    (irregex-match-substring (irregex-search (rx "abc") "abcdefg")))
 (test-assert (not (irregex-search (rx "abc") "abcdefg" 3)))
 (test-assert (not (irregex-search (rx "cba") "abcdefg")))
 
@@ -265,14 +222,14 @@
            (submatch (+ digit)) "/"
            (submatch (+ digit)))
        str
-       (lambda (m str)
+       (lambda (m)
          (let ((mon (vector-ref '#("Jan" "Feb" "Mar" "Apr" "May" "Jun"
                                    "Jul" "Aug" "Sep" "Oct" "Nov" "Dec")
                                 (- (string->number
-                                    (irregex-match-substring m str 1)) 
+                                    (irregex-match-substring m 1)) 
                                    1)))
-               (day (irregex-match-substring m str 2))
-               (year (irregex-match-substring m str 3)))
+               (day (irregex-match-substring m 2))
+               (year (irregex-match-substring m 3)))
            (string-append mon " " day ", 19" year))))))
 
 (let ((kill-matches (lambda (re s)
