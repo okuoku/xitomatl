@@ -42,7 +42,6 @@
                (define id* 
                  (let ([v t*]) (set! t* #f) v)) 
                ...))])))
-  
 
   (define-syntax my:define
     (syntax-rules ()
@@ -51,7 +50,6 @@
          (lambda f2 expr expr* ...))]
       [(_ . rest)
        (define . rest)]))
-
     
   (define-syntax my:define-syntax
     (syntax-rules ()

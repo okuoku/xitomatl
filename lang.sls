@@ -138,12 +138,13 @@
     with-exception-handler with-input-from-file with-output-to-file with-syntax
     write write-char zero?
     ;;; (rnrs) aliases
-    λ
+    (rename (lambda λ))
     ;;; xitomatl bindings
     ;; define extras
     define define-syntax define-values 
     case-lambda/AV lambda/AV λ/AV define/AV 
     case-lambda/? lambda/? λ/? define/?
+    case-lambda/?/AV lambda/?/AV λ/?/AV define/?/AV
     ;; common-unstandard
     add1 sub1 format printf fprintf make-list last-pair gensym
     ;; ports
@@ -153,7 +154,7 @@
     formals-ok? identifier-append unwrap syntax->list
     with-syntax*
     ;; keyword-args
-    lambda/kw lambda/kw/r define/kw define/kw/r :-
+    lambda/kw lambda/kw-r define/kw define/kw-r :-
     ;; indexes
     iota enumerate
     ;; lists
@@ -165,7 +166,6 @@
     )
   (import
     (except (rnrs) define define-syntax)
-    (rename (only (rnrs base) lambda) (lambda λ))
     (xitomatl define extras)
     (xitomatl common-unstandard)
     (xitomatl ports)
