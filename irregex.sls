@@ -27,7 +27,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turned into an R6RS library by Derick Eddington
-;; TODO: expand-time known-string optimization, ala Aziz's pregexp
 ;; TODO: follow Shinn's comments for optimizing
 ;; TODO: use case-lambda for optional arguments
 ;; TODO: irregex-search/all

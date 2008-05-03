@@ -131,7 +131,8 @@
        => 'b)
 (check ((case-lambda/? [() 'a] [([x integer?]) 'b]) 1)
        => 'b)
-(check ((case-lambda/? [#(rest) (reverse rest)] [([x integer?]) 'b]) 1 2 3)
+(check ((case-lambda/? [() 'a] [r 'b]) 1) => 'b)
+(check ((case-lambda/? [rest (reverse rest)] [([x integer?]) 'b]) 1 2 3)
        => '(3 2 1))
 (check ((case-lambda/? [#(rest list?) (reverse rest)] [([x integer?]) 'b]) 1 2 3)
        => '(3 2 1))
@@ -145,8 +146,6 @@
                        [(x) 'b])
         'x "yy" #\z 1 -56.3 67/902)
        => '(x "yy" #\z 1 -56.3 67/902))
-(check-syntax-error
- ((case-lambda/? [() 'a] [r 'b]) 1))  ;; must use a literal vector
 (check-syntax-error
  ((case-lambda/? [() 'a] [([x]) 'b]) 1))
 (check-syntax-error
@@ -180,7 +179,7 @@
        => 'b)
 (check ((λ/? ([x integer?]) 'b) 1)
        => 'b)
-(check ((λ/? #(rest) (reverse rest)) 1 2 3)
+(check ((λ/? rest (reverse rest)) 1 2 3)
        => '(3 2 1))
 (check ((λ/? #(rest list?) (reverse rest)) 1 2 3)
        => '(3 2 1))
@@ -192,8 +191,6 @@
           (cons* x y z r))
         'x "yy" #\z 1 -56.3 67/902)
        => '(x "yy" #\z 1 -56.3 67/902))
-(check-syntax-error
- ((λ/? r 'b) 1))  ;; must use a literal vector
 (check-syntax-error
  ((λ/? ([x]) 'b) 1))
 (check-syntax-error
@@ -232,7 +229,7 @@
          (f 1))
        => 'b)
 (check (let ()
-         (define/? (f . #(rest)) (reverse rest))
+         (define/? (f . rest) (reverse rest))
          (f 1 2 3))
        => '(3 2 1))
 (check (let ()
@@ -249,10 +246,6 @@
            (cons* x y z r))
          (f 'x "yy" #\z 1 -56.3 67/902))
        => '(x "yy" #\z 1 -56.3 67/902))
-(check-syntax-error
- (let ()
-   (define/? (f . r) 'b)   ;; must use a literal vector
-   (f 1)))
 (check-syntax-error
  (let ()
    (define/? (f [x]) 'b) 
@@ -295,6 +288,85 @@
    (define/? (f x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
+
+;;; case-lambda/?/AV and friends
+
+(check ((case-lambda/?/AV [() 'a] [(x) 'b]))
+       => 'a)
+(check ((case-lambda/?/AV [([x symbol?] [y string?] [z char?] . #(r (lambda (r) (for-all number? r)))) 
+                        (cons* x y z r)] 
+                       [(x) 'b])
+        'x "yy" #\z 1 -56.3 67/902)
+       => '(x "yy" #\z 1 -56.3 67/902))
+(check ((case-lambda/?/AV [() 'a] [r 'b]) 1) => 'b)
+(check-syntax-error
+ ((case-lambda/?/AV [(x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+                  (cons* x y z r)] 
+                 [(x) 'b])
+  'x "yy" #\z 1 -56.3 67/902))
+(check-assertion-error/msg/AN "argument check failed" r
+ ((case-lambda/?/AV [(x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+                  (cons* x y z r)] 
+                 [(x) 'b])
+  'x "yy" #\z 1 -56.3 67/902))
+(check ((case-lambda/?/AV [() (AV "oops")] [#(r (lambda (x) (for-all integer? x))) r]) 1 2 3)
+       => '(1 2 3))
+(check-assertion-error/msg "oops1" 
+ ((case-lambda/?/AV [([s symbol?]) (AV "oops1" 'ign)] [ign #f]) 'blah))
+
+(check ((λ/?/AV () 'a))
+       => 'a)
+(check ((λ/?/AV ([x symbol?] [y string?] [z char?] . #(r (lambda (r) (for-all number? r)))) 
+          (cons* x y z r))
+        'x "yy" #\z 1 -56.3 67/902)
+       => '(x "yy" #\z 1 -56.3 67/902))
+(check ((λ/?/AV r 'b) 1) => 'b)
+(check-syntax-error
+ ((λ/?/AV (x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+    (cons* x y z r))
+  'x "yy" #\z 1 -56.3 67/902))
+(check-assertion-error/msg/AN "argument check failed" r
+ ((λ/?/AV (x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+    (cons* x y z r))
+  'x "yy" #\z 1 -56.3 67/902))
+(check ((λ/?/AV ([a string?]) (list->string (reverse (string->list a)))) "asdf")
+       => "fdsa")
+(check-assertion-error/msg "oops2"
+ ((λ/?/AV #(r null?) (AV "oops2"))))
+
+(check (let ()
+         (define/?/AV (f) 'a)
+         (f))
+       => 'a)
+(check (let ()
+         (define/?/AV (f [x symbol?] [y string?] [z char?] . #(r (lambda (r) (for-all number? r)))) 
+           (cons* x y z r))
+         (f 'x "yy" #\z 1 -56.3 67/902))
+       => '(x "yy" #\z 1 -56.3 67/902))
+(check
+ (let ()
+   (define/?/AV (f . r) 'b)
+   (f 1))
+ => 'b)
+(check-syntax-error
+ (let ()
+   (define/?/AV (f x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+     (cons* x y z r))
+   (f 'x "yy" #\z 1 -56.3 67/902)))
+(check-assertion-error/msg/AN "argument check failed" r
+ (let ()
+   (define/?/AV (f x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+     (cons* x y z r))
+   (f 'x "yy" #\z 1 -56.3 67/902)))
+(let ()
+  (define/?/AV (f x [y integer?] . zs) 
+    (when (null? zs) (AV "zs null" zs))
+    (apply * x y zs))
+  (check (f 1 2 3 4 5) => 120))
+(check-assertion-error/msg "oops3"
+ (let ()
+   (define/?/AV (f) (AV "oops3" 'ign 'ign 'ign))
+   (f)))
 
 
 (check-report)

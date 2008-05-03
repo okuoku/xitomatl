@@ -9,7 +9,8 @@
       (my:define define)
       (my:define-syntax define-syntax))
     case-lambda/AV lambda/AV (rename (lambda/AV λ/AV)) define/AV
-    case-lambda/? lambda/? (rename (lambda/? λ/?)) define/?)
+    case-lambda/? lambda/? (rename (lambda/? λ/?)) define/?
+    case-lambda/?/AV lambda/?/AV (rename (lambda/?/AV λ/?/AV)) define/?/AV)
   (import 
     (rnrs)
     (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
@@ -64,32 +65,38 @@
     (lambda (msg . irrts) 
       (apply assertion-violation who msg irrts)))
   
+  (define-syntax AV-wrap
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ ctxt name b b* ...)
+         (with-syntax ([AV (datum->syntax #'ctxt 'AV)])
+           #'(let ([AV (make-AV 'name)])
+               b b* ...))])))
+  
   (define-syntax case-lambda/AV--meta
     (lambda (stx)
       (syntax-case stx ()
         [(_ ctxt name [frmls . body] ...)
-         (with-syntax ([AV (datum->syntax #'ctxt 'AV)])
-           #'(let ([AV (make-AV 'name)])
-               (case-lambda [frmls . body] ...)))])))
+         #'(AV-wrap ctxt name (case-lambda [frmls . body] ...))])))
   
   (define-syntax case-lambda/AV
     (lambda (stx)
       (syntax-case stx ()
-        [(kw [frmls body0 body* ...] ...)
-         #'(case-lambda/AV--meta kw "some <case-lambda/AV>" [frmls body0 body* ...] ...)])))
+        [(ctxt [frmls body0 body* ...] ...)
+         #'(case-lambda/AV--meta ctxt "some <case-lambda/AV>" [frmls body0 body* ...] ...)])))
   
   (define-syntax lambda/AV
     (lambda (stx)
       (syntax-case stx ()
-        [(kw frmls body0 body* ...)
-         #'(case-lambda/AV--meta kw "some <lambda/AV>" [frmls body0 body* ...])])))
+        [(ctxt frmls body0 body* ...)
+         #'(case-lambda/AV--meta ctxt "some <lambda/AV>" [frmls body0 body* ...])])))
   
   (define-syntax define/AV
     (lambda (stx)
       (syntax-case stx ()
-        [(kw (fname . frmls) body0 body* ...)
+        [(ctxt (fname . frmls) body0 body* ...)
          #'(define fname
-             (case-lambda/AV--meta kw fname [frmls body0 body* ...]))])))
+             (case-lambda/AV--meta ctxt fname [frmls body0 body* ...]))])))
   
   (define (make-arg-check-failed who)
     (lambda (pred-form arg-name arg-value)
@@ -100,26 +107,23 @@
   (define-syntax case-lambda/?--meta
     (lambda (stx)
       (define (frml-id frml)
-        (syntax-case frml () [(id pred) #'id] [id #'id]))
+        (syntax-case frml () [(id pred) #'id] [_ frml]))
+      (define (needs-check? frml)
+        (syntax-case frml () [(id pred) #t] [_ #f]))
       (syntax-case stx ()
         [(_ fname [frmls . body] ...)
          (with-syntax ([((frmls* ... . #(frmlR)) ...) 
                         (map (lambda (f)
                                (syntax-case f ()
-                                 [(f* ...) #'(f* ... . #(()))]
-                                 [(f* ... . #(r)) (identifier? #'r) f]
-                                 [(f* ... . #(r p)) #'(f* ... . #([r p]))]))
+                                 [(f* ... . #(r p)) #'(f* ... . #([r p]))]
+                                 [(f* ... . r) #'(f* ... . #(r))]))
                              #'(frmls ...))])
            (with-syntax ([((id* ... idR) ...)
-                          (map (lambda (f) (map frml-id (syntax->list f)))
+                          (map (lambda (fl) (map frml-id (syntax->list fl)))
                                #'((frmls* ... frmlR) ...))]
                          [(([cid* pred*] ...) ...) 
-                          (map 
-                            (lambda (f) 
-                              (remp (lambda (x) (or (identifier? x)
-                                                    (null? (syntax->datum x))))
-                                    (syntax->list f))) 
-                            #'((frmls* ... frmlR) ...))])
+                          (map (lambda (fl) (filter needs-check? (syntax->list fl))) 
+                               #'((frmls* ... frmlR) ...))])
              #'(let ([acf (make-arg-check-failed 'fname)])
                  (case-lambda 
                    [(id* ... . idR)
@@ -143,4 +147,28 @@
       [(_ (fname . frmls) body0 body* ...)
        (define fname
          (case-lambda/?--meta fname [frmls body0 body* ...]))]))
+  
+  (define-syntax case-lambda/?/AV
+    (lambda (stx)
+      (syntax-case stx ()
+        [(ctxt [frmls body0 body* ...] ...)
+         (with-syntax ([name "some <case-lambda/?/AV>"])
+           #'(AV-wrap ctxt name
+               (case-lambda/?--meta name [frmls body0 body* ...] ...)))])))
+  
+  (define-syntax lambda/?/AV
+    (lambda (stx)
+      (syntax-case stx ()
+        [(ctxt frmls body0 body* ...)
+         (with-syntax ([name "some <lambda/?/AV>"])
+           #'(AV-wrap ctxt name
+               (case-lambda/?--meta name [frmls body0 body* ...])))])))
+  
+  (define-syntax define/?/AV
+    (lambda (stx)
+      (syntax-case stx ()
+        [(ctxt (fname . frmls) body0 body* ...)
+         #'(define fname
+             (AV-wrap ctxt fname
+               (case-lambda/?--meta fname [frmls body0 body* ...])))])))
 )

@@ -24,9 +24,7 @@
                                (lambda ()
                                  (evaler expr (interaction-environment))))])
                  (for-each
-                   (lambda (v)
-                     (unless (eq? v (void))
-                       (pretty-print v fop)))
+                   (lambda (v) (pretty-print v fop))
                    vals)
                  (apply values vals))))))]))
   
