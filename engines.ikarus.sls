@@ -34,8 +34,8 @@
 
   (define (do-return/oops args)
     (apply die 'do-return/oops "internal bug" args))
-  (define (do-complete/oops ticks value)
-    (die 'do-complete/oops "internal bug" ticks value))
+  (define (do-complete/oops ticks vals)
+    (apply die 'do-complete/oops "internal bug" ticks vals))
   (define (do-expire/oops resume)
     (die 'do-expire/oops "internal bug" resume))
   
@@ -72,9 +72,9 @@
                (reset-state)
                (escape (lambda () (apply values args)))))
            (set! do-complete
-             (lambda (leftover value)
+             (lambda (leftover vals)
                (reset-state)
-               (escape (lambda () (complete leftover value)))))
+               (escape (lambda () (apply complete leftover vals)))))
            (set! do-expire
              (lambda (resume-k)
                (reset-state)
@@ -82,16 +82,16 @@
            (resume ticks)))))
     engine)
   
-  (define (make-engine proc)
-    (unless (procedure? proc)
-      (die 'make-engine "not a procedure" proc))    
+  (define (make-engine thunk)
+    (unless (procedure? thunk)
+      (die 'make-engine "not a procedure" thunk))    
     (new-engine
       (lambda (ticks)
-        (let* ([value (begin (start-timer ticks) 
-                             (proc))]
-               [leftover (stop-timer)]) 
-          ;; stop-timer refills fuel, so there's enough for do-complete to reset-state
-          (do-complete leftover value)))))
+        (let-values ([vals (begin (start-timer ticks) 
+                                  (thunk))]) 
+          (let ([leftover (stop-timer)])
+            ;; stop-timer refills fuel, so there's enough for do-complete to reset-state
+            (do-complete leftover vals))))))
   
   (define (engine-return . args) 
     ;; stop-timer refills fuel, so there's enough for do-return to reset-state
