@@ -39,8 +39,9 @@
        (let* ([a (cons #f '())] [t a])
          (port-for-each 
            (lambda (x) 
-             (set-cdr! t (cons (proc x) '()))
-             (set! t (cdr t))) 
+             (let ([v (cons (proc x) '())])
+               (set-cdr! t v)
+               (set! t v))) 
            reader port)
          (cdr a))]
       [(proc reader) 

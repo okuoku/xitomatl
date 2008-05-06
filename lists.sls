@@ -1,12 +1,13 @@
 #!r6rs
 (library (xitomatl lists)
   (export
-    map/left-right/preserving
+    map/left-right/preserving map/filter
     rem-dups
     intersperse
     list-of)
   (import
     (rnrs)
+    (rnrs mutable-pairs)
     (only (xitomatl define extras) define/?))
   
   ; deterministic, left-to-right map
@@ -22,6 +23,21 @@
             (if (and (eq? h1 h) (eq? t1 t)) 
               l
               (cons h1 t1)))))))
+  
+  (define/? (map/filter [f procedure?] [l pair?] . #(ls (lambda (ls) (for-all pair? ls))))
+    ;; On Ikarus r1468, this is: 
+    ;; 6 times faster and uses 2.5 times less memory than equivalent 
+    ;; (filter values (map odd? l))
+    ;; for the list (list-of x (x :range #e1e6))
+    (let* ([a (cons #f '())] [c a])
+      (apply for-each 
+             (lambda xs (let ([v (apply f xs)])
+                          (when v 
+                            (let ([v (cons v '())])
+                              (set-cdr! c v)
+                              (set! c v))))) 
+             l ls)
+      (cdr a)))
 
   (define/? (rem-dups [l list?])
     (let loop ([l l] [n '()])

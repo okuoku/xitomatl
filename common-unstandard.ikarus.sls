@@ -5,6 +5,7 @@
     format printf fprintf pretty-print
     gensym
     make-list last-pair
+    time
     ;; TODO: add to as needed/appropriate
     )
   (import

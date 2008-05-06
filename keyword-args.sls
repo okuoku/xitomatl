@@ -8,10 +8,9 @@
     :-)
   (import
     (rnrs)
-    (xitomatl conditions)
     (for (only (xitomatl indexes) enumerate) expand)
     (for (xitomatl macro-utils) expand)
-    (for (xitomatl keyword-args macro-helpers) expand))
+    (for (xitomatl keyword-args macro-helpers) run expand))
   
   (define-record-type kw-args-grp (fields kw-alist))  
   
@@ -21,14 +20,6 @@
         [(_ [name* expr*] ...)
          (for-all identifier? #'(name* ...))
          #'(make-kw-args-grp (list (cons 'name* expr*) ...))])))
-  
-  (define (missing who arg-name)
-    (assertion-violation/conditions who 
-      "missing required keyword argument" '()
-      (make-argument-name-condition arg-name)))
-  
-  (define (unknown who arg-name)
-    (assertion-violation who "unknown keyword argument" arg-name))
   
   (define (not-kw-args-grp who arg0 . arg*)
     (apply assertion-violation who "not a keyword arguments group" arg0 arg*))
@@ -99,23 +90,6 @@
                             [oops
                              (apply not-kw-args-grp 'who oops)])])
                   kw-lambda)]))])))
-  
-  (define (check-kw-args incoming input-arg-names dflt-names has-kw-rest who)
-    ;; NOTE: Called at expand-time.
-    (and
-      ;; Check for unknown keyword arguments, if no kw-rest
-      (or has-kw-rest
-          (for-all (lambda (kw)
-                     (or (member kw input-arg-names) (unknown who kw)))
-                   incoming)) 
-      ;; Check for missing required keyword arguments
-      (let ([no-dflts (remp (lambda (ian)
-                              (memp (lambda (dn) (symbol=? ian dn)) 
-                                    dflt-names)) 
-                            input-arg-names)])
-        (for-all (lambda (nd)
-                   (or (member nd incoming) (missing who nd)))
-                 no-dflts))))
     
   (define-syntax define/kw--meta
     (lambda (stx)

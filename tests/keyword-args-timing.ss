@@ -1,6 +1,8 @@
-#!/usr/bin/env ikarus --r6rs-script
+#!/usr/bin/env scheme-script
+#!r6rs
 (import 
-  (ikarus)
+  (rnrs)
+  (only (xitomatl common-unstandard) add1 time)
   (xitomatl keyword-args))
 
 ;;; TODO: consult with people about better/other ways to measure
@@ -14,7 +16,7 @@
          (loop (add1 i))))]))
 
 (define N #e1e8)
-(printf "\nN = ~s\n" N)
+(display "\nN = ") (display N) (newline)
 
 (define (n1 a) a)
 (define/kw (dekw1 a) a)
