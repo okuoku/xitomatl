@@ -6,11 +6,11 @@
     gensym
     make-list last-pair
     ;; TODO: add to as needed/appropriate
-    time
+    time current-milliseconds
     )
   (import
     (rnrs)
-    (only (scheme) add1 sub1 format printf fprintf gensym time void)
+    (only (scheme) add1 sub1 format printf fprintf gensym time void current-milliseconds)
     (only (scheme pretty) pretty-print)
     (only (xitomatl predicates) exact-non-negative-integer?))
   

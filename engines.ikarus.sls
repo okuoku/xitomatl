@@ -7,7 +7,7 @@
     por)
   (import
     (rnrs)
-    (only (ikarus) engine-handler void die)
+    (only (ikarus) engine-handler fxadd1 void die)
     (only (ikarus system $interrupts) $swap-engine-counter!))    
 
   ;;; Based off of The Scheme Programming Language engines.
@@ -30,7 +30,11 @@
     (set! do-expire do-expire/oops))
   
   (define (stop-timer)
-    (abs (fxmin ($swap-engine-counter! 1) 0)))
+    ;; add1 to return value of $swap-engine-counter! to account for
+    ;; the 1 tick stop-timer itself needs to consume.  This gives an accurate
+    ;; leftover value of 0 to the complete procedures whenever the process had
+    ;; just enough fuel to complete and have the engines system finish up.
+    (abs (fxmin (fxadd1 ($swap-engine-counter! 1)) 0)))
 
   (define (do-return/oops args)
     (apply die 'do-return/oops "internal bug" args))
@@ -46,17 +50,22 @@
   (define (timer-handler)
     ;;; The pcb->engine_counter just passed 0, so there's definitely
     ;;; enough fuel for do-expire to reset-state.
-    (start-timer (call/cc do-expire)))
+    ;; add1 to the ticks supplied by resume to account for the 1 tick consumed
+    ;; by Ikarus's $do-event.  This gives a consistent logic to processes
+    ;; which calculated they should only need X more ticks to complete.
+    ;; NOTE: this will probably need to be adjusted as Ikarus changes.
+    (start-timer (fxadd1 (call/cc do-expire))))
   
   (define (new-engine resume)
     (define (engine ticks complete expire)
+      (define who "some engine invocation")
       (unless (and (fixnum? ticks) (fxpositive? ticks))
-        (die 'engine "not a positive fixnum" ticks))
+        (die who "not a positive fixnum" ticks))
       (unless (and (procedure? complete) (procedure? expire))
-        (die 'engine "not a procedure" (if (procedure? complete) expire complete)))
+        (die who "not a procedure" (if (procedure? complete) expire complete)))
       ((call/cc
          (lambda (escape)
-           ;;; For do-return, do-complete, do-expire, it is critical that stop-timer be called
+           ;;; For do-return, do-complete, do-expire, it is critical that there be enough fuel
            ;;; before calling them and that reset-state be called by them.  This ensures, if the 
            ;;; fuel runs out while calling stop-timer and when that continuation is later resumed,
            ;;; it will continue on to calling the current do-whatever (which closes over the current
