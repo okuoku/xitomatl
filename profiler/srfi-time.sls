@@ -1,11 +1,9 @@
 #!r6rs
 (library (xitomatl profiler srfi-time)
   (export
-    case-lambda/profiled
-    lambda/profiled
-    define/profiled
-    generate-report
-    print-report)
+    case-lambda/profiled lambda/profiled define/profiled
+    generate-report print-report
+    reset-recorded-uses)
   (import
     (rnrs)
     (xitomatl srfi time)
@@ -52,19 +50,31 @@
                                  (set! nl (cons n nl))))) 
                            uses)
                  (apply string-append (map (lambda (n) (format " ~s" n)) (list-sort < nl)))))
-             (fpf " numbers of arguments to calls:~a\n"
-                  (count procedure-use-args-num procedure-use-called?))
-             (fpf " numbers of values returned:~a\n"
-                  (count procedure-use-retvals-num procedure-use-returned?))
+             (let ([cs (count procedure-use-args-num procedure-use-called?)])
+               (when (positive? (string-length cs))
+                 (fpf " numbers of arguments to calls:~a\n" cs)))
+             (let ([cs (count procedure-use-retvals-num procedure-use-returned?)])
+               (when (positive? (string-length cs))
+                 (fpf " numbers of values returned:~a\n" cs)))
              (let ([ts (map (lambda (u)
                               (let* ([d (time-difference (procedure-use-stop u) 
                                                          (procedure-use-start u))]
                                      [t (+ (time-second d) (/ (time-nanosecond d) 1e9))])
                                 (max t 0)))
                             uses)])
-               (fpf " average time: ~s sec\n" (/ (apply + ts) (length ts)))
-               (fpf " minimum time: ~s sec\n" (apply min ts))
-               (fpf " maximum time: ~s sec\n" (apply max ts))))
+               (when (positive? (length ts))
+                 (fpf " average time: ~s sec\n" 
+                      (let loop ([ts^ ts] [a 0])
+                        (if (null? ts^) 
+                          (/ a (length ts))
+                          (loop (cdr ts^) (+ a (car ts^))))))
+                 (fpf " minimum time: ~s sec\n" 
+                      (let loop ([ts (cdr ts)] [m (car ts)])
+                        (if (null? ts) m (loop (cdr ts) (min m (car ts))))))
+                 (fpf " maximum time: ~s sec\n" 
+                      (let loop ([ts (cdr ts)] [m (car ts)])
+                        (if (null? ts) m (loop (cdr ts) (max m (car ts)))))))))
            (fpf "=================================================================\n"))
          report)]))
+
 )

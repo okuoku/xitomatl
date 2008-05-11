@@ -98,16 +98,11 @@
     match-equality-test
     guard ... quasiquote unquote unquote-splicing)
   (import 
-    (rnrs)
+    (for (rnrs) run expand)
     (rnrs mutable-pairs)
     (only (xitomatl common-unstandard) add1 sub1 make-list last-pair)
     (xitomatl srfi parameters))
   
-  (define-syntax syntax-error
-    (syntax-rules ()
-      [(_ stx msg)
-       (syntax-violation #f msg stx)]))
-
 (define-syntax rec
   (syntax-rules ()
     [(_ name val) 
@@ -253,14 +248,28 @@
                   (lambda (x)
                     (syntax-case x ()
                       (Name
-                        (syntax-error #'Name
-                          "guard cannot refer to return-value variable")))))
+                        (syntax-violation "guard cannot refer to return-value variable" #'Name)))))
                 ...)
              B))))))
 
 (define-syntax convert-pat
   ;; returns sexp-pat x vars x guards x cdecls
   (let ()
+    (define-syntax let-values*
+      (syntax-rules ()
+        ((_ () B0 B ...) (begin B0 B ...))
+        ((_ (((Formal ...) Exp) Decl ...) B0 B ...)
+         (call-with-values (lambda () Exp)
+           (lambda (Formal ...)
+             (let-values* (Decl ...) B0 B ...))))))
+    (define-syntax let-synvalues*
+      (syntax-rules ()
+        ((_ () B0 B ...) (begin B0 B ...))
+        ((_ (((Formal ...) Exp) Decl ...) B0 B ...)
+         (call-with-values (lambda () Exp)
+           (lambda (Formal ...)
+             (with-syntax ((Formal Formal) ...)
+               (let-synvalues* (Decl ...) B0 B ...)))))))
     (define ellipsis?
       (lambda (x)
         (and (identifier? x) (free-identifier=? x #'(... ...)))))
@@ -332,7 +341,7 @@
             (Var? #'Var)
             (let-values* (((vars guards) (fVar #'Var vars guards)))
               (values #'each-any vars guards cdecls)))
-           ((expr Dots) (syntax-error #'expr "match-pattern unquote syntax"))))
+           ((expr Dots) (syntax-violation "match-pattern unquote syntax" #'expr))))
         ((Pat Dots)
          (ellipsis? #'Dots)
          (let-values* (((Dpat Dvars Dguards Dcdecls)
@@ -370,21 +379,6 @@
         (if (pair? ls)
             (reverseX (cdr ls) (cons (car ls) acc))
             (cons ls acc))))
-    (define-syntax let-values*
-      (syntax-rules ()
-        ((_ () B0 B ...) (begin B0 B ...))
-        ((_ (((Formal ...) Exp) Decl ...) B0 B ...)
-         (call-with-values (lambda () Exp)
-           (lambda (Formal ...)
-             (let-values* (Decl ...) B0 B ...))))))
-    (define-syntax let-synvalues*
-      (syntax-rules ()
-        ((_ () B0 B ...) (begin B0 B ...))
-        ((_ (((Formal ...) Exp) Decl ...) B0 B ...)
-         (call-with-values (lambda () Exp)
-           (lambda (Formal ...)
-             (with-syntax ((Formal Formal) ...)
-               (let-synvalues* (Decl ...) B0 B ...)))))))
     (lambda (syn) 
       (syntax-case syn ()
         ((_ syn (kh . kt))
@@ -508,7 +502,7 @@
            (with-values (destruct Orig #'Exp depth)
              (syntax-lambda (ExpBuilder (ExpVar ...) (ExpExp ...))
                (if (null? #'(ExpVar ...))
-                   (syntax-error Orig "Bad ellipsis")
+                   (syntax-violation "Bad ellipsis" Orig)
                    (with-values (destruct Orig #'Rest depth)
                      (syntax-lambda (RestBuilder RestVars RestExps)
                        (with-syntax ((TailExp
@@ -524,7 +518,7 @@
                                            (f (cdr ExpVar) ...))
                                          (if (and (null? ExpVar) ...)
                                              TailExp
-                                             (syntax-error Orig "Mismatched lists"))))
+                                             (syntax-violation "Mismatched lists" Orig))))
                                  (append #'(ExpVar ...) #'RestVars)
                                  (append #'(ExpExp ...) #'RestExps)))))))))
           ;; Vectors

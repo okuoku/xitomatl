@@ -17,7 +17,8 @@
     procedure-use-args-num 
     procedure-use-returned?
     procedure-use-retvals-num
-    profiled-procedures-HT)
+    profiled-procedures-HT
+    reset-recorded-uses)
   (import
     (rnrs)
     (xitomatl box))
@@ -59,7 +60,9 @@
               (case-lambda/profiled--meta 
                '(define (n . formals) . body)
                current-info current-info-add current-info-sub
-               [formals . body]))]))]))
+               [formals . body]))]
+           [(_ name expr)
+            (define name expr)]))]))
   
   (define (make-profiled-proxy proc current-info current-info-add current-info-sub
                                calls-num returns-num entries/exits-num)
@@ -138,4 +141,14 @@
       (profiled-procedure-uses-set! pp 
         (cons (make-procedure-use start stop called? args-num returned? retvals-num) 
               (profiled-procedure-uses pp)))))  
+  
+  (define (reset-recorded-uses)
+    (let-values ([(keys vals) (hashtable-entries profiled-procedures-HT)])
+      (vector-for-each 
+        (lambda (pp)
+          (box-value-set! (profiled-procedure-calls-num pp) 0)
+          (box-value-set! (profiled-procedure-returns-num pp) 0)
+          (box-value-set! (profiled-procedure-entries/exits-num pp) 0)
+          (profiled-procedure-uses-set! pp '())) 
+        vals)))  
 )

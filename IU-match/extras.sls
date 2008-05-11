@@ -15,7 +15,7 @@
   (import
     (rnrs)
     (xitomatl IU-match)
-    (xitomatl IU-match macro-helpers))
+    (for (xitomatl IU-match macro-helpers) expand))
   
   (define-syntax match-lambda/lexical-context
     (lambda (stx)
