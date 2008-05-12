@@ -26,9 +26,13 @@
   
   (define print-report
     (case-lambda
-      [() (print-report (generate-report))]
-      [(report) (print-report report (current-output-port))]
-      [(report port)
+      [()
+       (print-report #f)]
+      [(print-unused?) 
+       (print-report print-unused? (generate-report))]
+      [(print-unused? report) 
+       (print-report print-unused? report (current-output-port))]
+      [(print-unused? report port)
        (define (fpf str . args) (apply fprintf port str args))
        (define (fpp x) (pretty-print x port))
        (for-each
@@ -75,6 +79,10 @@
                       (let loop ([ts (cdr ts)] [m (car ts)])
                         (if (null? ts) m (loop (cdr ts) (max m (car ts)))))))))
            (fpf "=================================================================\n"))
-         report)]))
+         (if print-unused?
+           report
+           (filter 
+             (lambda (pp) (positive? (length (profiled-procedure-uses pp))))
+             report)))]))
 
 )

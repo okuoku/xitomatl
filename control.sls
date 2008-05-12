@@ -6,10 +6,14 @@
     (rnrs))
   
   (define-syntax aif
-    (syntax-rules ()
-      [(_ var ve te fe) 
-       (let ([t ve]) 
-         (if t 
-           (let ([var t]) te) 
-           fe))]))
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ var ve te fe)
+         (identifier? #'var)
+         #'(let ([var ve])
+             (if var te fe))]
+        [(_ var pred ve te fe) 
+         (identifier? #'var)
+         #'(let ([var ve])
+             (if (pred var) te fe))])))
 )

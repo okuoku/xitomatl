@@ -22,19 +22,14 @@
     :parent-slots-keys :value-slots-keys :method-slots-keys
     ; Convenient syntaxes
     new-distinct define-distincts
-    object #;define-object
+    object define-values
     ; Exception conditions
     &fuego? &unknown-key? &slot-already-exists?)  
   (import
     (rnrs)
-    #;(except (rnrs) define lambda case-lambda)
-    #;(prefix (only (rnrs) define lambda case-lambda) rnrs:)
-    #;(rename (only (xitomatl profiler srfi-time) define/profiled lambda/profiled case-lambda/profiled) 
-      (define/profiled define)
-      (lambda/profiled lambda) 
-      (case-lambda/profiled case-lambda))
     (rnrs mutable-pairs)
-    (only (xitomatl define extras) define/?))
+    (only (xitomatl define extras) define/? define-values)
+    (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand))
   
   ;-----------------------------------------------------------------------------    
   
@@ -206,10 +201,12 @@
   
   ;-----------------------------------------------------------------------------    
   
-  (define (new-distinct id) 
+  (define-record-type fuego-key (fields name))
+  
+  (define (new-distinct name) 
     ; A new distinct can use anything which will yield
     ; distinct values which are not eq? and will not be eq? to any other value.  
-    (list 'fuego-key id))
+    (make-fuego-key name))
   
   (define-syntax define-distincts
     (syntax-rules ()
@@ -270,13 +267,15 @@
                              [(quote x) (identifier? #'x)]
                              [x (identifier? #'x)])
                            (identifier? #'s))
-                      (with-syntax ([mnk-e (if (identifier? #'mn) 
-                                             #'(new-distinct 'mn)
-                                             #'mn)])
+                      (with-syntax* ([mnk (gen-temp)]
+                                     [(mnk-e add-mnk (... ...)) 
+                                      (if (identifier? #'mn) 
+                                        #'((new-distinct 'mn) (set! keys (cons mnk keys)))
+                                        #'(mn))])
                         #'(let ([mnk mnk-e])
                             (send o :add-method-slot! mnk 
                                   (lambda (s . ra) b0 b (... ...)))
-                            (set! keys (cons mnk keys))))])))
+                            add-mnk (... ...)))])))
                (define-syntax value
                  (lambda (stx)
                    (syntax-case stx ()
@@ -289,15 +288,23 @@
                                     (syntax-case (car #'(sn (... ...))) (quote)
                                       [(quote x) (identifier? #'x)]
                                       [x (identifier? #'x)]))))
-                      (with-syntax ([vnk-e (if (identifier? #'vn) #'(new-distinct 'vn) #'vn)]
-                                    [(snk-e (... ...)) 
-                                     (map (lambda (x) (if (identifier? x) #`(new-distinct '#,x) x)) 
-                                          #'(sn (... ...)))]
-                                    [(snk (... ...)) (generate-temporaries #'(sn (... ...)))])
+                      (with-syntax* ([vnk (gen-temp)]
+                                     [(snk (... ...)) (generate-temporaries #'(sn (... ...)))]
+                                     [(vnk-e add-vnk (... ...)) 
+                                      (if (identifier? #'vn)
+                                        #'((new-distinct 'vn) (set! keys (cons vnk keys)))
+                                        #'(vn))]
+                                     [((snk-e add-snk (... ...)) (... ...)) 
+                                      (map (lambda (x y) 
+                                             (if (identifier? x) 
+                                               #`((new-distinct '#,x) (set! keys (cons #,y keys)))
+                                               (list x))) 
+                                           #'(sn (... ...))
+                                           #'(snk (... ...)))])
                         #'(let ([vnk vnk-e] [snk snk-e] (... ...))
                             (send o :add-value-slot! vnk v snk (... ...))
-                            (set! keys (cons vnk keys))
-                            (set! keys (cons snk keys)) (... ...)))])))
+                            add-vnk (... ...)
+                            add-snk (... ...) (... ...)))])))
                (define-syntax parent
                  (lambda (stx)
                    (syntax-case stx ()
@@ -305,10 +312,14 @@
                       (syntax-case #'pn (quote)
                         [(quote x) (identifier? #'x)]
                         [x (identifier? #'x)])
-                      (with-syntax ([pnk-e (if (identifier? #'pn) #'(new-distinct 'pn) #'pn)])
+                      (with-syntax* ([pnk (gen-temp)]
+                                     [(pnk-e add-pnk (... ...)) 
+                                      (if (identifier? #'pn)
+                                        #'((new-distinct 'pn) (set! keys (cons pnk keys)))
+                                        #'(pn))])
                         #'(let ([pnk pnk-e]) 
                             (send o :add-parent-slot! pnk p)
-                            (set! keys (cons pnk keys))))])))
+                            add-pnk (... ...)))])))
                body ...
                (apply values o (reverse keys))))])))
   

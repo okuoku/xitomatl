@@ -5,43 +5,18 @@
 (library (xitomatl define extras)
   (export 
     (rename
-      (my:define-values define-values)
       (my:define define)
       (my:define-syntax define-syntax))
+    define-values
     case-lambda/AV lambda/AV (rename (lambda/AV λ/AV)) define/AV
     case-lambda/? lambda/? (rename (lambda/? λ/?)) define/?
     case-lambda/?/AV lambda/?/AV (rename (lambda/?/AV λ/?/AV)) define/?/AV)
   (import 
     (rnrs)
+    (xitomatl define define-values)
     (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
     (only (xitomatl common-unstandard) format)
     (xitomatl conditions))
-  
-  (define (define-values-error expected received-vals)
-    (apply assertion-violation 'define-values
-      (format "expected ~a values, received ~a values" expected (length received-vals))
-      received-vals))
-  
-  (define-syntax my:define-values
-    (lambda (stx)
-      (syntax-case stx ()
-        [(_ (id* ...) expr)
-         (formals-ok? #'(id* ...) stx)  ;; prevents duplicates
-         (with-syntax ([(t* ...) (generate-temporaries #'(id* ...))])
-           #`(begin
-               (define t*) ...
-               (define dummy 
-                 (call-with-values 
-                  (lambda () #f expr) ;; #f first to prevent internal defines
-                  (case-lambda
-                    [(id* ...)
-                     (set! t* id*) ...
-                     #f]
-                    [otherwise 
-                     (define-values-error #,(length #'(id* ...)) otherwise)])))
-               (define id* 
-                 (let ([v t*]) (set! t* #f) v)) 
-               ...))])))
 
   (define-syntax my:define
     (syntax-rules ()
