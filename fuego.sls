@@ -10,254 +10,169 @@
 ;       methods should not cause an exception which reveals the name of the underlying.
 ;       For _real_ capability-security, this needs to be thouroughly analyzed and tamed
 
-(library (xitomatl fuego)  
-  (export 
-    root-object send fuego-object?
+(library (xitomatl fuego)
+  (export
+    fuego-object? make-key key?
+    root-object send #;resend
     ; Distinct key values for root-object's slots 
-    :clone :unknown-key :slot-already-exists
-    :has-parent-slot? :has-value-slot? :has-method-slot?
-    :has-slot? :slots-keys :delete-slot! 
-    :delete-parent-slot! :delete-value-slot! :delete-method-slot!
-    :add-parent-slot! :add-value-slot! :add-method-slot!
-    :parent-slots-keys :value-slots-keys :method-slots-keys
-    ; Convenient syntaxes
-    new-distinct define-distincts
+    :clone :unknown :already-exists :has? :keys
+    :add-method! :add-parent! :add-value! :delete! 
+    ; Convenient syntaxes    
     object define-values
-    ; Exception conditions
-    &fuego? &unknown-key? &slot-already-exists?)  
+    ; Exception condition
+    &fuego? &fuego-object)  
   (import
     (rnrs)
-    (rnrs mutable-pairs)
     (only (xitomatl define extras) define/? define-values)
+    (only (xitomatl conditions) assertion-violation/conditions)
     (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand))
   
   ;-----------------------------------------------------------------------------    
   
   (define-record-type fuego-object
     (opaque #t) (sealed #t)
-    (fields (mutable parent-slots)
-            (mutable value-slots)
-            (mutable method-slots)))
+    (fields (mutable slots) (mutable parents)))
     
-  (define (slots-delete key slots)
-    (remp (lambda (p) (eq? (car p) key)) slots))
+  (define-record-type key (fields name))
   
   ;-----------------------------------------------------------------------------    
   
   (define-condition-type &fuego &condition 
     make-&fuego &fuego?
-    (obj &fuego-obj))
-
-  (define-condition-type &unknown-key &fuego
-    make-&unknown-key &unknown-key?
-    (key &unknown-key-key))
+    (object &fuego-object))
   
-  (define-condition-type &slot-already-exists &fuego
-    make-&slot-already-exists &slot-already-exists?
-    (slot &slot-already-exists-slot))
-  
-  (define (raise-&fuego obj str)
-    (raise (condition (make-&fuego obj) (make-message-condition str))))
-  
-  (define (raise-&unknown-key obj key)
-    (raise (condition (make-&unknown-key obj key))))
-  
-  (define (raise-&slot-already-exists obj key)
-    (raise (condition (make-&slot-already-exists obj key))))
+  (define (AV/F obj msg . irrts)
+    (assertion-violation/conditions '(library (xitomatl fuego))
+                                    msg irrts (make-&fuego obj)))
   
   ;-----------------------------------------------------------------------------  
   
   (define/? (send [obj fuego-object?] key . args)
-    (find-key/handle obj obj key args #f))  
+    (find-key/handle obj obj key args #f #f))
+  
+  #;(define/? (resend [obj fuego-object?] key . args)
+    ;; This has problems -- what if it's used by a method of one of obj's parents,
+    ;; it will infinitely loop finding the same method which does the same resend.
+    (let loop ([parents (fuego-object-parents obj)])      
+      (if (null? parents)
+        (AV/F obj "no parent has key" key)
+        (find-key/handle obj (cdar parents) key args loop (cdr parents)))))
 
-  (define (find-key/handle receiver search key args not-found-thunk)
+  (define (find-key/handle receiver search key args child-loop child-parents)
     ; Search obj's immediate slots
-    ; If not found, recursively search parents
-    (let ([found (assq key (fuego-object-method-slots search))])
+    ; If not found, search parents, depth-first
+    (let ([found (assq key (fuego-object-slots search))])
       (if found
         (apply (cdr found) receiver args)
-        (begin
-          (set! found (assq key (fuego-object-value-slots search)))
-          (if found
-            (cadr found)
-            (let ([parents (fuego-object-parent-slots search)])
-              (set! found (assq key parents))
-              (if found 
-                (cdr found)
-                (let loop ([parents parents])
-                  (if (null? parents)
-                    (if not-found-thunk
-                      (not-found-thunk)
-                      (find-key/handle receiver search :unknown-key (list key args)
-                                       (lambda () (when (null? parents)
-                                                    (raise-&fuego search "empty parent slots")))))
-                    (find-key/handle receiver (cdar parents) key args 
-                                     (lambda () (loop (cdr parents)))))))))))))
+        (let loop ([parents (fuego-object-parents search)])
+          (if (null? parents)
+            (if child-loop
+              (child-loop child-parents)
+              (find-key/handle receiver receiver :unknown (cons key args)
+                (lambda (ign) (AV/F receiver "unknown key" key)) #f))
+            (find-key/handle receiver (cdar parents) key args loop (cdr parents)))))))
 
   ;-----------------------------------------------------------------------------
   
   (define root-clone
     (case-lambda
-      [(self) (root-clone self (new-distinct ':parent))]
-      [(self pn)
-       (make-fuego-object 
-        (list (cons pn self)) ; parent-slots
-        '()                   ; value-slots
-        '())]))               ; method-slots  
+      [(self) (root-clone self (make-key 'cloned-parent))]
+      [(self pk)
+       (let ([o (make-fuego-object '() '())])
+         (root-add-parent! o pk self)
+         o)]))
   
-  (define (root-unknown-key self key ignore)
-    (raise-&unknown-key self key))  
+  (define (root-delete! self key)
+    (fuego-object-slots-set! self
+      (remp (lambda (s) (eq? (car s) key)) 
+            (fuego-object-slots self)))
+    (fuego-object-parents-set! self
+      (remp (lambda (pp) (eq? (car pp) key)) 
+            (fuego-object-parents self))))  
   
-  (define (root-slot-already-exists self key value type)
-    (raise-&slot-already-exists self key))  
+  (define (root-has? self key)
+    (if (assq key (fuego-object-slots self)) #t #f))
+
+  (define/? (root-add-method! self key [proc procedure?])
+    (if (root-has? self key)
+      (send self :already-exists key proc)
+      (fuego-object-slots-set! self
+        (cons (cons key proc) (fuego-object-slots self)))))
   
-  (define (root-delete-parent-slot! self key)
-    (fuego-object-parent-slots-set! self 
-      (slots-delete key (fuego-object-parent-slots self))))
-  
-  (define (root-delete-value-slot! self key)
-    (let ([value-slots (fuego-object-value-slots self)])
-      (cond [(assq key value-slots)
-             => (lambda (pair)
-                  (when (pair? (cddr pair))
-                    (root-delete-method-slot! self (caddr pair))))])
-      (fuego-object-value-slots-set! self (slots-delete key value-slots))))
-  
-  (define (root-delete-method-slot! self key)
-    (fuego-object-method-slots-set! self 
-      (slots-delete key (fuego-object-method-slots self))))
-  
-  (define (root-delete-slot! self key)
-    (root-delete-parent-slot! self key)
-    (root-delete-value-slot! self key)
-    (root-delete-method-slot! self key))  
-  
-  (define (root-has-parent-slot? self key)
-    (if (assq key (fuego-object-parent-slots self)) #t #f))
-  
-  (define (root-has-value-slot? self key)
-    (if (assq key (fuego-object-value-slots self)) #t #f))
-  
-  (define (root-has-method-slot? self key)
-    (if (assq key (fuego-object-method-slots self)) #t #f))
-  
-  (define (root-has-slot? self key)
-    (or (root-has-parent-slot? self key)
-        (root-has-value-slot? self key)
-        (root-has-method-slot? self key)))
-    
-  (define/? (root-add-parent-slot! self key [value fuego-object?])
-    (if (root-has-slot? self key)
-      (send self :slot-already-exists key value 'parent)
-      (fuego-object-parent-slots-set! self
-        (cons (cons key value)
-              (fuego-object-parent-slots self)))))  
-  
-  (define root-add-value-slot!
+  (define root-add-value! 
     (case-lambda
-      [(self key value)
-       (if (root-has-slot? self key)
-         (send self :slot-already-exists key value 'value)
-         (fuego-object-value-slots-set! self
-           (cons (cons key (list value))
-                 (fuego-object-value-slots self))))]
-      [(self key value set-key)
-       (if (root-has-slot? self key)
-         (send self :slot-already-exists key value 'value)
-         (let ([value-info (list value set-key)])
-           (fuego-object-value-slots-set! self
-             (cons (cons key value-info)
-                   (fuego-object-value-slots self)))
-           (root-add-method-slot! self set-key
-             (lambda (s new-value) 
-               (if (eq? s self)
-                 (set-car! value-info new-value)
-                 (let ([vs (fuego-object-value-slots s)])
-                   (cond [(assq key vs)
-                          => (lambda (p) (set-car! (cdr p) new-value))]
-                         [else
-                          (fuego-object-value-slots-set! s
-                            (cons (cons key (list new-value)) vs))])))))))]))
+      [(self key val) (root-add-value! self key val #f)]
+      [(self key val mutable)
+       (define (ina s args) 
+         (AV/F s "value method called with invalid number of arguments" (length args)))
+       (root-add-method! self key
+         (if mutable
+           (case-lambda 
+             [(s) val] 
+             [(s n) (if (eq? s self)
+                      (set! val n)
+                      (root-add-value! s key n mutable))]
+             [(s . args) (ina s args)])
+           (case-lambda 
+             [(s) val]
+             [(s n) (AV/F s "immutable value" key n)]
+             [(s . args) (ina s args)])))]))
+  
+  (define/? (root-add-parent! self key [obj fuego-object?])
+    (let detect ([parents (fuego-object-parents obj)])
+      (for-each (lambda (p) 
+                  (if (eq? p self)
+                    (AV/F self "parent cycle" obj)
+                    (detect (fuego-object-parents p))))
+                (map cdr parents)))
+    (root-add-value! self key obj)
+    (fuego-object-parents-set! self
+      (append (fuego-object-parents self) (list (cons key obj)))))
     
-  (define/? (root-add-method-slot! self key [proc procedure?])
-    (if (root-has-slot? self key)
-      (send self :slot-already-exists key proc 'method)
-      (fuego-object-method-slots-set! self 
-        (cons (cons key proc) (fuego-object-method-slots self)))))
-    
-  (define (root-parent-slots-keys self)
-    (map car (fuego-object-parent-slots self))) 
+  (define (root-keys self)
+    (map car (fuego-object-slots self)))
   
-  (define (root-value-slots-keys self)
-    (map car (fuego-object-value-slots self))) 
+  (define (root-unknown self key . vals)
+    (AV/F self "unknown key" key))  
   
-  (define (root-method-slots-keys self)
-    (map car (fuego-object-method-slots self)))
-  
-  (define (root-slots-keys self)
-    (append (root-parent-slots-keys self)
-            (root-value-slots-keys self)
-            (root-method-slots-keys self)))
+  (define (root-already-exists self key val)
+    (AV/F self "slot already exists" key))  
   
   ;-----------------------------------------------------------------------------    
   
-  (define-record-type fuego-key (fields name))
-  
-  (define (new-distinct name) 
-    ; A new distinct can use anything which will yield
-    ; distinct values which are not eq? and will not be eq? to any other value.  
-    (make-fuego-key name))
-  
-  (define-syntax define-distincts
+  (define-syntax define-root-keys
     (syntax-rules ()
       [(_ identifier ...)
-       (begin (define identifier (new-distinct 'identifier)) ...)]))
+       (begin (define identifier (make-key 'identifier)) ...)]))
 
   ; Distinct values used as keys used to access standard slots.
   ; Distinct values are used so access to any one of these slots can be 
   ; prevented by not supplying the corresponding value (capability-security).
-  (define-distincts :clone :unknown-key :slot-already-exists
-                    :has-parent-slot? :has-value-slot? :has-method-slot? 
-                    :has-slot? :slots-keys :delete-slot!
-                    :delete-parent-slot! :delete-value-slot! :delete-method-slot!
-                    :add-parent-slot! :add-value-slot! :add-method-slot!
-                    :parent-slots-keys :value-slots-keys :method-slots-keys)
-  
-  ;-----------------------------------------------------------------------------  
+  (define-root-keys :clone :unknown :already-exists :keys :has? 
+                    :add-method! :add-parent! :add-value! :delete!)
   
   (define root-object
-    (make-fuego-object '()  ; parent-slots
-                       '()  ; value-slots
-                       ; method-slots
-                       (list (cons :clone                    root-clone)
-                             (cons :unknown-key              root-unknown-key)
-                             (cons :slot-already-exists      root-slot-already-exists)
-                             (cons :delete-slot!             root-delete-slot!)
-                             (cons :delete-parent-slot!      root-delete-parent-slot!)
-                             (cons :delete-value-slot!       root-delete-value-slot!)
-                             (cons :delete-method-slot!      root-delete-method-slot!)
-                             (cons :has-slot?                root-has-slot?)
-                             (cons :has-parent-slot?         root-has-parent-slot?)
-                             (cons :has-value-slot?          root-has-value-slot?)
-                             (cons :has-method-slot?         root-has-method-slot?)
-                             (cons :add-parent-slot!         root-add-parent-slot!)
-                             (cons :add-value-slot!          root-add-value-slot!)
-                             (cons :add-method-slot!         root-add-method-slot!)
-                             (cons :parent-slots-keys        root-parent-slots-keys) 
-                             (cons :value-slots-keys         root-value-slots-keys)
-                             (cons :method-slots-keys        root-method-slots-keys)
-                             (cons :slots-keys               root-slots-keys)) ))
+    (make-fuego-object 
+     (list (cons :clone root-clone)
+           (cons :unknown root-unknown)
+           (cons :already-exists root-already-exists)
+           (cons :keys root-keys)
+           (cons :has? root-has?)
+           (cons :add-method! root-add-method!)
+           (cons :add-parent! root-add-parent!)
+           (cons :add-value! root-add-value!)
+           (cons :delete! root-delete!))
+     '()))
   
   (define-syntax object
     (lambda (stx)
       (syntax-case stx ()
-        [(kw () body ...)
-         #'(kw (root-object) body ...)]
-        [(kw (main-parent) body ...)
+        [(kw body ...)
          (with-syntax ([method (datum->syntax #'kw 'method)]
                        [value (datum->syntax #'kw 'value)]
                        [parent (datum->syntax #'kw 'parent)])
-           #'(let ([o (send main-parent :clone)]
+           #'(let ([o (make-fuego-object '() '())]
+                   [has-parent #f]
                    [keys '()])
                (define-syntax method
                  (lambda (stx)
@@ -270,44 +185,35 @@
                       (with-syntax* ([mnk (gen-temp)]
                                      [(mnk-e add-mnk (... ...)) 
                                       (if (identifier? #'mn) 
-                                        #'((new-distinct 'mn) (set! keys (cons mnk keys)))
+                                        #'((make-key 'mn) (set! keys (cons mnk keys)))
                                         #'(mn))])
                         #'(let ([mnk mnk-e])
-                            (send o :add-method-slot! mnk 
-                                  (lambda (s . ra) b0 b (... ...)))
+                            (root-add-method! o mnk 
+                              (lambda (s . ra) b0 b (... ...)))
                             add-mnk (... ...)))])))
                (define-syntax value
                  (lambda (stx)
                    (syntax-case stx ()
-                     [(_ vn v sn (... ...))
-                      (and (syntax-case #'vn (quote)
-                             [(quote x) (identifier? #'x)]
-                             [x (identifier? #'x)])
-                           (or (zero? (length #'(sn (... ...))))
-                               (and (= 1 (length #'(sn (... ...))))
-                                    (syntax-case (car #'(sn (... ...))) (quote)
-                                      [(quote x) (identifier? #'x)]
-                                      [x (identifier? #'x)]))))
+                     [(_ vn v) #'(value vn v #f)]
+                     [(_ vn v m)
+                      (syntax-case #'vn (quote)
+                        [(quote x) (identifier? #'x)]
+                        [x (identifier? #'x)])
                       (with-syntax* ([vnk (gen-temp)]
-                                     [(snk (... ...)) (generate-temporaries #'(sn (... ...)))]
                                      [(vnk-e add-vnk (... ...)) 
                                       (if (identifier? #'vn)
-                                        #'((new-distinct 'vn) (set! keys (cons vnk keys)))
-                                        #'(vn))]
-                                     [((snk-e add-snk (... ...)) (... ...)) 
-                                      (map (lambda (x y) 
-                                             (if (identifier? x) 
-                                               #`((new-distinct '#,x) (set! keys (cons #,y keys)))
-                                               (list x))) 
-                                           #'(sn (... ...))
-                                           #'(snk (... ...)))])
-                        #'(let ([vnk vnk-e] [snk snk-e] (... ...))
-                            (send o :add-value-slot! vnk v snk (... ...))
-                            add-vnk (... ...)
-                            add-snk (... ...) (... ...)))])))
+                                        #'((make-key 'vn) (set! keys (cons vnk keys)))
+                                        #'(vn))])
+                        #'(let ([vnk vnk-e])
+                            (root-add-value! o vnk v m)
+                            add-vnk (... ...)))])))
                (define-syntax parent
                  (lambda (stx)
                    (syntax-case stx ()
+                     [(_ p) 
+                      #'(let ([pnk (make-key 'parent)]) 
+                          (root-add-parent! o pnk p)
+                          (set! has-parent #t))]
                      [(_ pn p)
                       (syntax-case #'pn (quote)
                         [(quote x) (identifier? #'x)]
@@ -315,12 +221,15 @@
                       (with-syntax* ([pnk (gen-temp)]
                                      [(pnk-e add-pnk (... ...)) 
                                       (if (identifier? #'pn)
-                                        #'((new-distinct 'pn) (set! keys (cons pnk keys)))
+                                        #'((make-key 'pn) (set! keys (cons pnk keys)))
                                         #'(pn))])
                         #'(let ([pnk pnk-e]) 
-                            (send o :add-parent-slot! pnk p)
+                            (root-add-parent! o pnk p)
+                            (set! has-parent #t)
                             add-pnk (... ...)))])))
                body ...
+               (unless has-parent
+                 (root-add-parent! o (make-key 'cloned-parent) root-object))
                (apply values o (reverse keys))))])))
-  
+
 )
