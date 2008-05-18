@@ -13,7 +13,7 @@
   
   (define string-split
     (case-lambda
-      [(str) (string-split str "\t\n " #f)]
+      [(str) (string-split str "\t\n\r " #f)]
       [(str delim-strs) (string-split str delim-strs #f)]
       [(str delim-strs keep-empty?)
        (unless (string? str)
