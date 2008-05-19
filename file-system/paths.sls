@@ -1,8 +1,8 @@
 #!r6rs
-(library (xitomatl paths)
+(library (xitomatl file-system paths)
   (export
     dir-sep-char dir-sep-str root-dir-str
-    absolute-path? relative-path? path-join path-split)
+    path? absolute-path? relative-path? path-join path-split)
   (import
     (rnrs)
     (xitomatl strings))
@@ -18,13 +18,14 @@
     #;(string=? (root-dir-str) (substring p 0 (string-length (root-dir-str))))
     (char=? dir-sep-char (string-ref p 0)))
   
-  (define (absolute-path? p)
-    (and (positive? (string-length p))
-         (starts-with-root? p)))
+  (define (path? x)
+    (and (string? x) (positive? (string-length x))))
   
-  (define (relative-path? p)
-    (and (positive? (string-length p))
-         (not (starts-with-root? p))))
+  (define (absolute-path? x)
+    (and (path? x) (starts-with-root? x)))
+  
+  (define (relative-path? x)
+    (and (path? x) (not (starts-with-root? x))))
   
   (define (path-join . ps)
     (let ([r (string-intersperse (apply append (map _path-split ps)) 

@@ -60,7 +60,7 @@
 (define (basic-tests o)
   (check-exn (send o 'oops) 
              => (unknown-exn? '(oops) o))
-  (send o :add-method! 'm (lambda args args))
+  (send o :add-method! 'm (lambda (s r . args) (cons s args)))
   (send o :add-method! 'm2 (lambda args args))
   (check (send o 'm 1 "two") => (list o 1 "two"))
   (check-exn (send o :add-value! 'm 1) 
@@ -116,6 +116,24 @@
 ;; o1 overriding o0
 (check (send o1 'vm) => "asdf")
 (check (send o1 'm 'a 2 "x") => (list o1 'a 2 "x"))
+;; o1 using resend
+(send o1 :delete! 'm)
+(send o1 :add-method! 'm (lambda (s resend . a) (resend 'm a)))
+(check (send o1 'm 'foo "bar") => (list o1 '(foo "bar")))
+;; resend lookup through more than one parent
+(let ([ob (object (parent (object (parent (object))))
+                  (parent (object (parent (object))
+                                  (parent (object (parent 
+                                                    (object (parent (object (parent (object))))))
+                                                  (parent o1)))))
+                  (method ('m s r . a) (r 'm a)))])
+  (check (send ob 'm 'bar "foo")
+         => (list ob '((bar "foo")))))
+;; resend delivers :unknown to the owner of the method which uses it
+(check-exn (send o1 'r-oops) => (unknown-exn? '(r-oops) o1))
+(send o0 :add-method! 'r-oops (lambda (s r) (r 'asdf)))
+(check-exn (send o1 'r-oops)
+           => (unknown-exn? '(asdf) o0)) ;; note that it's o0 which gets the :unknown
 ;; o1 using parent's slots
 (send o1 :delete! 'vm)
 (check (send o1 :has? 'vm) => #f)
@@ -143,21 +161,22 @@
 (check-exn (send o0 :add-parent! 'P o1)
            => (cycle-exn? (list o1) o0))
 ;; override unknown key and already-exists
-(send o1 :add-method! :unknown (lambda (s k . vs) (send s :add-value! k vs)))
+(send o1 :add-method! :unknown (lambda (s r k . vs) (send s :add-value! k vs)))
 (send o1 'oops 47 "blah")
 (check (send o1 'oops) => '(47 "blah"))
-(send o1 :add-method! :already-exists (lambda args (reverse args)))
+(send o1 :add-method! :already-exists (lambda (s r . args) (reverse (cons s args))))
 (check (send o1 :add-method! :unknown +) => (list + :unknown o1))
 
 ;; multiple parents
 (define o2 (send root-object :clone))
-(send o2 :add-method! 'm (lambda args (length args)))
+(send o2 :add-method! 'm (lambda (s r . args) (length args)))
 (send o1 :add-parent! 'p o2)
-#;(check (send o1 'm 1 2 3) => (list o1 3 2 1)) ;; o1's 'm uses first parent o0's
+(send o1 :add-method! 'm (lambda (s r . args) (cons s (reverse args))))
+(check (send o1 'm 1 2 3) => (list o1 3 2 1)) ;; o1's new 'm used
 (send o1 :delete! 'm)
-(check (send o1 'm 1 2 3) => (list o1 1 2 3)) ;; o0's 'm used
+(check (send o1 'm 1 2 3) => (list o1 1 2 3)) ;; first parent o0's 'm used
 (send o0 :delete! 'm)
-(check (send o1 'm 1 2 3) => 4) ;; o2's 'm used
+(check (send o1 'm 1 2 3) => 3) ;; second parent o2's 'm used
 
 ;; unusual, intentionally allowed, reconfigurations of lower levels, "meta class" abilities
 ;;;; NOT YET SURE
@@ -170,11 +189,28 @@
 (check (eq? root-object (send o3 (car (send o3 :keys)))) 
        => #t)
 (basic-tests o3)
-(define o4 (object (parent o3) 
-                   (method ('m s . a) (null? a))
-                   (value 'v 'VEE)))
+(define Pk (make-key 'Pk))
+(define Mk (list 'Mk))
+(define Vk (string-copy "Vk"))
+;; unquoted field names are the value of any expression,
+;; but must be something which can reliably be found via eq? / assq.
+(define o4 (object (parent o3)
+                   (parent ,Pk (object))
+                   (method ('m s r . a) 
+                     (vector (null? a)
+                             (r 'm a)))
+                   (method (,Mk s r) 'hehehe)
+                   (method (,:unknown s r k . v) `(WHAT?! ,k . ,v))
+                   (value 'v 'VEE)
+                   (value ,Vk 'first #t)))
 (check (send o4 'vm) => "asdf")  ;; basic-tests added 'vm to o3
-(check (send o4 'm) => #t)
+(check (send o4 'm) => (vector #t (list o4 '())))
 (check (send o4 'v) => 'VEE)
+(check (fuego-object? (send o4 Pk)) => #t)
+(check (send o4 Mk) => 'hehehe)
+(check (send o4 'oops #\a "b" 'c) => '(WHAT?! oops #\a "b" c))
+(check (send o4 Vk) => 'first)
+(send o4 Vk 'second)
+(check (send o4 Vk) => 'second)
 
 (check-report)

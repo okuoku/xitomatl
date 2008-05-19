@@ -50,20 +50,20 @@
   (define/? (send [obj fuego-object?] key . args)
     (find-key/handle obj obj key args #f #f))
   
-  #;(define/? (resend [obj fuego-object?] key . args)
-    ;; This has problems -- what if it's used by a method of one of obj's parents,
-    ;; it will infinitely loop finding the same method which does the same resend.
-    (let loop ([parents (fuego-object-parents obj)])      
-      (if (null? parents)
-        (AV/F obj "no parent has key" key)
-        (find-key/handle obj (cdar parents) key args loop (cdr parents)))))
+  (define (resender receiver method-owner)
+    (lambda (key . args)
+      (let loop ([parents (fuego-object-parents method-owner)])
+        (if (null? parents)
+          (find-key/handle method-owner method-owner :unknown (cons key args)
+            (lambda (ign) (AV/F method-owner "unknown key" key)) #f)
+          (find-key/handle receiver (cdar parents) key args loop (cdr parents))))))
 
   (define (find-key/handle receiver search key args child-loop child-parents)
     ; Search obj's immediate slots
     ; If not found, search parents, depth-first
     (let ([found (assq key (fuego-object-slots search))])
       (if found
-        (apply (cdr found) receiver args)
+        (apply (cdr found) receiver (resender receiver search) args)
         (let loop ([parents (fuego-object-parents search)])
           (if (null? parents)
             (if child-loop
@@ -76,13 +76,13 @@
   
   (define root-clone
     (case-lambda
-      [(self) (root-clone self (make-key 'cloned-parent))]
-      [(self pk)
+      [(self resend) (root-clone self resend (make-key 'cloned-parent))]
+      [(self resend pk)
        (let ([o (make-fuego-object '() '())])
-         (root-add-parent! o pk self)
+         (root-add-parent! o 'no-resend pk self)
          o)]))
   
-  (define (root-delete! self key)
+  (define (root-delete! self resend key)
     (fuego-object-slots-set! self
       (remp (lambda (s) (eq? (car s) key)) 
             (fuego-object-slots self)))
@@ -90,52 +90,52 @@
       (remp (lambda (pp) (eq? (car pp) key)) 
             (fuego-object-parents self))))  
   
-  (define (root-has? self key)
+  (define (root-has? self resend key)
     (if (assq key (fuego-object-slots self)) #t #f))
 
-  (define/? (root-add-method! self key [proc procedure?])
-    (if (root-has? self key)
+  (define/? (root-add-method! self resend key [proc procedure?])
+    (if (root-has? self 'no-resend key)
       (send self :already-exists key proc)
       (fuego-object-slots-set! self
         (cons (cons key proc) (fuego-object-slots self)))))
   
   (define root-add-value! 
     (case-lambda
-      [(self key val) (root-add-value! self key val #f)]
-      [(self key val mutable)
+      [(self resend key val) (root-add-value! self resend key val #f)]
+      [(self resend key val mutable)
        (define (ina s args) 
          (AV/F s "value method called with invalid number of arguments" (length args)))
-       (root-add-method! self key
+       (root-add-method! self 'no-resend key
          (if mutable
            (case-lambda 
-             [(s) val] 
-             [(s n) (if (eq? s self)
-                      (set! val n)
-                      (root-add-value! s key n mutable))]
-             [(s . args) (ina s args)])
+             [(s r) val] 
+             [(s r n) (if (eq? s self)
+                        (set! val n)
+                        (root-add-value! s 'no-resend key n mutable))]
+             [(s r . args) (ina s args)])
            (case-lambda 
-             [(s) val]
-             [(s n) (AV/F s "immutable value" key n)]
-             [(s . args) (ina s args)])))]))
+             [(s r) val]
+             [(s r n) (AV/F s "immutable value" key n)]
+             [(s r . args) (ina s args)])))]))
   
-  (define/? (root-add-parent! self key [obj fuego-object?])
+  (define/? (root-add-parent! self resend key [obj fuego-object?])
     (let detect ([parents (fuego-object-parents obj)])
       (for-each (lambda (p) 
                   (if (eq? p self)
                     (AV/F self "parent cycle" obj)
                     (detect (fuego-object-parents p))))
                 (map cdr parents)))
-    (root-add-value! self key obj)
+    (root-add-value! self 'no-resend key obj)
     (fuego-object-parents-set! self
       (append (fuego-object-parents self) (list (cons key obj)))))
     
-  (define (root-keys self)
+  (define (root-keys self resend)
     (map car (fuego-object-slots self)))
   
-  (define (root-unknown self key . vals)
+  (define (root-unknown self resend key . vals)
     (AV/F self "unknown key" key))  
   
-  (define (root-already-exists self key val)
+  (define (root-already-exists self resend key val)
     (AV/F self "slot already exists" key))  
   
   ;-----------------------------------------------------------------------------    
@@ -176,25 +176,29 @@
                    [keys '()])
                (define-syntax method
                  (lambda (stx)
-                   (syntax-case stx ()
-                     [(_ (mn s . ra) b0 b (... ...))
-                      (and (syntax-case #'mn (quote)
-                             [(quote x) (identifier? #'x)]
-                             [x (identifier? #'x)])
-                           (identifier? #'s))
+                   (syntax-case stx (unquote)
+                     [(_ (mn s r . a) b0 b (... ...))
+                      #'(method mn (lambda (s r . a) b0 b (... ...)))]
+                     [(_ (unquote mnk) expr) 
+                      #'(root-add-method! o 'no-resend mnk expr)]
+                     [(_ mn expr)
+                      (syntax-case #'mn (quote)
+                        [(quote x) (identifier? #'x)]
+                        [x (identifier? #'x)])
                       (with-syntax* ([mnk (gen-temp)]
                                      [(mnk-e add-mnk (... ...)) 
                                       (if (identifier? #'mn) 
                                         #'((make-key 'mn) (set! keys (cons mnk keys)))
                                         #'(mn))])
                         #'(let ([mnk mnk-e])
-                            (root-add-method! o mnk 
-                              (lambda (s . ra) b0 b (... ...)))
+                            (method ,mnk expr)
                             add-mnk (... ...)))])))
                (define-syntax value
                  (lambda (stx)
-                   (syntax-case stx ()
+                   (syntax-case stx (unquote)
                      [(_ vn v) #'(value vn v #f)]
+                     [(_ (unquote vnk) v m)
+                      #'(root-add-value! o 'no-resend vnk v m)]
                      [(_ vn v m)
                       (syntax-case #'vn (quote)
                         [(quote x) (identifier? #'x)]
@@ -205,15 +209,17 @@
                                         #'((make-key 'vn) (set! keys (cons vnk keys)))
                                         #'(vn))])
                         #'(let ([vnk vnk-e])
-                            (root-add-value! o vnk v m)
+                            (value ,vnk v m)
                             add-vnk (... ...)))])))
                (define-syntax parent
                  (lambda (stx)
-                   (syntax-case stx ()
+                   (syntax-case stx (unquote)
                      [(_ p) 
                       #'(let ([pnk (make-key 'parent)]) 
-                          (root-add-parent! o pnk p)
-                          (set! has-parent #t))]
+                          (parent ,pnk p))]
+                     [(_ (unquote pnk) p)
+                      #'(begin (root-add-parent! o 'no-resend pnk p)
+                               (set! has-parent #t))]
                      [(_ pn p)
                       (syntax-case #'pn (quote)
                         [(quote x) (identifier? #'x)]
@@ -224,12 +230,11 @@
                                         #'((make-key 'pn) (set! keys (cons pnk keys)))
                                         #'(pn))])
                         #'(let ([pnk pnk-e]) 
-                            (root-add-parent! o pnk p)
-                            (set! has-parent #t)
+                            (parent ,pnk p)
                             add-pnk (... ...)))])))
                body ...
                (unless has-parent
-                 (root-add-parent! o (make-key 'cloned-parent) root-object))
+                 (root-add-parent! o 'no-resend (make-key 'cloned-parent) root-object))
                (apply values o (reverse keys))))])))
 
 )

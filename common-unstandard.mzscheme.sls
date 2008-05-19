@@ -5,12 +5,14 @@
     format printf fprintf pretty-print
     gensym
     make-list last-pair
-    ;; TODO: add to as needed/appropriate
     time current-milliseconds
+    current-directory
+    ;; TODO: add to as needed/appropriate
     )
   (import
     (rnrs)
     (only (scheme) add1 sub1 format printf fprintf gensym time void current-milliseconds)
+    (prefix (only (scheme) current-directory path->string) mz:)
     (only (scheme pretty) pretty-print)
     (only (xitomatl predicates) exact-non-negative-integer?))
   
@@ -32,4 +34,9 @@
       (if (pair? (cdr x))
         (loop (cdr x))
         x)))
+  
+  (define current-directory
+    (case-lambda
+      [() (mz:path->string (mz:current-directory))]
+      [(nv) (mz:current-directory nv)]))
 )
