@@ -36,9 +36,6 @@
 (define (cycle-exn? irrts obj)
   (lambda (ex) (fuego-exn? ex "parent cycle" irrts obj)))
 
-#;(define (cant-resend-exn? irrts obj)
-  (lambda (ex) (fuego-exn? ex "no parent has key" irrts obj)))
-
 (define root-keys
   (list :clone :unknown :already-exists :has? :keys
         :add-method! :add-parent! :add-value! :delete!))
@@ -152,14 +149,11 @@
 ;; add new slot to o0, use from o1
 (send o0 :add-value! 'XYZ "acme")
 (check (send o1 'XYZ) => "acme")
-;; override and use parent's
-#|(send o1 :add-method! 'm (lambda (s . a) (apply resend o1 'm (reverse a))))
-(check (send o1 'm 1 2 3) => (list o1 3 2 1))
-(check-exn (resend o1 'Q 'x "y")
-           => (cant-resend-exn? '(Q) o1)) |#
 ;; can not create inheritance cycle (prevents infinite loop when searching parents)
 (check-exn (send o0 :add-parent! 'P o1)
            => (cycle-exn? (list o1) o0))
+(check-exn (send o0 :add-parent! 'P o0)  ;; Note attempt to add self as parent
+           => (cycle-exn? (list o0) o0))
 ;; override unknown key and already-exists
 (send o1 :add-method! :unknown (lambda (s r k . vs) (send s :add-value! k vs)))
 (send o1 'oops 47 "blah")
@@ -212,5 +206,31 @@
 (check (send o4 Vk) => 'first)
 (send o4 Vk 'second)
 (check (send o4 Vk) => 'second)
+;; For each defined fields which uses the syntax of only an identifier,
+;; a new key record is created and used as the key, and all such
+;; automatically created keys are returned in the return values of the
+;; object form following the new object, in the same order they appeared
+;; in the object form's body.
+(define-values (o5 :plus3 :V :P :self) 
+  (object (define (add3 x) (+ 3 x))
+          (method (A s r x) (add3 x))
+          (value :V 2)
+          (parent C o4)
+          (method (:self s r) o5)))
+(check (send o5 :plus3 4) => 7)
+(check (send o5 :V) => 2)
+(check (send o5 :P) (=> eq?) o4)
+(check (send o5 :self) (=> eq?) o5)
+;; Use unquote to refer to keys to override them.
+(define o6
+  (object (parent o5)
+          (method ,:plus3 (case-lambda [(s r x) (r :plus3 x)] 
+                                       [(s r x y . a) (map (lambda (n) (r :plus3 n)) 
+                                                           (cons* x y a))]))
+          (method (,:self s r) o6)))
+(check (send o6 :plus3 -3) => 0)
+(check (send o6 :plus3 1 2 3 4 5) => '(4 5 6 7 8))
+(check (send o6 :self) (=> eq?) o6)
+
 
 (check-report)

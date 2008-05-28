@@ -7,7 +7,7 @@
     ;; This library's things
     entity? file? directory? link? entity-absolute-path
     path->entity delete-directory/recursively delete-file/directory/link
-    directory->alist)
+    #;directory->alist)
   (import
     (except (rnrs) file-exists?)
     (only (xitomatl define extras) define/AV)
@@ -38,7 +38,7 @@
           [(file-directory? fn #f)
            (delete-directory/recursively fn)]))
   
-  (define (directory->alist dname)
+  #;(define (directory->alist dname)
     (map
       (lambda (e) 
         (cons e (path->entity (path-join dname e))))

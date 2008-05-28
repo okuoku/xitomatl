@@ -4,12 +4,10 @@
     value-file? value-file-path make-value-file value-file=?
     value-file-ref value-file-set! delete-value-file
     value-directory? value-directory-path make-value-directory value-directory=?
-    value-directory-ref value-directory-set! delete-value-directory)
+    value-directory-ref #;value-directory-set! delete-value-directory)
   (import
     (except (rnrs) file-exists?)
     (only (xitomatl define extras) define/? define/AV)
-    (xitomatl srfi parameters)
-    (xitomatl common-unstandard)
     (xitomatl file-system paths)
     (xitomatl file-system base))
   
@@ -17,13 +15,13 @@
     (and (vector? a)
          (= 2 (vector-length a))
          (eq? 'value-file (vector-ref a 0))
-         (absolute-path? (vector-ref a 1))))
+         (path? (vector-ref a 1))))
   
   (define (value-directory? a)
     (and (vector? a)
          (= 2 (vector-length a))
          (eq? 'value-directory (vector-ref a 0))
-         (absolute-path? (vector-ref a 1))))
+         (path? (vector-ref a 1))))
   
   (define/? (value-file-path [vf value-file?])
     (vector-ref vf 1))
@@ -31,10 +29,10 @@
   (define/? (value-directory-path [vd value-directory?])
     (vector-ref vd 1))
   
-  (define/? (make-value-file [path absolute-path?])
+  (define/? (make-value-file [path path?])
     (vector 'value-file path))
   
-  (define/? (make-value-directory [path absolute-path?])
+  (define/? (make-value-directory [path path?])
     (vector 'value-directory path))
   
   (define (value-file=? vf0 vf1)
@@ -43,34 +41,43 @@
   (define (value-directory=? vd0 vd1)
     (string=? (value-directory-path vd0) (value-directory-path vd1)))  
   
-  (define (delete-value-file vf)
-    (delete-file (value-file-path vf)))
+  (define delete-value-file 
+    (case-lambda
+      [(vf)
+       (delete-file (value-file-path vf))]
+      [(vd vf)
+       (delete-file (path-join (value-directory-path vd) (value-file-path vf)))]))
   
   (define (delete-value-directory vd)
     (delete-directory/recursively (value-directory-path vd)))
   
-  (define (value-file-ref vf)
-    (call-with-input-file (value-file-path vf) read))
+  (define value-file-ref 
+    (let ([f (lambda (fn) (call-with-input-file fn read))])
+      (case-lambda
+        [(vf) (f (value-file-path vf))]
+        [(vd vf) (f (path-join (value-directory-path vd) (value-file-path vf)))])))
   
   (define/AV (value-directory-ref vd)
-    (map (lambda (filename.entity)
-           (let ([e (cdr filename.entity)] [fn (car filename.entity)])
-             (cond [(file? e)
-                    (cons fn (make-value-file (entity-absolute-path e)))]
-                   [(directory? e)
-                    (cons fn (make-value-directory (entity-absolute-path e)))]
-                   [else 
-                    (AV "internal bug: not a file or directory" e)])))
-         (directory->alist (value-directory-path vd))))
+    (map (lambda (fn)
+           (cond [(file-regular? fn #f)
+                  (make-value-file fn)]
+                 [(file-directory? fn #f)
+                  (make-value-directory fn)]
+                 [else 
+                  (AV "not a file or directory" fn)]))
+         (directory-list (value-directory-path vd))))
   
-  (define (value-file-set! vf v)
-    (let ([fn (value-file-path vf)])
-      (when (file-exists? fn #f)
-        (delete-file/directory/link fn))
-      (call-with-port (OFOP fn)
-        (lambda (fop) (write v fop)))))
+  (define value-file-set! 
+    (let ([f (lambda (fn v)
+               (when (file-exists? fn #f)
+                 (delete-file/directory/link fn))
+               (call-with-port (OFOP fn)
+                 (lambda (fop) (write v fop))))])
+      (case-lambda
+        [(vf v) (f (value-file-path vf) v)]
+        [(vd vf v) (f (path-join (value-directory-path vd) (value-file-path vf)) v)])))
 
-  (define/AV (value-directory-set! vd alrp)
+  #;(define/AV (value-directory-set! vd alrp)
     (define (alist-of-relative-paths? x)
       (and (list? x)
            (for-all (lambda (y) 

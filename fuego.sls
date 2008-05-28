@@ -119,12 +119,12 @@
              [(s r . args) (ina s args)])))]))
   
   (define/? (root-add-parent! self resend key [obj fuego-object?])
-    (let detect ([parents (fuego-object-parents obj)])
-      (for-each (lambda (p) 
-                  (if (eq? p self)
+    (let detect ([check (list (cons #f obj))])
+      (for-each (lambda (o) 
+                  (if (eq? o self)
                     (AV/F self "parent cycle" obj)
-                    (detect (fuego-object-parents p))))
-                (map cdr parents)))
+                    (detect (fuego-object-parents o))))
+                (map cdr check)))
     (root-add-value! self 'no-resend key obj)
     (fuego-object-parents-set! self
       (append (fuego-object-parents self) (list (cons key obj)))))
