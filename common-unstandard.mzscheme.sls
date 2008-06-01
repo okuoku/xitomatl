@@ -6,7 +6,6 @@
     gensym
     make-list last-pair
     time current-milliseconds
-    current-directory
     ;; TODO: add to as needed/appropriate
     )
   (import

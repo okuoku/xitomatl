@@ -1,14 +1,18 @@
 #!r6rs
 (library (xitomatl file-system base compat)
   (export
-    directory-list
-    delete-directory
-    file-exists?
-    file-regular?
-    file-directory?
-    file-symbolic-link?)
+    current-directory directory-list delete-directory delete-file
+    make-directory make-symbolic-link change-mode
+    file-exists? file-regular? file-directory? file-symbolic-link?)
   (import
-    (only (ikarus) directory-list delete-directory file-exists?
-                   file-regular? file-directory? file-symbolic-link?))
-  ;; NOTE: Ikarus doesn't yet provide these.
+    (rnrs)
+    (only (ikarus) current-directory delete-directory delete-file
+                   make-directory make-symbolic-link change-mode
+                   file-exists? file-regular? file-directory? file-symbolic-link?)
+    (prefix (only (ikarus) directory-list) ik:))
+
+  (define (directory-list path)
+    (remp (lambda (x) (or (equal? x ".") (equal? x "..")))
+          (ik:directory-list path)))
+  
 )
