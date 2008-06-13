@@ -15,22 +15,29 @@
   (define-syntax define-values
     (lambda (stx)
       (syntax-case stx ()
-        [(_ (id* ...) expr)
-         (formals-ok? #'(id* ...) stx)  ;; prevents duplicates
-         (with-syntax ([(t* ...) (generate-temporaries #'(id* ...))])
+        [(_ (id* ... . rid) expr)
+         (formals-ok? #'(id* ... . rid) stx)
+         (with-syntax ([(t* ...) (generate-temporaries #'(id* ...))]
+                       [(rt ...) (generate-temporaries 
+                                   (if (identifier? #'rid) '(1) '()))])
            #`(begin
                (define t*) ...
+               (define rt) ...
                (define dummy 
                  (call-with-values 
                   (lambda () #f expr) ;; #f first to prevent internal defines
                   (case-lambda
-                    [(id* ...)
+                    [(id* ... . rid)
                      (set! t* id*) ...
+                     (set! rt rid) ...
                      #f]
                     [otherwise 
                      (define-values-error #,(length #'(id* ...)) otherwise)])))
                (define id* 
                  (let ([v t*]) (set! t* #f) v)) 
+               ...
+               (define rid 
+                 (let ([v rt]) (set! rt #f) v)) 
                ...))])))  
   
 )

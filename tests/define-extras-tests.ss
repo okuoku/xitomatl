@@ -38,6 +38,18 @@
                   (let () expr '(succeeded: expr)))
                 => msg)])))
 
+(define-syntax check-assertion-error/who
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ who expr)
+       (symbol? (syntax->datum #'who))
+       #'(check (guard (ex [(and (assertion-violation? ex)
+                                 (who-condition? ex))
+                            (condition-who ex)]
+                           [else `(dont-know: ,ex)])
+                  (let () expr '(succeeded: expr)))
+                => 'who)])))
+
 (define-syntax check-assertion-error/msg/AN
   (lambda (stx)
     (syntax-case stx ()
@@ -71,6 +83,19 @@
   (values 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))
 (check (list d e f g h i j k l m n o p q r s t u v w x y z)
        => '(4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26))
+(define-values all0 (values))
+(check all0 => '())
+(define-values all1 (values 1))
+(check all1 => '(1))
+(define-values all2 (values 1 2 3 4))
+(check all2 => '(1 2 3 4))
+(define-values (aa . r0) (values 1 2 3 4))
+(check aa => 1)
+(check r0 => '(2 3 4))
+(define-values (bb cc . r1) (values 1 2))
+(check bb => 1)
+(check cc => 2)
+(check r1 => '())
 (check-assertion-error
   (define-values (a) (values 1 2)))
 (check-assertion-error
@@ -122,6 +147,10 @@
  (let ()
    (define/AV (f) (AV "oops3" 'ign 'ign 'ign))
    (f)))
+(check-assertion-error/who f
+  (let ()
+    (define/AV f (lambda () (AV "oops")))
+    (f)))
 
 ;;; case-lambda/? and friends
 
@@ -246,6 +275,14 @@
            (cons* x y z r))
          (f 'x "yy" #\z 1 -56.3 67/902))
        => '(x "yy" #\z 1 -56.3 67/902))
+(check-assertion-error/who foo
+  (let ()
+    (define/? foo (lambda/? ([x char?]) x))
+    (foo 1)))
+(check-assertion-error/who bar
+  (let ()
+    (define/? bar (case-lambda/? [([x char?]) x]))
+    (bar 1)))
 (check-syntax-error
  (let ()
    (define/? (f [x]) 'b) 
@@ -348,6 +385,18 @@
    (define/?/AV (f . r) 'b)
    (f 1))
  => 'b)
+(let ()
+  (define/?/AV asdf (lambda/? ([x char?]) (AV "oops")))
+  (check-assertion-error/who asdf
+    (asdf 1))
+  (check-assertion-error/who asdf
+    (asdf #\c)))
+(let ()
+  (define/?/AV asdf (case-lambda/? [([x char?]) x] [() (AV "oops")]))
+  (check-assertion-error/who asdf
+    (asdf 1))
+  (check-assertion-error/who asdf
+    (asdf)))
 (check-syntax-error
  (let ()
    (define/?/AV (f x [y string?] z . #([r (lambda (r) (for-all number? r))])) 

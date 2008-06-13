@@ -1,101 +1,72 @@
 #!r6rs
 (library (xitomatl lists)
   (export
+    make-list last-pair ;; from compat
     map/left-right/preserving map/filter
-    rem-dups
-    intersperse
-    list-of)
+    remove-dups remv-dups remq-dups
+    intersperse)
   (import
     (rnrs)
-    (rnrs mutable-pairs)
-    (only (xitomatl define extras) define/?))
+    (only (xitomatl define extras) define/? define/AV define/?/AV)
+    (xitomatl lists compat))
   
-  ; deterministic, left-to-right map
+  ; Deterministic, left-to-right map
   ; It preserves sharing as much as possible: that is, if given the pair
-  ; l == (cons h t), (and (eq? h (f h)) (eq? t (map/left-right/preserving f t))) holds, then
+  ; (h . t), (and (eq? h (f h)) 
+  ;;              (eq? t (map/left-right/preserving f t))) 
+  ;; holds, then
   ; (eq? (map/left-right/preserving f l) l) holds as well.
-  (define/? (map/left-right/preserving [f procedure?] [l list?])
-    (let loop ([f f] [l l])
-      (if (null? l)
-        l
-        (let ([h (car l)] [t (cdr l)])
-          (let ([h1 (f h)] [t1 (loop f t)])
-            (if (and (eq? h1 h) (eq? t1 t)) 
-              l
-              (cons h1 t1)))))))
+  (define/?/AV (map/left-right/preserving [f procedure?] l)
+    (let loop ([f f] [l l] [orig l])
+      (cond [(pair? l) (let ([h (car l)] [t (cdr l)])
+                         (let ([h1 (f h)] [t1 (loop f t orig)])
+                           (if (and (eq? h1 h) (eq? t1 t)) 
+                             l
+                             (cons h1 t1))))] 
+            [(null? l) '()]
+            [else (AV "not a proper list" orig)])))
   
-  (define/? (map/filter [f procedure?] [l pair?] . #(ls (lambda (ls) (for-all pair? ls))))
-    ;; On Ikarus r1468, this is: 
-    ;; 6 times faster and uses 2.5 times less memory than equivalent 
-    ;; (filter values (map odd? l))
-    ;; for the list (list-of x (x :range #e1e6))
-    (let* ([a (cons #f '())] [c a])
-      (apply for-each 
-             (lambda xs (let ([v (apply f xs)])
-                          (when v 
-                            (let ([v (cons v '())])
-                              (set-cdr! c v)
-                              (set! c v))))) 
-             l ls)
-      (cdr a)))
+  (define/?/AV map/filter 
+    ;;; map/filter is significantly more effecient than
+    ;;; the equivalent (filter values (map f l))
+    (case-lambda/?
+      [([f procedure?] l)
+       (let loop ([l l] [r '()] [orig l])
+         (cond [(pair? l) (let ([x (f (car l))])
+                            (loop (cdr l) (if x (cons x r) r) orig))]
+               [(null? l) (reverse r)]
+               [else (AV "not a proper list" orig)]))]
+      [([f procedure?] l . ls)
+       (let loop ([ls (cons l ls)] [r '()] [orig (cons l ls)])
+         (cond [(for-all pair? ls) (let ([x (apply f (map car ls))])
+                                     (loop (map cdr ls) (if x (cons x r) r) orig))]
+               [(for-all null? ls) (reverse r)]
+               [else (for-each (lambda (l o) (unless (or (pair? l) (null? l))
+                                             (AV "not a proper list" o))) 
+                               ls orig)
+                     (for-each (lambda (l) (when (null? l)
+                                             (AV "length mismatch" orig)))
+                               ls)]))]))
 
-  (define/? (rem-dups [l list?])
-    (let loop ([l l] [n '()])
-      (if (null? l)
-        (reverse n)
-        (loop (remove (car l) (cdr l))
-              (cons (car l) n)) )))
+  (define-syntax define-rem-dups
+    (syntax-rules ()
+      [(_ name rf)
+       (define/AV (name l)    
+         (let loop ([l l] [r '()])
+           (cond [(pair? l) (let ([h (car l)] [t (cdr l)])
+                              (loop (rf h t) (cons h r)))]
+                 [(null? l) (reverse r)]
+                 [else (AV "not a list" l)])))]))  
   
-  (define/? (intersperse [l list?] sep)
-    (let loop ([l l] [sep sep])
-      (cond
-        [(null? l) '()]
-        [(null? (cdr l)) l]
-        [else (cons* (car l) sep (loop (cdr l) sep))])))
+  (define-rem-dups remove-dups remove)
+  (define-rem-dups remv-dups remv)
+  (define-rem-dups remq-dups remq)
   
-  (define-syntax list-of
-    (syntax-rules ()      
-      [(_ expr clauses ...)
-       (list-of-aux expr '() clauses ...)]))
-  
-  (define-syntax list-of-aux
-    ;;; Modified from Phil Bewig's list-of, from:
-    ;;; http://groups.google.com/group/comp.lang.scheme/msg/18df0b4cc3939ef0
-    (syntax-rules (:range :in :is)
-      [(_ expr base)
-       (cons expr base)]
-      [(_ expr base (x :range first past step) clauses ...)
-       (let ([f first] [p past])
-         (let* ([s (let-syntax ([SM (syntax-rules ()
-                                      [(_ #f) (if (< f p) 1 -1)]
-                                      [(_ s) s])]) 
-                     (SM step))]
-                [more? (cond [(positive? s) <] 
-                             [(negative? s) >]
-                             [else (assertion-violation 'list-of 
-                                     "step must not be zero" s)])])
-           (let loop ([z f])
-             (if (more? z p)
-               (let ([x z])
-                 (list-of-aux expr (loop (+ z s)) clauses ...))
-               base))))]
-      [(_ expr base (x :range first past) clauses ...)
-       (list-of-aux expr base (x :range first past #f) clauses ...)]
-      [(_ expr base (x :range past) clauses ...)
-       (list-of-aux expr base (x :range 0 past) clauses ...)]
-      [(_ expr base (x :in xs) clauses ...)
-       (let loop ([z xs])
-         (if (null? z)
-           base
-           (let ([x (car z)])
-             (list-of-aux expr (loop (cdr z)) clauses ...))))]
-      [(_ expr base (x :is y) clauses ...)
-       (let ([x y])
-         (list-of-aux expr base clauses ...))]
-      [(_ expr base pred clauses ...)
-       (if pred
-         (list-of-aux expr base clauses ...)
-         base)]))
+  (define/AV (intersperse l sep)
+    (let loop ([l l] [r '()] [sep sep] [orig l])
+      (cond [(pair? l) (loop (cdr l) (cons* sep (car l) r) sep orig)]
+            [(null? l) (if (null? r) '() (reverse (cdr r)))]
+            [else (AV "not a proper list" orig)])))
   
   #;(define/? (flatten [l list?])
     ;;; not sure exactly what I want the semantics to be

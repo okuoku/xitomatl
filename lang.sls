@@ -41,7 +41,7 @@
     char-general-category char-lower-case? char-numeric? char-title-case?
     char-titlecase char-upcase char-upper-case? char-whitespace? char<=? char<?
     char=? char>=? char>? char? close-input-port close-output-port close-port
-    command-line complex? cond condition condition-accessor condition-irritants
+    command-line complex? #;cond condition condition-accessor condition-irritants
     condition-message condition-predicate condition-who condition? cons cos
     current-error-port current-input-port current-output-port datum->syntax #;define
     define-condition-type define-enumeration define-record-type #;define-syntax
@@ -146,7 +146,7 @@
     case-lambda/? lambda/? λ/? define/?
     case-lambda/?/AV lambda/?/AV λ/?/AV define/?/AV
     ;; common-unstandard
-    add1 sub1 format printf fprintf make-list last-pair gensym
+    add1 sub1 format printf fprintf gensym
     ;; ports
     read-all get-lines-all port-for-each port-map
     ;; macro-utils
@@ -158,14 +158,17 @@
     ;; indexes
     iota enumerate
     ;; lists
-    map/left-right/preserving rem-dups list-of
+    make-list last-pair map/left-right/preserving map/filter
+    intersperse remove-dups remv-dups remq-dups
     ;; strings
     string-intersperse string-split
     ;; smatch
     smatch smatch-lambda smatch-let smatch-let*
+    ;; SRFI-61: more general cond
+    cond
     )
   (import
-    (except (rnrs) define define-syntax)
+    (except (rnrs) define define-syntax cond)
     (xitomatl define extras)
     (xitomatl common-unstandard)
     (xitomatl ports)
@@ -174,5 +177,6 @@
     (xitomatl indexes)
     (xitomatl lists)
     (xitomatl strings)
-    (xitomatl smatch))  
+    (xitomatl smatch)
+    (xitomatl srfi general-cond))
 )

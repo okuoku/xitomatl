@@ -41,10 +41,11 @@
   (define-syntax AV-wrap
     (lambda (stx)
       (syntax-case stx ()
-        [(_ ctxt name b b* ...)
+        [(_ ctxt name expr)
          (with-syntax ([AV (datum->syntax #'ctxt 'AV)])
            #'(let ([AV (make-AV 'name)])
-               b b* ...))])))
+               #f  ;; prevent internal defines in expr 
+               expr))])))
   
   (define-syntax case-lambda/AV--meta
     (lambda (stx)
@@ -69,7 +70,11 @@
       (syntax-case stx ()
         [(ctxt (fname . frmls) body0 body* ...)
          #'(define fname
-             (case-lambda/AV--meta ctxt fname [frmls body0 body* ...]))])))
+             (case-lambda/AV--meta ctxt fname [frmls body0 body* ...]))]
+        [(ctxt name expr)
+         #'(define name
+             (AV-wrap ctxt name 
+               expr))])))
   
   (define (make-arg-check-failed who)
     (lambda (pred-form arg-name arg-value)
@@ -116,10 +121,26 @@
        (case-lambda/?--meta "some <lambda/?>" [frmls body0 body* ...])]))
   
   (define-syntax define/?
-    (syntax-rules ()
-      [(_ (fname . frmls) body0 body* ...)
-       (define fname
-         (case-lambda/?--meta fname [frmls body0 body* ...]))]))
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ (fname . frmls) body0 body* ...)
+         #'(define fname
+             (case-lambda/?--meta fname [frmls body0 body* ...]))]
+        [(_ name expr)
+         (with-syntax ([CL/? (datum->syntax #'name 'case-lambda/?)]
+                       [L/? (datum->syntax #'name 'lambda/?)])
+           #'(define name
+               (let ()
+                 (define-syntax CL/? 
+                   (syntax-rules ()
+                     [(_ [frmls b0 b* (... ...)] (... ...))
+                      (case-lambda/?--meta name [frmls b0 b* (... ...)] (... ...))]))
+                 (define-syntax L/?
+                   (syntax-rules ()
+                     [(_ frmls b0 b* (... ...))
+                      (case-lambda/?--meta name [frmls b0 b* (... ...)])]))
+                 #f  ;; prevent internal defines in expr
+                 expr)))])))
   
   (define-syntax case-lambda/?/AV
     (lambda (stx)
@@ -143,5 +164,9 @@
         [(ctxt (fname . frmls) body0 body* ...)
          #'(define fname
              (AV-wrap ctxt fname
-               (case-lambda/?--meta fname [frmls body0 body* ...])))])))
+               (case-lambda/?--meta fname [frmls body0 body* ...])))]
+        [(_ name expr)
+         #'(define/? name
+             (AV-wrap name name
+               expr))])))
 )

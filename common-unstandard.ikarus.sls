@@ -4,7 +4,6 @@
     add1 sub1
     format printf fprintf pretty-print
     gensym
-    make-list last-pair
     time current-milliseconds
     ;; TODO: add to as needed/appropriate
     )
@@ -12,9 +11,10 @@
     (ikarus))
   
   (define current-milliseconds
-    ;; Returns: fixnum of the "current" millisecond, the reference point isn't known, and so
-    ;; should only be used for calculating a difference between other values returned by this 
-    ;; procedure, within a reasonable time span before the fixnum overflows/wraps. 
+    ;; Returns: fixnum of the "current" millisecond, the reference point isn't
+    ;; known, and so should only be used for calculating a difference between 
+    ;; other values returned by this procedure, within a reasonable time span 
+    ;; before the fixnum overflows/wraps. 
     (let ([m (fxdiv (greatest-fixnum) 1000)])
       (define-struct my-time (msecs secs usecs))
       (lambda ()

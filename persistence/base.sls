@@ -47,6 +47,7 @@
     (deserialize-object-field bd deserializer id all-field))
   
   (define (store-object-field bd id field x)
+    ;; TODO: probably cache the serializer
     (let* ([type-id (call-with-input-file (path-join bd objects-dir id type-field) read)]
            [code (call-with-input-file (path-join bd objects-dir type-id
                                                   (string-append field serializer-postfix))
@@ -55,6 +56,7 @@
       (serialize-object-field bd serializer id field x)))
   
   (define (load-object-field bd id field)
+    ;; TODO: probably cache the deserializer
     (let* ([type-id (call-with-input-file (path-join bd objects-dir id type-field) read)]
            [code (call-with-input-file (path-join bd objects-dir type-id 
                                                   (string-append field deserializer-postfix))
