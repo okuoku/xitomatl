@@ -89,8 +89,22 @@
              (apply proc args))))]))
   
   (define-syntax define-generic
-    (syntax-rules ()
-      [(_ name)
-       (define name (make-generic 'name))]))
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ name [pred-frmls . b] ...)
+         (with-syntax ([((preds frmls) ...) 
+                        (map (lambda (pf)
+                               (syntax-case pf (R)
+                                 [([a p] ...)
+                                  #'((list p ...) (a ...))]
+                                 [([a0 p0] [a p] ... [R ar pr])
+                                  #'((cons* p0 p ... pr) (a0 a ... . ar))]
+                                 [[R ar pr]
+                                  #'(pr ar)]))
+                             #'(pred-frmls ...))])
+           #'(begin
+               (define name (make-generic 'name))
+               (specialize name preds (lambda frmls . b))
+               ...))])))
   
 )

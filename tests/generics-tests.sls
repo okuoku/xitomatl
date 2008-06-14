@@ -2,6 +2,7 @@
 #!r6rs
 (import
   (rnrs)
+  (rnrs eval)
   (xitomatl generics)
   (xitomatl srfi lightweight-testing))
 
@@ -21,6 +22,14 @@
   (syntax-rules ()
     [(_ who expr)
      (check-AV-who-msg who "no specialization" expr)]))
+
+(define-syntax check-SV
+  (syntax-rules ()
+    [(_ expr)
+     (check (guard (ex [else (syntax-violation? ex)])
+              (eval 'expr (environment '(rnrs) '(xitomatl generics)))
+              'unexpected-return)
+            => #t)]))
 
 (define-generic g0)
 (check (procedure? g0) => #t)
@@ -72,7 +81,88 @@
   (specialize g1 'oops values))
 (check-AV-who-msg specialize "not a valid specialization predicates list" 
   (specialize g1 (list 'oops) values))
+(check-AV-who-msg specialize "not a valid specialization predicates list" 
+  (specialize g1 (cons* char? number? 'oops) values))
 (check-AV-who-msg specialize "not a procedure"
   (specialize g1 (list number?) 'oops))
+;; define-generic specializations
+(define-generic g2
+  [() 1]
+  [([x symbol?])
+   (symbol->string x)]
+  [([x symbol?] [y symbol?])
+   (symbol=? x y)]
+  [([x (lambda (x) (or (symbol? x) (string? x)))] [y number?])
+   (make-vector y x)]
+  [([x char?] [R y (lambda r (for-all char-alphabetic? r))])
+   (apply string x y)]
+  [[R x (lambda a #t)]
+   (reverse x)])
+(check (g2) => 1)
+(check (g2 'a) => "a")
+(check (g2 'a 'b) => #f)
+(check (g2 'a 'a) => #t)
+(check (g2 'a 3) => '#(a a a))
+(check (g2 "a" 4) => '#("a" "a" "a" "a"))
+(check (g2 #\1) => "1")
+(check (g2 #\1 #\b #\c #\d) => "1bcd")
+(check (g2 1 2 3) => '(3 2 1))
+(check (g2 's) => "s")
+(check (g2 's 's) => #t)
+(check (g2 "x" 'y) => '(y "x"))
+(check (g2 "x" 2) => '#("x" "x"))
+(check (g2 #\1 #\2 #\3 #\4) => '(#\4 #\3 #\2 #\1))
+(check (g2 #\1) => "1")
+(check (g2 #\1 #\z) => "1z")
+(check (g2 '(x)) => '((x)))
+(check (g2 's 3 's #\c) => '(#\c s 3 s))
+(check-AV-who-msg specialize "not a valid specialization predicates list" 
+  (let ()
+    (define-generic g1 
+      [([a 'oops]) values])
+    g1))
+(check-AV-who-msg specialize "not a valid specialization predicates list" 
+  (let ()
+    (define-generic g1 
+      [[R a 'oops] values])
+    g1))
+(check-AV-who-msg specialize "not a valid specialization predicates list" 
+  (let ()
+    (define-generic g1 
+      [([z char?] [R a 'oops]) values])
+    g1))
+(check-SV (let ()
+            (define-generic g1 
+              [(oops) values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [(oops oops2) values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [oops values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [[R oops] values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [([1 char?]) values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [([a null?] [R 1 char?]) values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [[R 1 char?] values])
+            g1))
+(check-SV (let ()
+            (define-generic g1 
+              [([R x char?]) values])
+            g1))
+
 
 (check-report)
