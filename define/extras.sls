@@ -17,7 +17,7 @@
     (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
     (only (xitomatl common-unstandard) format)
     (xitomatl conditions))
-
+  
   (define-syntax my:define
     (syntax-rules ()
       [(_ ((maybe-list . f1) . f2) expr expr* ...)
@@ -69,9 +69,11 @@
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt (fname . frmls) body0 body* ...)
+         (identifier? #'fname)
          #'(define fname
              (case-lambda/AV--meta ctxt fname [frmls body0 body* ...]))]
         [(ctxt name expr)
+         (identifier? #'name)
          #'(define name
              (AV-wrap ctxt name 
                expr))])))
@@ -90,22 +92,22 @@
         (syntax-case frml () [(id pred) #t] [_ #f]))
       (syntax-case stx ()
         [(_ fname [frmls . body] ...)
-         (with-syntax ([((frmls* ... . #(frmlR)) ...) 
+         (with-syntax ([((f ... fr) ...) 
                         (map (lambda (f)
                                (syntax-case f ()
-                                 [(f* ... . #(r p)) #'(f* ... . #([r p]))]
-                                 [(f* ... . r) #'(f* ... . #(r))]))
+                                 [(f ... . #(r p)) #'(f ... (r p))]
+                                 [(f ... . r) #'(f ... r)]))
                              #'(frmls ...))])
-           (with-syntax ([((id* ... idR) ...)
+           (with-syntax ([((id ... idr) ...)
                           (map (lambda (fl) (map frml-id (syntax->list fl)))
-                               #'((frmls* ... frmlR) ...))]
-                         [(([cid* pred*] ...) ...) 
+                               #'((f ... fr) ...))]
+                         [(((cid p) ...) ...) 
                           (map (lambda (fl) (filter needs-check? (syntax->list fl))) 
-                               #'((frmls* ... frmlR) ...))])
+                               #'((f ... fr) ...))])
              #'(let ([acf (make-arg-check-failed 'fname)])
                  (case-lambda 
-                   [(id* ... . idR)
-                    (unless (pred* cid*) (acf 'pred* 'cid* cid*))
+                   [(id ... . idr)
+                    (unless (p cid) (acf 'p 'cid cid))
                     ...
                     (let () . body)]
                    ...))))])))
@@ -124,9 +126,11 @@
     (lambda (stx)
       (syntax-case stx ()
         [(_ (fname . frmls) body0 body* ...)
+         (identifier? #'fname)
          #'(define fname
              (case-lambda/?--meta fname [frmls body0 body* ...]))]
-        [(_ name expr)
+        [(_ name expr) 
+         (identifier? #'name)
          (with-syntax ([CL/? (datum->syntax #'name 'case-lambda/?)]
                        [L/? (datum->syntax #'name 'lambda/?)])
            #'(define name
@@ -162,10 +166,12 @@
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt (fname . frmls) body0 body* ...)
+         (identifier? #'fname)
          #'(define fname
              (AV-wrap ctxt fname
                (case-lambda/?--meta fname [frmls body0 body* ...])))]
         [(_ name expr)
+         (identifier? #'name)
          #'(define/? name
              (AV-wrap name name
                expr))])))

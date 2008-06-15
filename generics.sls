@@ -92,15 +92,14 @@
     (lambda (stx)
       (syntax-case stx ()
         [(_ name [pred-frmls . b] ...)
+         (identifier? #'name)
          (with-syntax ([((preds frmls) ...) 
                         (map (lambda (pf)
-                               (syntax-case pf (R)
+                               (syntax-case pf ()
                                  [([a p] ...)
                                   #'((list p ...) (a ...))]
-                                 [([a0 p0] [a p] ... [R ar pr])
-                                  #'((cons* p0 p ... pr) (a0 a ... . ar))]
-                                 [[R ar pr]
-                                  #'(pr ar)]))
+                                 [([a p] ... . #(ar pr))
+                                  #'((cons* p ... pr) (a ... . ar))]))
                              #'(pred-frmls ...))])
            #'(begin
                (define name (make-generic 'name))

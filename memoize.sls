@@ -22,7 +22,8 @@
   
   (define-syntax define/memoize
     (syntax-rules ()
-      [(_ (name . frmls) b0 b ...)
+      [(_ (name . frmls) b0 b ...) 
+       (identifier? #'name)
        (define name
          (memoize
            (lambda frmls b0 b ...)))]))

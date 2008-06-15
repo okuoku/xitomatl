@@ -94,9 +94,9 @@
    (symbol=? x y)]
   [([x (lambda (x) (or (symbol? x) (string? x)))] [y number?])
    (make-vector y x)]
-  [([x char?] [R y (lambda r (for-all char-alphabetic? r))])
+  [([x char?] . #(y (lambda r (for-all char-alphabetic? r))))
    (apply string x y)]
-  [[R x (lambda a #t)]
+  [#(x (lambda a #t))
    (reverse x)])
 (check (g2) => 1)
 (check (g2 'a) => "a")
@@ -124,12 +124,12 @@
 (check-AV-who-msg specialize "not a valid specialization predicates list" 
   (let ()
     (define-generic g1 
-      [[R a 'oops] values])
+      [#(a 'oops) values])
     g1))
 (check-AV-who-msg specialize "not a valid specialization predicates list" 
   (let ()
     (define-generic g1 
-      [([z char?] [R a 'oops]) values])
+      [([z char?] . #(a 'oops)) values])
     g1))
 (check-SV (let ()
             (define-generic g1 
@@ -145,7 +145,7 @@
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [[R oops] values])
+              [#(oops) values])
             g1))
 (check-SV (let ()
             (define-generic g1 
@@ -153,15 +153,15 @@
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [([a null?] [R 1 char?]) values])
+              [([a null?] . #(1 char?)) values])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [[R 1 char?] values])
+              [#(1 char?) values])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [([R x char?]) values])
+              [(#(x char?)) values])
             g1))
 
 

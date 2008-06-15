@@ -6,8 +6,7 @@
     port-for-each
     port-map)
   (import
-    (rnrs)
-    (rnrs mutable-pairs))
+    (rnrs))
   
   (define read-all
     (case-lambda 
@@ -36,14 +35,12 @@
   (define port-map
     (case-lambda
       [(proc reader port)
-       (let* ([a (cons #f '())] [t a])
+       (let ([a '()])
          (port-for-each 
-           (lambda (x) 
-             (let ([v (cons (proc x) '())])
-               (set-cdr! t v)
-               (set! t v))) 
+           (lambda (x)
+             (set! a (cons (proc x) a))) 
            reader port)
-         (cdr a))]
+         (reverse a))]
       [(proc reader) 
        (port-map proc reader (current-input-port))]))
 )

@@ -6,7 +6,7 @@
   (xitomatl define extras)
   (xitomatl conditions)
   (xitomatl srfi lightweight-testing))
-
+  
 (define-syntax check-syntax-error
   (syntax-rules ()
     [(_ expr)
