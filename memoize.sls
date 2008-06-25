@@ -21,11 +21,12 @@
              (apply values r))]))))
   
   (define-syntax define/memoize
-    (syntax-rules ()
-      [(_ (name . frmls) b0 b ...) 
-       (identifier? #'name)
-       (define name
-         (memoize
-           (lambda frmls b0 b ...)))]))
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ (name . frmls) b0 b ...) 
+         (identifier? #'name)
+         #'(define name
+             (memoize
+              (lambda frmls b0 b ...)))])))
 
 )

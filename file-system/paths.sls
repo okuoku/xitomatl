@@ -2,7 +2,8 @@
 (library (xitomatl file-system paths)
   (export
     dir-sep-char dir-sep-str root-dir-str
-    path? absolute-path? relative-path? path-join path-split)
+    path? absolute-path? relative-path? path=? 
+    path-join path-split cleanse-path)
   (import
     (rnrs)
     (xitomatl strings))
@@ -27,6 +28,9 @@
   (define (relative-path? x)
     (and (path? x) (not (starts-with-root? x))))
   
+  (define (path=? x y . r)
+    (apply string=? (map cleanse-path (cons* x y r))))
+  
   (define (path-join . ps)
     (let ([r (string-intersperse (apply append (map _path-split ps)) 
                                  dir-sep-str)])
@@ -43,4 +47,8 @@
       (if (absolute-path? p)  ;; Windows version wouldn't do this, just return r
         (cons dir-sep-str r)
         r)))
+  
+  (define (cleanse-path p)
+    (apply path-join (path-split p)))
+  
 )

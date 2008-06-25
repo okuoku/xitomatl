@@ -5,6 +5,7 @@
 (library (xitomatl define extras)
   (export 
     (rename
+      (lambda λ)
       (my:define define)
       (my:define-syntax define-syntax))
     define-values

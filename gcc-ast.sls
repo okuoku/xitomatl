@@ -12,8 +12,9 @@
     find-all-function_decl/name-prefixes->func-specs
     find-all-enumeral_type/name-prefixes->enum-specs)
   (import
-    (ikarus)
+    (rnrs)
     (rnrs mutable-pairs)
+    (only (xitomatl common-unstandard) format)
     (xitomatl pregexp)
     (xitomatl IU-match))
   
@@ -21,7 +22,7 @@
   (define-syntax dpf
     (syntax-rules ()
       #;[(_ . rest) (printf . rest)]
-      [(_ . rest) (void)]))
+      [(_ . rest) (values)]))
   
   
   (define (read-node-lines ip)

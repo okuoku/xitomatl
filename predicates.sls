@@ -3,7 +3,8 @@
   (export
     exact-non-negative-integer?
     symbol<?
-    non-empty-string?)
+    non-empty-string?
+    list-of?)
   (import
     (rnrs))
 
@@ -15,5 +16,13 @@
   
   (define (non-empty-string? x)
     (and (string? x) (positive? (string-length x))))
+  
+  (define (list-of? pred)
+    (letrec ([list-of?-pred
+              (lambda (x)
+                (cond [(pair? x) (and (pred (car x)) (list-of?-pred (cdr x)))]
+                      [(null? x) #t]
+                      [else #f]))])
+      list-of?-pred))
   
 )

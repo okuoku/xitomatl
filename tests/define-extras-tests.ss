@@ -1,13 +1,13 @@
 #!/usr/bin/env scheme-script
 #!r6rs
 (import
-  (except (rnrs) define define-syntax)
+  (rename (rnrs) (define rnrs:define) (define-syntax rnrs:define-syntax))
   (rnrs eval)
   (xitomatl define extras)
   (xitomatl conditions)
   (xitomatl srfi lightweight-testing))
   
-(define-syntax check-syntax-error
+(rnrs:define-syntax check-syntax-error
   (syntax-rules ()
     [(_ expr)
      (check (guard (ex [(syntax-violation? ex) #t]
@@ -18,7 +18,7 @@
               '(succeeded: expr))
             => #t)]))
 
-(define-syntax check-assertion-error
+(rnrs:define-syntax check-assertion-error
   (syntax-rules ()
     [(_ expr)
      (check (guard (ex [(assertion-violation? ex) #t]
@@ -26,7 +26,7 @@
               (let () expr '(succeeded: expr)))
             => #t)]))
 
-(define-syntax check-assertion-error/msg
+(rnrs:define-syntax check-assertion-error/msg
   (lambda (stx)
     (syntax-case stx ()
       [(_ msg expr)
@@ -38,7 +38,7 @@
                   (let () expr '(succeeded: expr)))
                 => msg)])))
 
-(define-syntax check-assertion-error/who
+(rnrs:define-syntax check-assertion-error/who
   (lambda (stx)
     (syntax-case stx ()
       [(_ who expr)
@@ -50,7 +50,7 @@
                   (let () expr '(succeeded: expr)))
                 => 'who)])))
 
-(define-syntax check-assertion-error/msg/AN
+(rnrs:define-syntax check-assertion-error/msg/AN
   (lambda (stx)
     (syntax-case stx ()
       [(_ msg an expr)
@@ -65,7 +65,7 @@
                   (let () expr '(succeeded: expr)))
                 => '(msg an))])))
 
-(define-syntax check-no-error
+(rnrs:define-syntax check-no-error
   (syntax-rules ()
     [(_ expr)
      (check (guard (ex [#t #f])
