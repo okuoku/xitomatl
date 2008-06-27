@@ -3,7 +3,8 @@
   (export
     make-argument-name-condition argument-name-condition? condition-argument-name
     assertion-violation/conditions
-    make-predicate-condition predicate-condition? condition-pred)
+    make-predicate-condition predicate-condition? condition-pred
+    make-port-position-condition port-position-condition? condition-port-position)
   (import
     (rnrs))  
       
@@ -21,4 +22,8 @@
   (define-condition-type &predicate &condition
     make-predicate-condition predicate-condition?
     (p condition-pred))  ;; condition-predicate already taken by (rnrs)
+  
+  (define-condition-type &port-position &condition
+    make-port-position-condition port-position-condition?
+    (pos condition-port-position))
 )

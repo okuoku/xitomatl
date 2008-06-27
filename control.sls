@@ -1,7 +1,8 @@
 #!r6rs
 (library (xitomatl control)
   (export
-    aif)
+    aif
+    begin0)
   (import 
     (rnrs))
   
@@ -16,4 +17,11 @@
          (identifier? #'var)
          #'(let ([var ve])
              (if (pred var) te fe))])))
+  
+  (define-syntax begin0
+    (syntax-rules ()
+      [(_ form0 form1 ...)
+       (let ([result form0])
+         (begin form1 ... result))]))
+  
 )
