@@ -9,7 +9,8 @@
     (rnrs)
     (only (rnrs r5rs) null-environment scheme-report-environment)
     (rnrs eval)
-    (xitomatl r6rs-bindings utils))
+    (xitomatl r6rs-bindings utils)
+    (only (xitomatl exceptions) warning))
   
   (define (run-checks present?)
     ;;; present? must be a procedure which takes one argument. This argument
@@ -30,25 +31,32 @@
                #|(display "\nChecking library ") (display lib) (newline)
                (display "------------------------------------------------------\n")|#
                (map (lambda (id)
-                      (guard (ex [#t 
-                                  ;; Here we give the exception to client-supplied 
-                                  ;; present? so it can tell us if the exception
-                                  ;; means the binding is not present.
-                                  (let ([p? (present? ex)])
-                                    (unless p?
-                                      (set! missing (+ 1 missing)))
-                                    (cons p? id))])
-                        (eval id 
-                              (if (list? lib)
-                                (environment lib)
-                                (case lib
-                                  [(null-environment)
-                                   (null-environment 5)]
-                                  [(scheme-report-environment)
-                                   (scheme-report-environment 5)]
-                                  [else
-                                   (error 'run-checks "unknown non-list lib" lib)])))
-                        (cons #t id)))
+                      (define env
+                        (guard (ex [#t #f])
+                          (if (list? lib)
+                            (environment lib)
+                            (case lib
+                              [(null-environment)
+                               (null-environment 5)]
+                              [(scheme-report-environment)
+                               (scheme-report-environment 5)]
+                              [else
+                               #f]))))
+                      (cond 
+                        [env
+                         (guard (ex [#t 
+                                     ;; Here we give the exception to client-supplied 
+                                     ;; present? so it can tell us if the exception
+                                     ;; means the binding is not present.
+                                     (let ([p? (present? ex)])
+                                       (unless p?
+                                         (set! missing (+ 1 missing)))
+                                       (cons p? id))])
+                           (eval id env)
+                           (cons #t id))]
+                        [else
+                         (warning 'run-checks "could not create environment" lib)
+                         (cons #f id)]))
                     (list-sort 
                       (lambda (id1 id2) 
                         (string<? (symbol->string id1) (symbol->string id2)))
