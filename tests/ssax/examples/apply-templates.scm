@@ -164,8 +164,8 @@
 ; </xsl:template>
 (pp
  (apply-templates tree2
-  `((PERIOD & Title *text* . ,(lambda (node) (list 'Title-PERIOD node)))
-    (VAR & Title *text* . ,(lambda (node) (list 'Title-VAR node))))
+  `((PERIOD & Title *TEXT* . ,(lambda (node) (list 'Title-PERIOD node)))
+    (VAR & Title *TEXT* . ,(lambda (node) (list 'Title-VAR node))))
   ))
 (newline)
 
@@ -277,20 +277,20 @@
 		; Handle PREVAILING grandchild of a TAF-elem
   (define (handle-Prevailing elem)
     (let ((trange (conv-TRange (car 
-	     ((sxpath `((PERIOD  ((eq? ,elem))) & TRange *text*))
+	     ((sxpath `((PERIOD  ((eq? ,elem))) & TRange *TEXT*))
 	      TAF-elem)))))
       `(div (& (class ,(if (<= (car trange) time-current (cdr trange))
 			   "per_c" "per_nc")))
-	    ,((sxpath `((PERIOD ((eq? ,elem))) & Title *text*)) TAF-elem)
+	    ,((sxpath `((PERIOD ((eq? ,elem))) & Title *TEXT*)) TAF-elem)
 	    " "
-	    ,((sxpath '(*text*)) elem))))
+	    ,((sxpath '(*TEXT*)) elem))))
 
   `((p (br))
     (table (& (bgcolor "#CCCCCC") (width "100%") (cellpadding "3"))
      (tr
-      (td ,((sxpath '(& SName *text*)) TAF-elem))
-      (td "Id: " ,((sxpath '(& BId *text*)) TAF-elem))
-      (td "[" ,((sxpath '(& LatLon *text*)) TAF-elem) "]")
+      (td ,((sxpath '(& SName *TEXT*)) TAF-elem))
+      (td "Id: " ,((sxpath '(& BId *TEXT*)) TAF-elem))
+      (td "[" ,((sxpath '(& LatLon *TEXT*)) TAF-elem) "]")
       ))
     (table 
      (& (width "100%") (cellpadding "1") (BORDER "1") (RULES "none")
@@ -298,14 +298,14 @@
      (tr (td (& (width "20%"))
 	     ,(let ((date (time-utc->date 
 			   (string->number 
-			    (car ((sxpath '(& TStamp *text*)) TAF-elem)))
+			    (car ((sxpath '(& TStamp *TEXT*)) TAF-elem)))
 			   0)))
 		(list (date-month date) "-" (date-day date) " "
 		      (date-hour date) ":" (date-minute date)))
 	     (br)
 	     ,(let ((trange
 		     (conv-TRange
-		      (car ((sxpath '(VALID & TRange *text*)) TAF-elem))))
+		      (car ((sxpath '(VALID & TRange *TEXT*)) TAF-elem))))
 		    (format-date
 		     (lambda (tstamp)
 		       (let ((date (time-utc->date  tstamp 0)))
@@ -314,14 +314,14 @@
 		(list (format-date (car trange)) " - "
 		      (format-date (cdr trange))))
 	     )
-	 (td ,((sxpath '(VALID *text*)) TAF-elem)
+	 (td ,((sxpath '(VALID *TEXT*)) TAF-elem)
 	     ,(apply-templates TAF-elem
 		 `((PERIOD PREVAILING . ,handle-Prevailing)
 		   (PERIOD VAR . ,(lambda (elem)
 				    `(div (& (class "var"))
-					  ,((sxpath '(& Title *text*)) elem)
+					  ,((sxpath '(& Title *TEXT*)) elem)
 					  " "
-					  ,((sxpath '(*text*)) elem))))
+					  ,((sxpath '(*TEXT*)) elem))))
 		   ))
 	     )
      )))

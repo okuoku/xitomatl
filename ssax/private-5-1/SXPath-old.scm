@@ -111,16 +111,16 @@
 ;	id		- tests if the Node has the right name (id)
 ;	&		- tests if the Node is an <attributes-coll>
 ;	*		- tests if the Node is an <Element>
-;	*text*		- tests if the Node is a text node
+;	*TEXT*		- tests if the Node is a text node
 ;	*PI*		- tests if the Node is a PI node
-;	*any*		- #t for any type of Node
+;	*ANY*		- #t for any type of Node
 
 (define (node-typeof? crit)
   (lambda (node)
     (case crit
       ((*) (and (pair? node) (not (memq (car node) '(& *PI*)))))
-      ((*any*) #t)
-      ((*text*) (string? node))
+      ((*ANY*) #t)
+      ((*TEXT*) (string? node))
       (else
        (and (pair? node) (eq? crit (car node))))
 )))
@@ -414,8 +414,8 @@
 ; (sxpath '(path-component ...)) ->
 ;		(node-join (sxpath1 path-component) (sxpath '(...)))
 ; (sxpath1 '//) -> (node-or 
-;		     (node-self (node-typeof? '*any*))
-;		      (node-closure (node-typeof? '*any*)))
+;		     (node-self (node-typeof? '*ANY*))
+;		      (node-closure (node-typeof? '*ANY*)))
 ; (sxpath1 '(equal? x)) -> (select-kids (node-equal? x))
 ; (sxpath1 '(eq? x))    -> (select-kids (node-eq? x))
 ; (sxpath1 ?symbol)     -> (select-kids (node-typeof? ?symbol)
@@ -438,7 +438,7 @@
      ((eq? '// (car path))
       (loop
        ((if (nodeset? nodeset) append cons) nodeset
-	((node-closure (node-typeof? '*any*)) nodeset))
+	((node-closure (node-typeof? '*ANY*)) nodeset))
        (cdr path)))
      ((symbol? (car path))
       (loop ((select-kids (node-typeof? (car path))) nodeset)
@@ -618,8 +618,8 @@
       (expected
        '("cdata"))
       )
-  (run-test (select-kids (node-typeof? '*text*)) tree expected)
-  (run-test (sxpath '(*text*)) tree expected)
+  (run-test (select-kids (node-typeof? '*TEXT*)) tree expected)
+  (run-test (sxpath '(*TEXT*)) tree expected)
 )
 
 
@@ -631,8 +631,8 @@
        )
       (expected (cdr tree))
       )
-  (run-test (select-kids (node-typeof? '*any*)) tree expected)
-  (run-test (sxpath '(*any*)) tree expected)
+  (run-test (select-kids (node-typeof? '*ANY*)) tree expected)
+  (run-test (sxpath '(*ANY*)) tree expected)
 )
 
 ; Location path, full form: child::*/child::para 
@@ -744,8 +744,8 @@
       )
   (run-test
    (node-or
-    (node-self (node-typeof? '*any*))
-    (node-closure (node-typeof? '*any*)))
+    (node-self (node-typeof? '*ANY*))
+    (node-closure (node-typeof? '*ANY*)))
    tree expected)
   (run-test (sxpath '(//)) tree expected)
 )
@@ -1210,8 +1210,8 @@
     (node-closure (node-typeof? 'stanza))
     (node-reduce 
      (select-kids (node-typeof? 'line)) (node-pos 1))
-    (select-kids (node-typeof? '*text*)))
+    (select-kids (node-typeof? '*TEXT*)))
    tree expected)
-  (run-test (sxpath '(// stanza (line 1) *text*)) tree expected)
+  (run-test (sxpath '(// stanza (line 1) *TEXT*)) tree expected)
 )
 

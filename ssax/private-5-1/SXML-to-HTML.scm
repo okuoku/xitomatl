@@ -61,11 +61,11 @@
                 ; Universal transformation rules. Work for every HTML,
                 ; present and future
     `((&
-      ((*default*       ; local override for attributes
+      ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr attr-key value))))
       . ,(lambda (trigger . value) (cons '& value)))
-     (*default* . ,(lambda (tag . elems) (entag tag elems)))
-     (*text* . ,(lambda (trigger str) 
+     (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
+     (*TEXT* . ,(lambda (trigger str) 
 		  (if (string? str) (string->goodHTML str) str)))
  
                 ; Handle a nontraditional but convenient top-level element:

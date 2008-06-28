@@ -399,19 +399,19 @@
 ;     (cerr namespaces nl)
 ;     (cerr translation nl)
     `((&
-      ((*default*       ; local override for attributes
+      ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr (translate attr-key) value)))
-       (& *preorder* . ,(lambda _ '()))) ; annotations handled already
+       (& *PREORDER* . ,(lambda _ '()))) ; annotations handled already
       . ,(lambda (trigger . value) (cons '& value)))
-     (*default* . ,(lambda (tag . elems) (entag (translate tag) elems)))
-     (*text* . ,(lambda (trigger str) 
+     (*DEFAULT* . ,(lambda (tag . elems) (entag (translate tag) elems)))
+     (*TEXT* . ,(lambda (trigger str) 
 		  (if (string? str) (string->goodXML str) str)))
      (*PI*
-      *preorder*
+      *PREORDER*
       . ,(lambda (tag target body)
 	   (list "<?" target " " body "?>")))
      (*TOP*       ; check for the namespaces and add xmlns:xxx attributes
-      *preorder*  ; to the root element
+      *PREORDER*  ; to the root element
       . ,(lambda (tag . elems)
 	   (let*-values
 	    (((pis root-elem)

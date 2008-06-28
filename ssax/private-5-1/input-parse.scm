@@ -11,7 +11,7 @@
 ; EOF is generally frowned on, and thrown up upon if encountered.
 ; Exceptions are mentioned specifically. The list of expected characters 
 ; (characters to skip until, or break-characters) may include an EOF
-; "character", which is to be coded as symbol *eof*
+; "character", which is to be coded as symbol *EOF*
 ;
 ; The input stream to parse is specified as a PORT, which is usually
 ; the last (and optional) argument. It defaults to the current input
@@ -62,7 +62,7 @@
   (let ((c (read-char port)))
     (if (memv c expected-chars) c
     (parser-error port "Wrong character " c
-    	   " (0x" (if (eof-object? c) "*eof*"
+    	   " (0x" (if (eof-object? c) "*EOF*"
     	   	    (number->string (char->integer c) 16)) ") "
     	   comment ". " expected-chars " expected"))))
     	   
@@ -71,7 +71,7 @@
 ;	Reads and skips characters from the PORT until one of the break
 ;	characters is encountered. This break character is returned.
 ;	The break characters are specified as the CHAR-LIST. This list
-;	may include EOF, which is to be coded as a symbol *eof*
+;	may include EOF, which is to be coded as a symbol *EOF*
 ;
 ; -- procedure+: skip-until NUMBER [PORT]
 ;	Skips the specified NUMBER of characters from the PORT and returns #f
@@ -92,7 +92,7 @@
        (cond
          ((memv c arg) c)
          ((eof-object? c)
-           (if (memq '*eof* arg) c
+           (if (memq '*EOF* arg) c
              (parser-error port "Unexpected EOF while skipping until " arg)))
          (else (loop (read-char port))))))))
 
@@ -125,7 +125,7 @@
 ;	The string of characters thus read is returned.
 ;	The break character is left on the input stream
 ;	The list of break characters may include EOF, which is to be coded as
-;	a symbol *eof*. Otherwise, EOF is fatal, generating an error message
+;	a symbol *EOF*. Otherwise, EOF is fatal, generating an error message
 ;	including a specified COMMENT-STRING (if any)
 ;
 ;	The optional argument PORT defaults to the current input port.
@@ -168,7 +168,7 @@
       (cond
         ((memv c break-chars) (substring buffer 0 i))
     	((eof-object? c)
-    	  (if (memq '*eof* break-chars)
+    	  (if (memq '*EOF* break-chars)
     	    (substring buffer 0 i)		; was EOF expected?
     	    (parser-error port "EOF while reading a token " comment)))
     	(else
@@ -205,7 +205,7 @@
 	    (if (null? filled-buffer-l) (substring buffer 0 i)
 	      (string-concatenate-reverse filled-buffer-l buffer i)))
 	  ((eof-object? c)
-	    (if (memq '*eof* break-chars)	; was EOF expected?
+	    (if (memq '*EOF* break-chars)	; was EOF expected?
 	      (if (null? filled-buffer-l) (substring buffer 0 i)
 		(string-concatenate-reverse filled-buffer-l buffer i))
 	      (parser-error port "EOF while reading a token " comment)))
@@ -294,7 +294,7 @@
 ; 
 ;	The optional argument PORT defaults to the current input port.
 
-(define *read-line-breaks* (list char-newline char-return '*eof*))
+(define *read-line-breaks* (list char-newline char-return '*EOF*))
 
 (define-opt (read-text-line (optional (port (current-input-port))) )
   (if (eof-object? (peek-char port)) (peek-char port)

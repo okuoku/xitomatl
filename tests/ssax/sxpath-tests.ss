@@ -98,8 +98,8 @@
       (expected
        '("cdata"))
       )
-  (run-test (select-kids (node-typeof? '*text*)) tree expected)
-  (run-test (sxpath '(*text*)) tree expected)
+  (run-test (select-kids (node-typeof? '*TEXT*)) tree expected)
+  (run-test (sxpath '(*TEXT*)) tree expected)
 )
 
 
@@ -111,8 +111,8 @@
        )
       (expected (cdr tree))
       )
-  (run-test (select-kids (node-typeof? '*any*)) tree expected)
-  (run-test (sxpath '(*any*)) tree expected)
+  (run-test (select-kids (node-typeof? '*ANY*)) tree expected)
+  (run-test (sxpath '(*ANY*)) tree expected)
 )
 
 ; Location path, full form: child::*/child::para 
@@ -224,8 +224,8 @@
       )
   (run-test
    (node-or
-    (node-self (node-typeof? '*any*))
-    (node-closure (node-typeof? '*any*)))
+    (node-self (node-typeof? '*ANY*))
+    (node-closure (node-typeof? '*ANY*)))
    tree expected)
   (run-test (sxpath '(//)) tree expected)
 )
@@ -690,9 +690,9 @@
     (node-closure (node-typeof? 'stanza))
     (node-reduce 
      (select-kids (node-typeof? 'line)) (node-pos 1))
-    (select-kids (node-typeof? '*text*)))
+    (select-kids (node-typeof? '*TEXT*)))
    tree expected)
-  (run-test (sxpath '(// stanza (line 1) *text*)) tree expected)
+  (run-test (sxpath '(// stanza (line 1) *TEXT*)) tree expected)
 )
 
 

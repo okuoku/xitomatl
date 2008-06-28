@@ -65,21 +65,21 @@
 ;	pre-post-order:: <tree> x <bindings> -> <new-tree>
 ; where
 ; <bindings> ::= (<binding> ...)
-; <binding> ::= (<trigger-symbol> *preorder* . <handler>) |
-;               (<trigger-symbol> *macro* . <handler>) |
+; <binding> ::= (<trigger-symbol> *PREORDER* . <handler>) |
+;               (<trigger-symbol> *MACRO* . <handler>) |
 ;		(<trigger-symbol> <new-bindings> . <handler>) |
 ;		(<trigger-symbol> . <handler>)
-; <trigger-symbol> ::= XMLname | *text* | *default*
+; <trigger-symbol> ::= XMLname | *TEXT* | *DEFAULT*
 ; <handler> :: <trigger-symbol> x [<tree>] -> <new-tree>
 ;
 ; The pre-post-order function visits the nodes and nodelists
 ; pre-post-order (depth-first).  For each <Node> of the form (name
 ; <Node> ...) it looks up an association with the given 'name' among
 ; its <bindings>. If failed, pre-post-order tries to locate a
-; *default* binding. It's an error if the latter attempt fails as
+; *DEFAULT* binding. It's an error if the latter attempt fails as
 ; well.  Having found a binding, the pre-post-order function first
 ; checks to see if the binding is of the form
-;	(<trigger-symbol> *preorder* . <handler>)
+;	(<trigger-symbol> *PREORDER* . <handler>)
 ; If it is, the handler is 'applied' to the current node. Otherwise,
 ; the pre-post-order function first calls itself recursively for each
 ; child of the current node, with <new-bindings> prepended to the
@@ -89,16 +89,16 @@
 ; and its processed children. The result of the handler, which should
 ; also be a <tree>, replaces the current <Node>. If the current <Node>
 ; is a text string or other atom, a special binding with a symbol
-; *text* is looked up.
+; *TEXT* is looked up.
 ;
 ; A binding can also be of a form
-;	(<trigger-symbol> *macro* . <handler>)
-; This is equivalent to *preorder* described above. However, the result
+;	(<trigger-symbol> *MACRO* . <handler>)
+; This is equivalent to *PREORDER* described above. However, the result
 ; is re-processed again, with the current stylesheet.
 
 (define (pre-post-order tree bindings)
-  (let* ((default-binding (assq '*default* bindings))
-	 (text-binding (or (assq '*text* bindings) default-binding))
+  (let* ((default-binding (assq '*DEFAULT* bindings))
+	 (text-binding (or (assq '*TEXT* bindings) default-binding))
 	 (text-handler			; Cache default and text bindings
 	   (and text-binding
 	     (if (procedure? (cdr text-binding))
@@ -107,7 +107,7 @@
       (cond
 	((null? tree) '())
 	((not (pair? tree))
-	  (let ((trigger '*text*))
+	  (let ((trigger '*TEXT*))
 	    (if text-handler (text-handler trigger tree)
 	      (error "Unknown binding for " trigger " and no default"))))
 	((not (symbol? (car tree))) (map loop tree)) ; tree is a nodelist
@@ -119,17 +119,17 @@
 		(error "Unknown binding for " trigger " and no default"))
 	      ((not (pair? (cdr binding)))  ; must be a procedure: handler
 		(apply (cdr binding) trigger (map loop (cdr tree))))
-	      ((eq? '*preorder* (cadr binding))
+	      ((eq? '*PREORDER* (cadr binding))
 		(apply (cddr binding) tree))
-	      ((eq? '*macro* (cadr binding))
+	      ((eq? '*MACRO* (cadr binding))
 		(loop (apply (cddr binding) tree)))
 	      (else			    ; (cadr binding) is a local binding
 		(apply (cddr binding) trigger 
 		  (pre-post-order (cdr tree) (append (cadr binding) bindings)))
 		))))))))
 
-; post-order is a strict subset of pre-post-order without *preorder*
-; (let alone *macro*) traversals. 
+; post-order is a strict subset of pre-post-order without *PREORDER*
+; (let alone *MACRO*) traversals. 
 ; Now pre-post-order is actually faster than the old post-order.
 ; The function post-order is deprecated and is aliased below for
 ; backward compatibility.

@@ -596,7 +596,7 @@
    (call-with-input-string str
      (lambda (port)
        (let loop ((frags '()))
-	 (let* ((token (next-token '() '(#\% *eof*) "unesc-string" port))
+	 (let* ((token (next-token '() '(#\% *EOF*) "unesc-string" port))
 		(cterm (read-char port))
 		(frags (cons token frags)))
 	   (if (eof-object? cterm) (string-concatenate-reverse/shared frags)
@@ -1164,7 +1164,7 @@
  (let ((value-delimeters (append ssax:S-chars '(#\< #\&))))
 		; Read the AttValue from the PORT up to the delimiter
 		; (which can be a single or double-quote character,
-		; or even a symbol *eof*)
+		; or even a symbol *EOF*)
 		; 'prev-fragments' is the list of string fragments, accumulated
 		; so far, in reverse order.
 		; Return the list of fragments with newly read fragments
@@ -1208,7 +1208,7 @@
       (assert-curr-char '(#\;) "XML [68]" port)
       (ssax:handle-parsed-entity port name entities
 	(lambda (port entities fragments)
-	  (read-attrib-value '*eof* port entities fragments))
+	  (read-attrib-value '*EOF* port entities fragments))
 	(lambda (str1 str2 fragments)
 	  (if (equal? "" str2) (cons str1 fragments)
 	      (cons* str2 str1 fragments)))
@@ -1835,7 +1835,7 @@
 (define ssax:read-char-data
  (let
      ((terminators-usual (list #\< #\& char-return))
-      (terminators-usual-eof (list #\< '*eof* #\& char-return))
+      (terminators-usual-eof (list #\< '*EOF* #\& char-return))
 
       (handle-fragment
        (lambda (fragment str-handler seed)

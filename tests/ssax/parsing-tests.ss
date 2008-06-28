@@ -110,7 +110,7 @@
    (call-with-input-string str
      (lambda (port)
        (let loop ((frags '()))
-	 (let* ((token (next-token '() '(#\% *eof*) "unesc-string" port))
+	 (let* ((token (next-token '() '(#\% *EOF*) "unesc-string" port))
 		(cterm (read-char port))
 		(frags (cons token frags)))
 	   (if (eof-object? cterm) (string-concatenate-reverse/shared frags)

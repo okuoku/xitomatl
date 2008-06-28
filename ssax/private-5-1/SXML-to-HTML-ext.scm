@@ -151,11 +151,11 @@
 ; work for every HTML, present and future
 (define universal-conversion-rules
   `((&
-      ((*default*       ; local override for attributes
+      ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr attr-key value))))
       . ,(lambda (trigger . value) (cons '& value)))
-    (*default* . ,(lambda (tag . elems) (entag tag elems)))
-    (*text* . ,(lambda (trigger str) 
+    (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
+    (*TEXT* . ,(lambda (trigger str) 
 		 (if (string? str) (string->goodHTML str) str)))
     (n_		; a non-breaking space
      . ,(lambda (tag . elems)
@@ -166,11 +166,11 @@
 ; useful when the tree of fragments has to be traversed one more time.
 (define universal-protected-rules
   `((&
-      ((*default*       ; local override for attributes
+      ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr attr-key value))))
       . ,(lambda (trigger . value) (cons '& value)))
-    (*default* . ,(lambda (tag . elems) (entag tag elems)))
-    (*text* . ,(lambda (trigger str) 
+    (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
+    (*TEXT* . ,(lambda (trigger str) 
 		 str))
     (n_		; a non-breaking space
      . ,(lambda (tag . elems)
@@ -178,8 +178,8 @@
 
 ; The following rules define the identity transformation
 (define alist-conv-rules
-  `((*default* . ,(lambda (tag . elems) (cons tag elems)))
-    (*text* . ,(lambda (trigger str) str))))
+  `((*DEFAULT* . ,(lambda (tag . elems) (cons tag elems)))
+    (*TEXT* . ,(lambda (trigger str) str))))
 
 
 ; Find the 'Header' node within the 'Content' SXML expression.
@@ -189,8 +189,8 @@
 (define (find-Header Content)
   (letrec 
     ((search-rules
-	 `((*default*
-	    *preorder*
+	 `((*DEFAULT*
+	    *PREORDER*
 	    . ,(lambda (tag . elems)
 		 (let loop ((elems elems) (worklist '()))
 		   (cond
@@ -227,7 +227,7 @@
 	     "</html>" nl)))
 
      (Header
-      *preorder*
+      *PREORDER*
       . ,(lambda (tag . headers)
 	   (post-order (make-header headers) universal-conversion-rules)
 	   ))
@@ -265,14 +265,14 @@
 	   (let ((sections
 		  (post-order Content
 		    `((Section	; (Section level "content ...")
-		       ((*text* . ,(lambda (tag str) str)))
+		       ((*TEXT* . ,(lambda (tag str) str)))
 		       . ,(lambda (tag level head-word . elems)
 			    (vector level
 				    (list "<li><a href=\"#" head-word
 					  "\">" head-word elems "</a>" nl))))
-		      (*default*
+		      (*DEFAULT*
 		       . ,(lambda (attr-key . elems) elems))
-		      (*text* . ,(lambda (trigger str) '()))))))
+		      (*TEXT* . ,(lambda (trigger str) '()))))))
 	     ;(cerr sections)
 	     (list "<div>"
 	      (let loop ((curr-level 1) (sections sections))
@@ -305,7 +305,7 @@
 		(else "wrong item: " sections)))
 	      nl "</div>" nl))))
 
-     (bibitem *macro*
+     (bibitem *MACRO*
        . ,(lambda (tag label key . text)
 	   `(p (a (& (name ,key)) "[" ,label "]") " " ,text)))
 
@@ -319,7 +319,7 @@
 	   (cerr tag content nl)
 	   '()))
 
-     (URL  *macro*
+     (URL  *MACRO*
       . ,(lambda (tag url)
 	   `((br) "<" (a (& (href ,url)) ,url) ">")))
 
@@ -371,14 +371,14 @@
 		; title SXML. All other constructs re-write to
 		; nothing.
      (local-ref
-      *macro*
+      *MACRO*
       . ,(lambda (tag target . title)
 	   (let
 	       ((title
 		 (if (pair? title) title	; it is given explicitly
 		     (pre-post-order Content
-		       `((*text* . ,(lambda (trigger str) '()))
-			 (*default*
+		       `((*TEXT* . ,(lambda (trigger str) '()))
+			 (*DEFAULT*
 			  . ,(lambda (tag . elems)
 			       (let ((first-sign (signif-tail elems)))
 				 (if first-sign
@@ -388,7 +388,7 @@
 				       (car first-sign))
 				     '()))))
 			 (Description-unit
-			  *preorder*
+			  *PREORDER*
 			  . ,(lambda (tag key title . elems)
 			       (if (equal? key target)
 				   (list title)

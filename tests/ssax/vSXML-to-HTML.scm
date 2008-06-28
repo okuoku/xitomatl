@@ -106,7 +106,7 @@
    )
  )
 
-; Testing *preorder* and *macro* rules
+; Testing *PREORDER* and *MACRO* rules
 
 (let ()
   (define (custom-sxml->html tree)
@@ -116,18 +116,18 @@
                 ; Universal transformation rules. Work for every HTML,
                 ; present and future
 	`((&
-	    ((*default*       ; local override for attributes
+	    ((*DEFAULT*       ; local override for attributes
 	       . ,(lambda (attr-key . value) (enattr attr-key value))))
 	    . ,(lambda (trigger . value) (cons '& value)))
-	   (*default* . ,(lambda (tag . elems) (entag tag elems)))
-	   (*text* . ,(lambda (trigger str) 
+	   (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
+	   (*TEXT* . ,(lambda (trigger str) 
 			(if (string? str) (string->goodHTML str) str)))
 	  (link
-	   *macro*
+	   *MACRO*
 	    . ,(lambda (tag url body)
 		 `(a (& (href ,url)) ,body)))
 	   (vspace		; (vspace flag)
-	     *preorder*			; where flag is a symbol: small, large
+	     *PREORDER*			; where flag is a symbol: small, large
 	     . ,(lambda (tag flag)
 		  (case flag
 		    ((large) (list "<p><br>&nbsp;</p>"))
