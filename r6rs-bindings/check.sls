@@ -26,22 +26,23 @@
            (define ids (identifiers-of lib))
            (define total (length ids))
            (define missing 0)
+           (define env
+             (guard (ex [#t #f])
+               (if (list? lib)
+                 (environment lib)
+                 (case lib
+                   [(null-environment)
+                    (null-environment 5)]
+                   [(scheme-report-environment)
+                    (scheme-report-environment 5)]
+                   [else
+                    #f]))))
            (define results
              (begin 
-               #|(display "\nChecking library ") (display lib) (newline)
-               (display "------------------------------------------------------\n")|#
+               #;(begin (display "\nChecking library ") (display lib) (newline)
+                      (display "------------------------------------------------------\n"))
                (map (lambda (id)
-                      (define env
-                        (guard (ex [#t #f])
-                          (if (list? lib)
-                            (environment lib)
-                            (case lib
-                              [(null-environment)
-                               (null-environment 5)]
-                              [(scheme-report-environment)
-                               (scheme-report-environment 5)]
-                              [else
-                               #f]))))
+                      #;(begin (display " checking ") (display id) (newline))
                       (cond 
                         [env
                          (guard (ex [#t 
