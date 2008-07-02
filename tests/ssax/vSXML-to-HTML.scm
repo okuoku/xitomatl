@@ -39,34 +39,34 @@
 		  (lambda ()
 		    (SXML->HTML exp))))))
   (equal-strs?! '(#\newline "<p>&amp;</p>") (gen '(p "&")))
-  ;(write (gen '(p (& (ALIGN "center")) "bad chars:" "<>&\"")))
+  ;(write (gen '(p (^ (ALIGN "center")) "bad chars:" "<>&\"")))
   (equal-strs?! '(#\newline
 		   "<p align=\"center\">bad chars:&lt;&gt;&amp;&quot;</p>")
-		  (gen '(p (& (align "center")) "bad chars:" "<>&\"")))
+		  (gen '(p (^ (align "center")) "bad chars:" "<>&\"")))
   (equal-strs?! '(#\newline
 		   "<p align=\"center\" atr=\"&lt;value&gt;\">bad chars:"
 		   #\newline "<em>&lt;&gt;&amp;&quot;</em></p>")
-		(gen '(p (& (align "center") (atr "<value>"))
+		(gen '(p (^ (align "center") (atr "<value>"))
 			 "bad chars:" (em "<>&\""))))
   (equal-strs?! '(#\newline
 		   "<p align=\"center\" atr=\"&quot;text&quot;\">"
 		   #\newline "<br>"
 		   #\newline "<ul compact>"
 		   #\newline "<li>item 1</li></ul></p>")
-		(gen '(p (& (align "center") (atr "\"text\"")) (br)
-			 (ul (& (compact)) (li "item " 1)))))
+		(gen '(p (^ (align "center") (atr "\"text\"")) (br)
+			 (ul (^ (compact)) (li "item " 1)))))
   (equal-strs?!  '(#\newline "<p>"
 		   #\newline "<br>"
 		   #\newline "<ul compact>"
 		   #\newline "<li>item 1</li></ul></p>")
-		 (gen '(p (&) (br) (ul (& (compact)) (li "item " 1)))))
+		 (gen '(p (^) (br) (ul (^ (compact)) (li "item " 1)))))
   (equal-strs?! '("Content-type: text/html" #\newline #\newline
 		  "<HTML><HEAD><TITLE>my title</TITLE></HEAD>"
 		  #\newline "<body bgcolor=\"#ffffff\">"
 		  #\newline "<p>par1</p></body></HTML>")
 		(gen 
 		 '(html:begin "my title" 
-			      (body (& (bgcolor "#ffffff")) (p "par1")))))
+			      (body (^ (bgcolor "#ffffff")) (p "par1")))))
   )
 
 (let ()
@@ -74,9 +74,9 @@
     (SXML->HTML
      `((h2 "Slide number:" ,n)     ; Note n is used in its native form
        ,(and (positive? n)
-	     `(a (& (href "base-url&slide=" ,(- n 1))) "prev"))
+	     `(a (^ (href "base-url&slide=" ,(- n 1))) "prev"))
        ,(and (< (+ n 1) max-count)
-	     `(a (& (href "base-url&slide=" ,(+ n 1))) "next"))
+	     `(a (^ (href "base-url&slide=" ,(+ n 1))) "next"))
        (p "the text of the slide"))))
   (equal-strs?! '(#\newline "<h2>Slide number:0</h2>" 
 		  #\newline "<p>the text of the slide</p>")
@@ -99,7 +99,7 @@
 (SXML->HTML
  `(ul
    ,@(map (lambda (filename-title)
-	    `(li (a (& (href ,(car filename-title))))
+	    `(li (a (^ (href ,(car filename-title))))
 		 ,(cdr filename-title)))
 	  '(("slides/slide0001.gif" . "Introduction")
 	    ("slides/slide0010.gif" . "Summary")))
@@ -115,17 +115,17 @@
       (pre-post-order tree
                 ; Universal transformation rules. Work for every HTML,
                 ; present and future
-	`((&
+	`((^
 	    ((*DEFAULT*       ; local override for attributes
 	       . ,(lambda (attr-key . value) (enattr attr-key value))))
-	    . ,(lambda (trigger . value) (cons '& value)))
+	    . ,(lambda (trigger . value) (cons '^ value)))
 	   (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
 	   (*TEXT* . ,(lambda (trigger str) 
 			(if (string? str) (string->goodHTML str) str)))
 	  (link
 	   *MACRO*
 	    . ,(lambda (tag url body)
-		 `(a (& (href ,url)) ,body)))
+		 `(a (^ (href ,url)) ,body)))
 	   (vspace		; (vspace flag)
 	     *PREORDER*			; where flag is a symbol: small, large
 	     . ,(lambda (tag flag)

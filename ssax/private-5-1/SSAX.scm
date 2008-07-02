@@ -614,22 +614,6 @@
 		     frags))))))))))
 )
 	     
-
-; Test if a string is made of only whitespace
-; An empty string is considered made of whitespace as well
-(define (string-whitespace? str)
-  (let ((len (string-length str)))
-    (cond
-     ((zero? len) #t)
-     ((= 1 len) (char-whitespace? (string-ref str 0)))
-     ((= 2 len) (and (char-whitespace? (string-ref str 0))
-		     (char-whitespace? (string-ref str 1))))
-     (else
-      (let loop ((i 0))
-	(or (>= i len)
-	    (and (char-whitespace? (string-ref str i))
-		 (loop (inc i)))))))))
-
 ; Find val in alist
 ; Return (values found-el remaining-alist) or
 ;	 (values #f alist)
@@ -2511,7 +2495,7 @@
 					    (reverse seed)))))
 			 (let ((seed (if (attlist-null? attributes) seed
 					 (cons 
-					  (cons '& 
+					  (cons '^ 
 					   (map (lambda (attr)
 					      (list (car attr) (cdr attr)))
 						(attlist->alist attributes)))
@@ -2555,18 +2539,18 @@
 
    (test "   <A HREF='URL'> link <I>itlink </I> &amp;amp;</A>"
 	 dummy-doctype-fn 
-	 '(('"A" (& ('"HREF" "URL")) " link " ('"I" "itlink ")
+	 '(('"A" (^ ('"HREF" "URL")) " link " ('"I" "itlink ")
 	    " " "&" "amp;")))
 
    (test
       "   <A HREF='URL' xml:space='preserve'> link <I>itlink </I> &amp;amp;</A>" dummy-doctype-fn 
-      '(('"A" (& ('"HREF" "URL") (('"xml" . '"space") "preserve"))
+      '(('"A" (^ ('"HREF" "URL") (('"xml" . '"space") "preserve"))
 	   " link " ('"I" "itlink ") " " "&" "amp;")))
 
    (test "   <A HREF='URL' xml:space='preserve'> link <I xml:space='default'>itlink </I> &amp;amp;</A>" dummy-doctype-fn
-	 '(('"A" (& ('"HREF" "URL") (('"xml" . '"space") "preserve"))
+	 '(('"A" (^ ('"HREF" "URL") (('"xml" . '"space") "preserve"))
 	      " link "
-	      ('"I" (& (('"xml" . '"space") "default")) "itlink ")
+	      ('"I" (^ (('"xml" . '"space") "default")) "itlink ")
 	      " " "&" "amp;")))
    (test "<itemize><item>This   is item 1 </item>%n<!-- Just:a comment --><item>Item 2</item>%n </itemize>" dummy-doctype-fn 
 	 `(('"itemize" ('"item" "This   is item 1 ")
@@ -2578,7 +2562,7 @@
 	dummy-doctype-fn `(('"P" "<BR>" ,nl "<![CDATA[<BR>" "]]" "" ">")))
 
   (test "<?xml version='1.0'?>%n%n<Reports TStamp='1'></Reports>"
-	dummy-doctype-fn '(('"Reports" (& ('"TStamp" "1")))))
+	dummy-doctype-fn '(('"Reports" (^ ('"TStamp" "1")))))
   (test "%n<?PI xxx?><!-- Comment %n -%r-->%n<?PI1 zzz?><T/>" 
 	dummy-doctype-fn '(('"T")))
   (test "<!DOCTYPE T SYSTEM 'system1' ><!-- comment -->%n<T/>"
@@ -2631,7 +2615,7 @@
  (test "<DIV A:B='A' B='B' xmlns:A='URI1' xmlns='URI1'><A:P xmlns=''><BR/></A:P></DIV>"
 	(lambda (elem-gi seed)
 	  (values #f '() '() seed))
-       '((('"URI1" . '"DIV") (& ('"B" "B") (('"URI1" . '"B") "A"))
+       '((('"URI1" . '"DIV") (^ ('"B" "B") (('"URI1" . '"B") "A"))
 	  (*NAMESPACES* (('"A" '"URI1" . '"URI1")
 			 (*DEFAULT* '"URI1" . '"URI1")))
 	  (('"URI1" . '"P")
@@ -2644,7 +2628,7 @@
  (test "<DIV A:B='A' B='B' xmlns:A='URI1' xmlns='URI1'><A:P xmlns=''><BR/></A:P></DIV>"
 	(lambda (elem-gi seed)
 	  (values #f '() '((#f '"UA" . '"URI1")) seed))
-       '((('"UA" . '"DIV") (& ('"B" "B") (('"UA" . '"B") "A"))
+       '((('"UA" . '"DIV") (^ ('"B" "B") (('"UA" . '"B") "A"))
 	  (*NAMESPACES* (('"A" '"UA" . '"URI1")
 			 (*DEFAULT* '"UA" . '"URI1") (#f '"UA" . '"URI1")))
 	  (('"UA" . '"P")
@@ -2703,7 +2687,7 @@
 		       ))
 	     (('"A" . '"P") ANY ()) ('"BR" EMPTY ()))
 	   '() '((#f '"UA" . '"URI1")) seed))
-       '((('"UA" . '"DIV") (& ('"B" "B") (('"UA" . '"B") "A"))
+       '((('"UA" . '"DIV") (^ ('"B" "B") (('"UA" . '"B") "A"))
 	  (*NAMESPACES* ((*DEFAULT* '"UA" . '"URI1")
 			 ('"A" '"UA" . '"URI1") (#f '"UA" . '"URI1")))
 	  (('"UA" . '"P")
@@ -2724,7 +2708,7 @@
 		       ))
 	     (('"A" . '"P") ANY ()) ('"BR" EMPTY ()))
 	   '() '((#f '"UA" . '"URI1")) seed))
-	'((('"UA" . '"DIV") (& ('"B" "B") (('"UA" . '"B") "A")
+	'((('"UA" . '"DIV") (^ ('"B" "B") (('"UA" . '"B") "A")
 			       (('"URI2" . '"B") "xx"))
 	   (*NAMESPACES* ((*DEFAULT* '"UA" . '"URI1")
 			  ('"A" '"UA" . '"URI1")
@@ -2864,7 +2848,7 @@
 		   (if (symbol? elem-gi) elem-gi
 		       (RES-NAME->SXML elem-gi))
 		   (if (null? attrs) seed
-		       (cons (cons '& attrs) seed)))
+		       (cons (cons '^ attrs) seed)))
 		  parent-seed)))
 
 	     CHAR-DATA-HANDLER
@@ -2897,7 +2881,7 @@
       (cons '*TOP*
 	    (if (null? namespace-prefix-assig) result
 		(cons
-		 (list '& (cons '*NAMESPACES* 
+		 (list '^ (cons '*NAMESPACES* 
 				 (map (lambda (ns) (list (car ns) (cdr ns)))
 				      namespace-prefix-assig)))
 		      result)))
@@ -2922,15 +2906,15 @@
     (test " <BR/>" '() '(*TOP* (BR)))
     (test "<BR></BR>" '() '(*TOP* (BR)))
     (test " <BR CLEAR='ALL'%nCLASS='Class1'/>" '()
-	  '(*TOP* (BR (& (CLEAR "ALL") (CLASS "Class1")))))
+	  '(*TOP* (BR (^ (CLEAR "ALL") (CLASS "Class1")))))
     (test "   <A HREF='URL'>  link <I>itlink </I> &amp;amp;</A>" '()
-	  '(*TOP* (A (& (HREF "URL")) "  link " (I "itlink ") " &amp;")))
+	  '(*TOP* (A (^ (HREF "URL")) "  link " (I "itlink ") " &amp;")))
     (test "   <A HREF='URL' xml:space='preserve'>  link <I>itlink </I> &amp;amp;</A>" '()
-	  '(*TOP* (A (& (xml:space "preserve") (HREF "URL"))
+	  '(*TOP* (A (^ (xml:space "preserve") (HREF "URL"))
 		     "  link " (I "itlink ") " &amp;")))
     (test "   <A HREF='URL' xml:space='preserve'>  link <I xml:space='default'>itlink </I> &amp;amp;</A>" '()
-	  '(*TOP* (A (& (xml:space "preserve") (HREF "URL"))
-		     "  link " (I (& (xml:space "default"))
+	  '(*TOP* (A (^ (xml:space "preserve") (HREF "URL"))
+		     "  link " (I (^ (xml:space "default"))
 				  "itlink ") " &amp;")))
     (test " <P><?pi1  p1 content ?>?<?pi2 pi2? content? ??></P>" '()
 	  '(*TOP* (P (*PI* pi1 "p1 content ") "?"
@@ -2950,20 +2934,20 @@
     (test "<!DOCTYPE T SYSTEM 'system1' ><!-- comment -->%n<T/>" '()
 	  '(*TOP* (T)))
     (test "<?xml version='1.0'?>%n<WEIGHT unit=\"pound\">%n<NET certified='certified'> 67 </NET>%n<GROSS> 95 </GROSS>%n</WEIGHT>" '()
-	  '(*TOP* (*PI* xml "version='1.0'") (WEIGHT (& (unit "pound"))
-                (NET (& (certified "certified")) " 67 ")
+	  '(*TOP* (*PI* xml "version='1.0'") (WEIGHT (^ (unit "pound"))
+                (NET (^ (certified "certified")) " 67 ")
                 (GROSS " 95 "))
 		  ))
 ;     (test "<?xml version='1.0'?>%n<WEIGHT unit=\"pound\">%n<NET certified='certified'> 67 </NET>%n<GROSS> 95 </GROSS>%n</WEIGHT>" '()
-; 	  '(*TOP* (*PI* xml "version='1.0'") (WEIGHT (& (unit "pound"))
-;                "%n" (NET (& (certified "certified")) " 67 ")
+; 	  '(*TOP* (*PI* xml "version='1.0'") (WEIGHT (^ (unit "pound"))
+;                "%n" (NET (^ (certified "certified")) " 67 ")
 ;                "%n" (GROSS " 95 ") "%n")
 ; 		  ))
     (test "<DIV A:B='A' B='B' xmlns:A='URI1' xmlns='URI1'><A:P xmlns=''><BR/></A:P></DIV>" '()
-	  '(*TOP* (URI1:DIV (& (URI1:B "A") (B "B")) (URI1:P (BR)))))
+	  '(*TOP* (URI1:DIV (^ (URI1:B "A") (B "B")) (URI1:P (BR)))))
     (test "<DIV A:B='A' B='B' xmlns:A='URI1' xmlns='URI1'><A:P xmlns=''><BR/></A:P></DIV>" '((UA . "URI1"))
-	  '(*TOP* (& (*NAMESPACES* (UA "URI1")))
-		  (UA:DIV (& (UA:B "A") (B "B")) (UA:P (BR)))))
+	  '(*TOP* (^ (*NAMESPACES* (UA "URI1")))
+		  (UA:DIV (^ (UA:B "A") (B "B")) (UA:P (BR)))))
 
     ; A few tests from XML Namespaces Recommendation
     (test (string-append
@@ -2973,7 +2957,7 @@
            "</x>") '()
 	   '(*TOP* 
 	     (x (lineItem
-		 (& (http://ecommerce.org/schema:taxClass "exempt"))
+		 (^ (http://ecommerce.org/schema:taxClass "exempt"))
             "Baby food"))))
     (test (string-append 
 	   "<x xmlns:edi='http://ecommerce.org/schema'>"
@@ -2981,9 +2965,9 @@
            "<lineItem edi:taxClass='exempt'>Baby food</lineItem>"
            "</x>") '((EDI . "http://ecommerce.org/schema"))
 	   '(*TOP*
-	     (& (*NAMESPACES* (EDI "http://ecommerce.org/schema")))
+	     (^ (*NAMESPACES* (EDI "http://ecommerce.org/schema")))
 	     (x (lineItem
-		 (& (EDI:taxClass "exempt"))
+		 (^ (EDI:taxClass "exempt"))
             "Baby food"))))
 
     (test (string-append
@@ -3037,7 +3021,7 @@
            "</Beers>")
 	      '((html . "http://www.w3.org/TR/REC-html40"))
 	      '(*TOP*
-		(& (*NAMESPACES* (html "http://www.w3.org/TR/REC-html40")))
+		(^ (*NAMESPACES* (html "http://www.w3.org/TR/REC-html40")))
 		(Beers (html:table
                 (html:th (html:td "Name")
                          (html:td "Origin")
@@ -3059,11 +3043,11 @@
        "<!-- 5 --><DEPARTURE>1997-05-24T07:55:00+1</DEPARTURE></RESERVATION>")
 	  '((HTML . "http://www.w3.org/TR/REC-html40"))
 	  '(*TOP*
-	    (& (*NAMESPACES* (HTML "http://www.w3.org/TR/REC-html40")))
+	    (^ (*NAMESPACES* (HTML "http://www.w3.org/TR/REC-html40")))
 	     (RESERVATION
-	      (NAME (& (HTML:CLASS "largeSansSerif")) "Layman, A")
-	      (SEAT (& (HTML:CLASS "largeMonotype") (CLASS "Y")) "33B")
-	      (HTML:A (& (HREF "/cgi-bin/ResStatus")) "Check Status")
+	      (NAME (^ (HTML:CLASS "largeSansSerif")) "Layman, A")
+	      (SEAT (^ (HTML:CLASS "largeMonotype") (CLASS "Y")) "33B")
+	      (HTML:A (^ (HREF "/cgi-bin/ResStatus")) "Check Status")
 	      (DEPARTURE "1997-05-24T07:55:00+1"))))
     ; Part of RDF from the XML Infoset
         (test (string-concatenate/shared (list-intersperse '(
@@ -3097,33 +3081,33 @@
    '((RDF . "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
      (RDFS . "http://www.w3.org/2000/01/rdf-schema#")
      (ISET . "http://www.w3.org/2001/02/infoset#"))
-   '(*TOP* (& (*NAMESPACES*
+   '(*TOP* (^ (*NAMESPACES*
          (RDF "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
          (RDFS "http://www.w3.org/2000/01/rdf-schema#")
          (ISET "http://www.w3.org/2001/02/infoset#")))
        (*PI* xml "version='1.0' encoding='utf-8' standalone='yes'")
        (RDF:RDF
-	(RDFS:Class (& (ID "Boolean")))
-	(ISET:Boolean (& (ID "Boolean.true")))
-	(ISET:Boolean (& (ID "Boolean.false")))
-	(RDFS:Class (& (ID "InfoItem")))
-	(RDFS:Class (& (RDFS:subClassOf "#InfoItem") (ID "Document")))
-	(RDFS:Class (& (RDFS:subClassOf "#InfoItem") (ID "Element")))
-	(RDFS:Class (& (RDFS:subClassOf "#InfoItem") (ID "Attribute")))
+	(RDFS:Class (^ (ID "Boolean")))
+	(ISET:Boolean (^ (ID "Boolean.true")))
+	(ISET:Boolean (^ (ID "Boolean.false")))
+	(RDFS:Class (^ (ID "InfoItem")))
+	(RDFS:Class (^ (RDFS:subClassOf "#InfoItem") (ID "Document")))
+	(RDFS:Class (^ (RDFS:subClassOf "#InfoItem") (ID "Element")))
+	(RDFS:Class (^ (RDFS:subClassOf "#InfoItem") (ID "Attribute")))
 	(RDFS:Class
-	 (& (RDFS:subClassOf
+	 (^ (RDFS:subClassOf
 	     "http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag")
 	    (ID "InfoItemSet")))
 	(RDFS:Class
-	 (& (RDFS:subClassOf "#InfoItemSet") (ID "AttributeSet")))
+	 (^ (RDFS:subClassOf "#InfoItemSet") (ID "AttributeSet")))
 	(RDFS:Property
-	 (& (ID "allDeclarationsProcessed"))
-	 (RDFS:domain (& (resource "#Document")))
-	 (RDFS:range (& (resource "#Boolean"))))
+	 (^ (ID "allDeclarationsProcessed"))
+	 (RDFS:domain (^ (resource "#Document")))
+	 (RDFS:range (^ (resource "#Boolean"))))
 	(RDFS:Property
-	 (& (ID "attributes"))
-	 (RDFS:domain (& (resource "#Element")))
-	 (RDFS:range (& (resource "#AttributeSet")))))))
+	 (^ (ID "attributes"))
+	 (RDFS:domain (^ (resource "#Element")))
+	 (RDFS:range (^ (resource "#AttributeSet")))))))
 	  
     ; Part of RDF from RSS of the Daemon News Mall
         (test (string-concatenate/shared (list-intersperse '(
@@ -3149,7 +3133,7 @@
    '((RDF . "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
      (RSS . "http://my.netscape.com/rdf/simple/0.9/")
      (ISET . "http://www.w3.org/2001/02/infoset#"))
-   '(*TOP* (& (*NAMESPACES*
+   '(*TOP* (^ (*NAMESPACES*
          (RDF "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
          (RSS "http://my.netscape.com/rdf/simple/0.9/")
          (ISET "http://www.w3.org/2001/02/infoset#")))
@@ -3189,19 +3173,19 @@
        ))
 	  '()
 	  '(*TOP* (Forecasts
-		   (& (TStamp "958082142"))
-		   (TAF (& (TStamp "958066200")
+		   (^ (TStamp "958082142"))
+		   (TAF (^ (TStamp "958066200")
 			   (SName "KMRY, MONTEREY PENINSULA")
 			   (LatLon "36.583, -121.850")
 			   (BId "724915"))
-              (VALID (& (TRange "958068000, 958154400")) "111730Z 111818")
-              (PERIOD (& (TRange "958068000, 958078800"))
+              (VALID (^ (TRange "958068000, 958154400")) "111730Z 111818")
+              (PERIOD (^ (TRange "958068000, 958078800"))
                       (PREVAILING "31010KT P6SM FEW030"))
-              (PERIOD (& (Title "FM2100") (TRange "958078800, 958104000"))
+              (PERIOD (^ (Title "FM2100") (TRange "958078800, 958104000"))
                       (PREVAILING "29016KT P6SM FEW040"))
-              (PERIOD (& (Title "FM0400") (TRange "958104000, 958154400"))
+              (PERIOD (^ (Title "FM0400") (TRange "958104000, 958154400"))
                       (PREVAILING "29010KT P6SM SCT200")
-                      (VAR (& (Title "BECMG 0708")
+                      (VAR (^ (Title "BECMG 0708")
                               (TRange "958114800, 958118400"))
                            "VRB05KT"))))))
 ))

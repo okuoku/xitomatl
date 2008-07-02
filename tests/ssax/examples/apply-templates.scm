@@ -26,36 +26,36 @@
   '(html
     (head (title "Slides"))
     (body
-     (p (& (align "center"))
-	(table (& (style "font-size: x-large"))
+     (p (^ (align "center"))
+	(table (^ (style "font-size: x-large"))
 	       (tr
-		(td (& (align "right")) "Talks ")
-		(td (& (align "center")) " = ")
+		(td (^ (align "right")) "Talks ")
+		(td (^ (align "center")) " = ")
 		(td " slides + transition"))
 	       (tr (td)
-		   (td (& (align "center")) " = ")
+		   (td (^ (align "center")) " = ")
 		   (td " data + control"))
 	       (tr (td)
-		   (td (& (align "center")) " = ")
+		   (td (^ (align "center")) " = ")
 		   (td " programs"))))
      (ul
-      (li (a (& (href "slides/slide0001.gif")) "Introduction"))
-      (li (a (& (href "slides/slide0010.gif")) "Summary")))
+      (li (a (^ (href "slides/slide0001.gif")) "Introduction"))
+      (li (a (^ (href "slides/slide0010.gif")) "Summary")))
      )))
 
 
 (define tree2
-  '(Forecasts (& (TStamp "958082142"))
-     (TAF (& (TStamp "958066200") (LatLon "36.583, -121.850")
+  '(Forecasts (^ (TStamp "958082142"))
+     (TAF (^ (TStamp "958066200") (LatLon "36.583, -121.850")
 	     (BId "724915") (SName "KMRY, MONTEREY PENINSULA"))
-	  (VALID (& (TRange "958068000, 958154400")) "111730Z 111818")
-	  (PERIOD (& (TRange "958068000, 958078800"))
+	  (VALID (^ (TRange "958068000, 958154400")) "111730Z 111818")
+	  (PERIOD (^ (TRange "958068000, 958078800"))
 		  (PREVAILING "31010KT P6SM FEW030"))
-	  (PERIOD (& (TRange "958078800, 958104000") (Title "FM2100"))
+	  (PERIOD (^ (TRange "958078800, 958104000") (Title "FM2100"))
 		  (PREVAILING "29016KT P6SM FEW040"))
-	  (PERIOD (& (TRange "958104000, 958154400") (Title "FM0400"))
+	  (PERIOD (^ (TRange "958104000, 958154400") (Title "FM0400"))
 		  (PREVAILING "29010KT P6SM SCT200")
-		  (VAR (& (Title "BECMG 0708")
+		  (VAR (^ (Title "BECMG 0708")
 			  (TRange "958114800, 958118400"))
 		       "VRB05KT"))
 )))
@@ -141,7 +141,7 @@
 ; <xsl:template match="a/@href"><xsl:value-of/></xsl:template>
 (pp
  (apply-templates tree1
-		  `((a & href . ,(lambda (node) node)))
+		  `((a ^ href . ,(lambda (node) node)))
 ))
 (newline)
 
@@ -151,7 +151,7 @@
 ; <xsl:template match="td/@align"><xsl:value-of/></xsl:template>
 (pp
  (apply-templates tree1
-		  `((td & align . ,(lambda (node) node)))
+		  `((td ^ align . ,(lambda (node) node)))
 ))
 (newline)
 
@@ -164,8 +164,8 @@
 ; </xsl:template>
 (pp
  (apply-templates tree2
-  `((PERIOD & Title *TEXT* . ,(lambda (node) (list 'Title-PERIOD node)))
-    (VAR & Title *TEXT* . ,(lambda (node) (list 'Title-VAR node))))
+  `((PERIOD ^ Title *TEXT* . ,(lambda (node) (list 'Title-PERIOD node)))
+    (VAR ^ Title *TEXT* . ,(lambda (node) (list 'Title-VAR node))))
   ))
 (newline)
 
@@ -277,35 +277,35 @@
 		; Handle PREVAILING grandchild of a TAF-elem
   (define (handle-Prevailing elem)
     (let ((trange (conv-TRange (car 
-	     ((sxpath `((PERIOD  ((eq? ,elem))) & TRange *TEXT*))
+	     ((sxpath `((PERIOD  ((eq? ,elem))) ^ TRange *TEXT*))
 	      TAF-elem)))))
-      `(div (& (class ,(if (<= (car trange) time-current (cdr trange))
+      `(div (^ (class ,(if (<= (car trange) time-current (cdr trange))
 			   "per_c" "per_nc")))
-	    ,((sxpath `((PERIOD ((eq? ,elem))) & Title *TEXT*)) TAF-elem)
+	    ,((sxpath `((PERIOD ((eq? ,elem))) ^ Title *TEXT*)) TAF-elem)
 	    " "
 	    ,((sxpath '(*TEXT*)) elem))))
 
   `((p (br))
-    (table (& (bgcolor "#CCCCCC") (width "100%") (cellpadding "3"))
+    (table (^ (bgcolor "#CCCCCC") (width "100%") (cellpadding "3"))
      (tr
-      (td ,((sxpath '(& SName *TEXT*)) TAF-elem))
-      (td "Id: " ,((sxpath '(& BId *TEXT*)) TAF-elem))
-      (td "[" ,((sxpath '(& LatLon *TEXT*)) TAF-elem) "]")
+      (td ,((sxpath '(^ SName *TEXT*)) TAF-elem))
+      (td "Id: " ,((sxpath '(^ BId *TEXT*)) TAF-elem))
+      (td "[" ,((sxpath '(^ LatLon *TEXT*)) TAF-elem) "]")
       ))
     (table 
-     (& (width "100%") (cellpadding "1") (BORDER "1") (RULES "none")
+     (^ (width "100%") (cellpadding "1") (BORDER "1") (RULES "none")
 	(FRAME "hsides"))
-     (tr (td (& (width "20%"))
+     (tr (td (^ (width "20%"))
 	     ,(let ((date (time-utc->date 
 			   (string->number 
-			    (car ((sxpath '(& TStamp *TEXT*)) TAF-elem)))
+			    (car ((sxpath '(^ TStamp *TEXT*)) TAF-elem)))
 			   0)))
 		(list (date-month date) "-" (date-day date) " "
 		      (date-hour date) ":" (date-minute date)))
 	     (br)
 	     ,(let ((trange
 		     (conv-TRange
-		      (car ((sxpath '(VALID & TRange *TEXT*)) TAF-elem))))
+		      (car ((sxpath '(VALID ^ TRange *TEXT*)) TAF-elem))))
 		    (format-date
 		     (lambda (tstamp)
 		       (let ((date (time-utc->date  tstamp 0)))
@@ -318,8 +318,8 @@
 	     ,(apply-templates TAF-elem
 		 `((PERIOD PREVAILING . ,handle-Prevailing)
 		   (PERIOD VAR . ,(lambda (elem)
-				    `(div (& (class "var"))
-					  ,((sxpath '(& Title *TEXT*)) elem)
+				    `(div (^ (class "var"))
+					  ,((sxpath '(^ Title *TEXT*)) elem)
 					  " "
 					  ,((sxpath '(*TEXT*)) elem))))
 		   ))

@@ -35,7 +35,7 @@
 ; <Nodeset> however is either an empty list, or a list whose head is not
 ; a symbol.  A symbol at the head of a node is either an XML name (in
 ; which case it's a tag of an XML element), or an administrative name
-; such as '&'.  This uniform list representation makes processing rather
+; such as '^'.  This uniform list representation makes processing rather
 ; simple and elegant, while avoiding confusion. The multi-branch tree
 ; structure formed by the mutually-recursive datatypes <Node> and
 ; <Nodeset> lends itself well to processing by functional languages.
@@ -109,7 +109,7 @@
 ;
 ; The criterion 'crit' is a symbol, one of the following:
 ;	id		- tests if the Node has the right name (id)
-;	&		- tests if the Node is an <attributes-coll>
+;	^		- tests if the Node is an <attributes-coll>
 ;	*		- tests if the Node is an <Element>
 ;	*TEXT*		- tests if the Node is a text node
 ;	*PI*		- tests if the Node is a PI node
@@ -118,7 +118,7 @@
 (define (node-typeof? crit)
   (lambda (node)
     (case crit
-      ((*) (and (pair? node) (not (memq (car node) '(& *PI*)))))
+      ((*) (and (pair? node) (not (memq (car node) '(^ *PI*)))))
       ((*ANY*) #t)
       ((*TEXT*) (string? node))
       (else
@@ -397,7 +397,7 @@
 		 (node-self (node-typeof? '*))
 		 (select-kids (node-eq? node)))
 		(node-join
-		 (select-kids (node-typeof? '&))
+		 (select-kids (node-typeof? '^))
 		 (select-kids (node-eq? node))))))
 	  ((node-or
 	    (node-self pred)
@@ -477,21 +477,21 @@
   '(html
     (head (title "Slides"))
     (body
-     (p (& (align "center"))
-	(table (& (style "font-size: x-large"))
+     (p (^ (align "center"))
+	(table (^ (style "font-size: x-large"))
 	       (tr
-		(td (& (align "right")) "Talks ")
-		(td (& (align "center")) " = ")
+		(td (^ (align "right")) "Talks ")
+		(td (^ (align "center")) " = ")
 		(td " slides + transition"))
 	       (tr (td)
-		   (td (& (align "center")) " = ")
+		   (td (^ (align "center")) " = ")
 		   (td " data + control"))
 	       (tr (td)
-		   (td (& (align "center")) " = ")
+		   (td (^ (align "center")) " = ")
 		   (td " programs"))))
      (ul
-      (li (a (& (href "slides/slide0001.gif")) "Introduction"))
-      (li (a (& (href "slides/slide0010.gif")) "Summary")))
+      (li (a (^ (href "slides/slide0001.gif")) "Introduction"))
+      (li (a (^ (href "slides/slide0010.gif")) "Summary")))
      )))
 
 
@@ -499,7 +499,7 @@
 ; Shriram Krishnamurthi, comp.lang.scheme, Nov. 26. 1999.
 ; http://www.deja.com/getdoc.xp?AN=553507805
 (define tree3
-  '(poem (& (title "The Lovesong of J. Alfred Prufrock")
+  '(poem (^ (title "The Lovesong of J. Alfred Prufrock")
 	    (poet "T. S. Eliot"))
 	 (stanza
 	  (line "Let us go then, you and I,")
@@ -585,9 +585,9 @@
 ; selects the para element children of the context node
 
 (let ((tree
-       '(elem (&) (para (&) "para") (br (&)) "cdata" (para (&) "second par"))
+       '(elem (^) (para (^) "para") (br (^)) "cdata" (para (^) "second par"))
        )
-      (expected '((para (&) "para") (para (&) "second par")))
+      (expected '((para (^) "para") (para (^) "second par")))
       )
   (run-test (select-kids (node-typeof? 'para)) tree expected)
   (run-test (sxpath '(para)) tree expected)
@@ -598,10 +598,10 @@
 ; selects all element children of the context node
 
 (let ((tree
-       '(elem (&) (para (&) "para") (br (&)) "cdata" (para "second par"))
+       '(elem (^) (para (^) "para") (br (^)) "cdata" (para "second par"))
        )
       (expected
-       '((para (&) "para") (br (&)) (para "second par")))
+       '((para (^) "para") (br (^)) (para "second par")))
       )
   (run-test (select-kids (node-typeof? '*)) tree expected)
   (run-test (sxpath '(*)) tree expected)
@@ -613,7 +613,7 @@
 ; Location path, abbreviated form: text()
 ; selects all text node children of the context node
 (let ((tree
-       '(elem (&) (para (&) "para") (br (&)) "cdata" (para "second par"))
+       '(elem (^) (para (^) "para") (br (^)) "cdata" (para "second par"))
        )
       (expected
        '("cdata"))
@@ -627,7 +627,7 @@
 ; Location path, abbreviated form: node()
 ; selects all the children of the context node, whatever their node type
 (let* ((tree
-       '(elem (&) (para (&) "para") (br (&)) "cdata" (para "second par"))
+       '(elem (^) (para (^) "para") (br (^)) "cdata" (para "second par"))
        )
       (expected (cdr tree))
       )
@@ -640,8 +640,8 @@
 ; selects all para grandchildren of the context node
 
 (let ((tree
-       '(elem (&) (para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para "third para")))
+       '(elem (^) (para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para "third para")))
        )
       (expected
        '((para "third para")))
@@ -659,36 +659,36 @@
 ; selects the 'name' attribute of the context node
 
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para (&) "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para (^) "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       (expected
        '((name "elem")))
       )
   (run-test
-   (node-join (select-kids (node-typeof? '&))
+   (node-join (select-kids (node-typeof? '^))
 	      (select-kids (node-typeof? 'name)))
    tree expected)
-  (run-test (sxpath '(& name)) tree expected)
+  (run-test (sxpath '(^ name)) tree expected)
 )
 
 ; Location path, full form:  attribute::* 
 ; Location path, abbreviated form: @*
 ; selects all the attributes of the context node
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       (expected
        '((name "elem") (id "idz")))
       )
   (run-test
-   (node-join (select-kids (node-typeof? '&))
+   (node-join (select-kids (node-typeof? '^))
 	      (select-kids (node-typeof? '*)))
    tree expected)
-  (run-test (sxpath '(& *)) tree expected)
+  (run-test (sxpath '(^ *)) tree expected)
 )
 
 
@@ -697,12 +697,12 @@
 ; selects the para element descendants of the context node
 
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       (expected
-       '((para (&) "para") (para "second par") (para (&) "third para")))
+       '((para (^) "para") (para "second par") (para (^) "third para")))
       )
   (run-test
    (node-closure (node-typeof? 'para))
@@ -715,9 +715,9 @@
 ; selects the context node if it is a para element; otherwise selects nothing
 
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       )
   (run-test (node-self (node-typeof? 'para)) tree '())
@@ -731,16 +731,16 @@
 ; descendants of the context node.
 ; This is _almost_ a powerset of the context node.
 (let* ((tree
-       '(para (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(para (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       (expected
        (cons tree
 	(append (cdr tree)
-       '((&) "para" (&) "second par"
-	 (& (name "aa")) (para (&) "third para")
-	 (&) "third para"))))
+       '((^) "para" (^) "second par"
+	 (^ (name "aa")) (para (^) "third para")
+	 (^) "third para"))))
       )
   (run-test
    (node-or
@@ -775,9 +775,9 @@
 
 (let*
     ((root
-	 '(div (& (name "elem") (id "idz")) 
-		(para (&) "para") (br (&)) "cdata" (para (&) "second par")
-		(div (& (name "aa")) (para (&) "third para"))))
+	 '(div (^ (name "elem") (id "idz")) 
+		(para (^) "para") (br (^)) "cdata" (para (^) "second par")
+		(div (^ (name "aa")) (para (^) "third para"))))
      (context-node	; /descendant::any()[child::text() == "third para"]
       (car
        ((node-closure 
@@ -795,7 +795,7 @@
      (node-closure pred))
    root 
    (cons root
-	 '((div (& (name "aa")) (para (&) "third para")))))
+	 '((div (^ (name "aa")) (para (^) "third para")))))
 )
 
 
@@ -806,13 +806,13 @@
 ; children of the context node
 
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")
 	     (div (para "fourth para"))))
        )
       (expected
-       '((para (&) "third para") (para "fourth para")))
+       '((para (^) "third para") (para "fourth para")))
       )
   (run-test
    (node-join 
@@ -839,10 +839,10 @@
   (run-test
    (node-join 
     (node-closure (node-typeof? 'td))
-    (select-kids (node-typeof? '&))
+    (select-kids (node-typeof? '^))
     (select-kids (node-typeof? 'align)))
    tree expected)
-  (run-test (sxpath '(// td & align)) tree expected)
+  (run-test (sxpath '(// td ^ align)) tree expected)
 )
 
 
@@ -851,20 +851,20 @@
 ; Selects all td elements that have an attribute 'align' in tree1
 (let ((tree tree1)
       (expected
-       '((td (& (align "right")) "Talks ") (td (& (align "center")) " = ")
-	 (td (& (align "center")) " = ") (td (& (align "center")) " = "))
+       '((td (^ (align "right")) "Talks ") (td (^ (align "center")) " = ")
+	 (td (^ (align "center")) " = ") (td (^ (align "center")) " = "))
        ))
   (run-test
    (node-reduce 
     (node-closure (node-typeof? 'td))
     (filter
      (node-join
-      (select-kids (node-typeof? '&))
+      (select-kids (node-typeof? '^))
       (select-kids (node-typeof? 'align)))))
    tree expected)
-  (run-test (sxpath `(// td ,(node-self (sxpath '(& align)))))  tree expected)
-  (run-test (sxpath '(// (td (& align)))) tree expected)
-  (run-test (sxpath '(// ((td) (& align)))) tree expected)
+  (run-test (sxpath `(// td ,(node-self (sxpath '(^ align)))))  tree expected)
+  (run-test (sxpath '(// (td (^ align)))) tree expected)
+  (run-test (sxpath '(// ((td) (^ align)))) tree expected)
   ; note! (sxpath ...) is a converter. Therefore, it can be used
   ; as any other converter, for example, in the full-form SXPath.
   ; Thus we can mix the full and abbreviated form SXPath's freely.
@@ -872,7 +872,7 @@
    (node-reduce 
     (node-closure (node-typeof? 'td))
     (filter
-     (sxpath '(& align))))
+     (sxpath '(^ align))))
    tree expected)
 )
 
@@ -882,29 +882,29 @@
 ; Selects all td elements that have an attribute align = "right" in tree1
 (let ((tree tree1)
       (expected
-       '((td (& (align "right")) "Talks "))
+       '((td (^ (align "right")) "Talks "))
        ))
   (run-test
    (node-reduce 
     (node-closure (node-typeof? 'td))
     (filter
      (node-join
-      (select-kids (node-typeof? '&))
+      (select-kids (node-typeof? '^))
       (select-kids (node-equal? '(align "right"))))))
    tree expected)
-  (run-test (sxpath '(// (td (& (equal? (align "right")))))) tree expected)
+  (run-test (sxpath '(// (td (^ (equal? (align "right")))))) tree expected)
 )
 
 ; Location path, full form: child::para[position()=1] 
 ; Location path, abbreviated form: para[1]
 ; selects the first para child of the context node
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       (expected
-       '((para (&) "para"))
+       '((para (^) "para"))
       ))
   (run-test
    (node-reduce
@@ -918,9 +918,9 @@
 ; Location path, abbreviated form: para[last()]
 ; selects the last para child of the context node
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       (expected
        '((para "second par"))
@@ -940,18 +940,18 @@
 ; elements that are the first para children of their parents."
 
 (let ((tree
-       '(elem (& (name "elem") (id "idz")) 
-	(para (&) "para") (br (&)) "cdata" (para "second par")
-	(div (& (name "aa")) (para (&) "third para")))
+       '(elem (^ (name "elem") (id "idz")) 
+	(para (^) "para") (br (^)) "cdata" (para "second par")
+	(div (^ (name "aa")) (para (^) "third para")))
        )
       )
   (run-test
    (node-reduce	; /descendant::para[1] in SXPath
     (node-closure (node-typeof? 'para))
     (node-pos 1))
-   tree '((para (&) "para")))
+   tree '((para (^) "para")))
   (run-test (sxpath '(// (para 1))) tree
-	    '((para (&) "para") (para (&) "third para")))
+	    '((para (^) "para") (para (^) "third para")))
 )
 
 ; Location path, full form: parent::node()
@@ -964,9 +964,9 @@
 ; Selects the name attribute of the parent of the context node
 
 (let* ((tree
-	'(elem (& (name "elem") (id "idz")) 
-	       (para (&) "para") (br (&)) "cdata" (para "second par")
-	       (div (& (name "aa")) (para (&) "third para")))
+	'(elem (^ (name "elem") (id "idz")) 
+	       (para (^) "para") (br (^)) "cdata" (para "second par")
+	       (div (^ (name "aa")) (para (^) "third para")))
 	)
        (para1		; the first para node
 	(car ((sxpath '(para)) tree)))
@@ -983,15 +983,15 @@
    para3 (list div))
   (run-test		; checking the parent of an attribute node
    (node-parent tree)
-   ((sxpath '(& name)) div) (list div))
+   ((sxpath '(^ name)) div) (list div))
   (run-test
    (node-join
     (node-parent tree)
-    (select-kids (node-typeof? '&))
+    (select-kids (node-typeof? '^))
     (select-kids (node-typeof? 'name)))
    para3 '((name "aa")))
   (run-test
-   (sxpath `(,(node-parent tree) & name))
+   (sxpath `(,(node-parent tree) ^ name))
    para3 '((name "aa")))
 )
 
@@ -1006,18 +1006,18 @@
 (let* ((tree
        '(document
 	 (preface "preface")
-	 (chapter (& (id "one")) "Chap 1 text")
-	 (chapter (& (id "two")) "Chap 2 text")
-	 (chapter (& (id "three")) "Chap 3 text")
-	 (chapter (& (id "four")) "Chap 4 text")
+	 (chapter (^ (id "one")) "Chap 1 text")
+	 (chapter (^ (id "two")) "Chap 2 text")
+	 (chapter (^ (id "three")) "Chap 3 text")
+	 (chapter (^ (id "four")) "Chap 4 text")
 	 (epilogue "Epilogue text")
-	 (appendix (& (id "A")) "App A text")
+	 (appendix (^ (id "A")) "App A text")
 	 (References "References"))
        )
        (a-node	; to be used as a context node
-	(car ((sxpath '(// (chapter (& (equal? (id "two")))))) tree)))
+	(car ((sxpath '(// (chapter (^ (equal? (id "two")))))) tree)))
        (expected
-       '((chapter (& (id "three")) "Chap 3 text")))
+       '((chapter (^ (id "three")) "Chap 3 text")))
       )
   (run-test
    (node-reduce
@@ -1040,18 +1040,18 @@
 (let* ((tree
        '(document
 	 (preface "preface")
-	 (chapter (& (id "one")) "Chap 1 text")
-	 (chapter (& (id "two")) "Chap 2 text")
-	 (chapter (& (id "three")) "Chap 3 text")
-	 (chapter (& (id "four")) "Chap 4 text")
+	 (chapter (^ (id "one")) "Chap 1 text")
+	 (chapter (^ (id "two")) "Chap 2 text")
+	 (chapter (^ (id "three")) "Chap 3 text")
+	 (chapter (^ (id "four")) "Chap 4 text")
 	 (epilogue "Epilogue text")
-	 (appendix (& (id "A")) "App A text")
+	 (appendix (^ (id "A")) "App A text")
 	 (References "References"))
        )
        (a-node	; to be used as a context node
-	(car ((sxpath '(// (chapter (& (equal? (id "three")))))) tree)))
+	(car ((sxpath '(// (chapter (^ (equal? (id "three")))))) tree)))
        (expected
-       '((chapter (& (id "two")) "Chap 2 text")))
+       '((chapter (^ (id "two")) "Chap 2 text")))
       )
   (run-test
    (node-reduce
@@ -1097,27 +1097,27 @@
 (let ((tree
        '(chapter
 	 (para "para1")
-	 (para (& (type "warning")) "para 2")
-	 (para (& (type "warning")) "para 3")
-	 (para (& (type "warning")) "para 4")
-	 (para (& (type "warning")) "para 5")
-	 (para (& (type "warning")) "para 6"))
+	 (para (^ (type "warning")) "para 2")
+	 (para (^ (type "warning")) "para 3")
+	 (para (^ (type "warning")) "para 4")
+	 (para (^ (type "warning")) "para 5")
+	 (para (^ (type "warning")) "para 6"))
        )
       (expected
-       '((para (& (type "warning")) "para 6"))
+       '((para (^ (type "warning")) "para 6"))
       ))
   (run-test
    (node-reduce
     (select-kids (node-typeof? 'para))
     (filter
      (node-join
-      (select-kids (node-typeof? '&))
+      (select-kids (node-typeof? '^))
       (select-kids (node-equal? '(type "warning")))))
     (node-pos 5))
    tree expected)
-  (run-test (sxpath '( (((para (& (equal? (type "warning"))))) 5 )  ))
+  (run-test (sxpath '( (((para (^ (equal? (type "warning"))))) 5 )  ))
 	    tree expected)
-  (run-test (sxpath '( (para (& (equal? (type "warning"))) 5 )  ))
+  (run-test (sxpath '( (para (^ (equal? (type "warning"))) 5 )  ))
 	    tree expected)
 )
 
@@ -1130,14 +1130,14 @@
 (let ((tree
        '(chapter
 	 (para "para1")
-	 (para (& (type "warning")) "para 2")
-	 (para (& (type "warning")) "para 3")
-	 (para (& (type "warning")) "para 4")
-	 (para (& (type "warning")) "para 5")
-	 (para (& (type "warning")) "para 6"))
+	 (para (^ (type "warning")) "para 2")
+	 (para (^ (type "warning")) "para 3")
+	 (para (^ (type "warning")) "para 4")
+	 (para (^ (type "warning")) "para 5")
+	 (para (^ (type "warning")) "para 6"))
        )
       (expected
-       '((para (& (type "warning")) "para 5"))
+       '((para (^ (type "warning")) "para 5"))
       ))
   (run-test
    (node-reduce
@@ -1145,12 +1145,12 @@
     (node-pos 5)
     (filter
      (node-join
-      (select-kids (node-typeof? '&))
+      (select-kids (node-typeof? '^))
       (select-kids (node-equal? '(type "warning"))))))
    tree expected)
-  (run-test (sxpath '( (( (para 5))  (& (equal? (type "warning"))))))
+  (run-test (sxpath '( (( (para 5))  (^ (equal? (type "warning"))))))
 	    tree expected)
-  (run-test (sxpath '( (para 5 (& (equal? (type "warning")))) ))
+  (run-test (sxpath '( (para 5 (^ (equal? (type "warning")))) ))
 	    tree expected)
 )
 
@@ -1161,18 +1161,18 @@
 (let ((tree
        '(document
 	 (preface "preface")
-	 (chapter (& (id "one")) "Chap 1 text")
-	 (chapter (& (id "two")) "Chap 2 text")
-	 (chapter (& (id "three")) "Chap 3 text")
+	 (chapter (^ (id "one")) "Chap 1 text")
+	 (chapter (^ (id "two")) "Chap 2 text")
+	 (chapter (^ (id "three")) "Chap 3 text")
 	 (epilogue "Epilogue text")
-	 (appendix (& (id "A")) "App A text")
+	 (appendix (^ (id "A")) "App A text")
 	 (References "References"))
        )
       (expected
-       '((chapter (& (id "one")) "Chap 1 text")
-	 (chapter (& (id "two")) "Chap 2 text")
-	 (chapter (& (id "three")) "Chap 3 text")
-	 (appendix (& (id "A")) "App A text"))
+       '((chapter (^ (id "one")) "Chap 1 text")
+	 (chapter (^ (id "two")) "Chap 2 text")
+	 (chapter (^ (id "three")) "Chap 3 text")
+	 (appendix (^ (id "A")) "App A text"))
       ))
   (run-test
    (node-join

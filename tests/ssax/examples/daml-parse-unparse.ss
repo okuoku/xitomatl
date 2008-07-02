@@ -5,7 +5,6 @@
   (xitomatl include)
   (xitomatl ssax parsing)
   (xitomatl ssax tree-trans)
-  (prefix (xitomatl ssax parsing) ssax:)
   (xitomatl ssax private-5-1 output)
   (xitomatl ssax private-5-1 misc)
   (xitomatl ssax private-5-1 util)

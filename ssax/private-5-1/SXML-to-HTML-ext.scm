@@ -70,7 +70,7 @@
       (lambda (key)
 	(let ((val (car (lookup-def key head-parms '(#f)))))
 	  (and val
-	       `(meta (& (name ,(symbol->string key)) (content ,val))))))
+	       `(meta (^ (name ,(symbol->string key)) (content ,val))))))
       '(description AuthorAddress keywords
 	Date-Revision-yyyymmdd Date-Creation-yyyymmdd))
     ,(let ((links (lookup-def 'Links head-parms '())))
@@ -79,7 +79,7 @@
 	    (lambda (link-key)
 	      (let ((val (lookup-def link-key links '())))
 		(and (pair? val)
-		     `(link (& (rel ,(symbol->string link-key))
+		     `(link (^ (rel ,(symbol->string link-key))
 			       (href ,(car val))
 			       ,@(cdr val))))))
 	    '(start contents prev next)))))
@@ -95,7 +95,7 @@
 		      (contents . "contents")
 		      (top . "top"))))
     (and (pair? links)
-      `(div (& (align "center") (class "navbar"))
+      `(div (^ (align "center") (class "navbar"))
 	 ,(let loop ((nav-labels nav-labels) (first? #t))
 	    (if (null? nav-labels) '()
 		(let ((val (car
@@ -104,7 +104,7 @@
 		      (loop (cdr nav-labels) first?)
 		      (cons
 		       (list " " (if first? #f '(n_)) " "
-			     `(a (& (href ,val)) ,(cdar nav-labels)))
+			     `(a (^ (href ,val)) ,(cdar nav-labels)))
 		       (loop (cdr nav-labels) #f))))))
 	 (hr)))
 ))
@@ -133,12 +133,12 @@
 	    (let ((home (car (lookup-def 'home links '(#f)))))
 	      (and home
 		   `(p "This site's top page is "
-		       (a (& (href ,home)) (strong ,home)))))))
+		       (a (^ (href ,home)) (strong ,home)))))))
     (div 
       (address "oleg-at-pobox.com or oleg-at-acm.org or oleg-at-computer.org"
        (br)
        "Your comments, problem reports, questions are very welcome!"))
-    (p (font (& (size "-2")) "Converted from SXML by SXML->HTML"))
+    (p (font (^ (size "-2")) "Converted from SXML by SXML->HTML"))
     ,(let ((rcs-id (lookup-def 'rcs-id head-parms '())))
        (and (pair? rcs-id)
 	    `(h4 ,rcs-id)))
@@ -150,10 +150,10 @@
 ; The universal transformation from SXML to HTML. The following rules
 ; work for every HTML, present and future
 (define universal-conversion-rules
-  `((&
+  `((^
       ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr attr-key value))))
-      . ,(lambda (trigger . value) (cons '& value)))
+      . ,(lambda (trigger . value) (cons '^ value)))
     (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
     (*TEXT* . ,(lambda (trigger str) 
 		 (if (string? str) (string->goodHTML str) str)))
@@ -165,10 +165,10 @@
 ; and similar characters intact. The universal-protected-rules are
 ; useful when the tree of fragments has to be traversed one more time.
 (define universal-protected-rules
-  `((&
+  `((^
       ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr attr-key value))))
-      . ,(lambda (trigger . value) (cons '& value)))
+      . ,(lambda (trigger . value) (cons '^ value)))
     (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
     (*TEXT* . ,(lambda (trigger str) 
 		 str))
@@ -307,7 +307,7 @@
 
      (bibitem *MACRO*
        . ,(lambda (tag label key . text)
-	   `(p (a (& (name ,key)) "[" ,label "]") " " ,text)))
+	   `(p (a (^ (name ,key)) "[" ,label "]") " " ,text)))
 
      (cite		; ought to locate the label and use the label!
       . ,(lambda (tag key)
@@ -321,7 +321,7 @@
 
      (URL  *MACRO*
       . ,(lambda (tag url)
-	   `((br) "<" (a (& (href ,url)) ,url) ">")))
+	   `((br) "<" (a (^ (href ,url)) ,url) ">")))
 
 
      (verbatim	; set off pieces of code: one or several lines
@@ -395,7 +395,7 @@
 				   '()))))))))
 	     (assert (pair? title))
 	     (cerr "title: " title nl)
-	     `(a (& (href #\# ,target)) ,title))))
+	     `(a (^ (href #\# ,target)) ,title))))
 
 		; Unit of a description for a piece of code
 		; (Description-unit key title . elems)
@@ -427,7 +427,7 @@
        )
       . ,(lambda (tag key title . elems)
 	   (post-order
-	    `((a (& (name ,key)) (n_))
+	    `((a (^ (name ,key)) (n_))
 	      (h2 ,title)
 	      (dl (insert-elems))
 	      )

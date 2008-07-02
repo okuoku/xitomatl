@@ -57,7 +57,7 @@
 ; <Nodelist> however is either an empty list, or a list whose head is
 ; not a symbol (an atom in general). A symbol at the head of a node is
 ; either an XML name (in which case it's a tag of an XML element), or
-; an administrative name such as '&'.
+; an administrative name such as '^'.
 ; See SXPath.scm and SSAX.scm for more information on SXML.
 
 

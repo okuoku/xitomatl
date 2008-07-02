@@ -1,8 +1,8 @@
 #!r6rs
 (library (xitomatl ssax private-5-1 to-html)
   (export
-    (rename (SXML->HTML sxml->html)            
-            (string->goodHTML string->good-html))
+    SXML->HTML
+    string->goodHTML
     enattr
     entag)
   (import

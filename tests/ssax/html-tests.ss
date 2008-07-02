@@ -2,9 +2,7 @@
 #!r6rs
 (import
   (except (rnrs) assert)
-  (rename (xitomatl ssax html)
-          (sxml->html SXML->HTML)
-          (string->good-html string->goodHTML))
+  (xitomatl ssax html)
   (xitomatl ssax tree-trans)
   (xitomatl include)
   (xitomatl srfi lightweight-testing)

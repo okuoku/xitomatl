@@ -60,10 +60,10 @@
    (pre-post-order tree
                 ; Universal transformation rules. Work for every HTML,
                 ; present and future
-    `((&
+    `((^
       ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr attr-key value))))
-      . ,(lambda (trigger . value) (cons '& value)))
+      . ,(lambda (trigger . value) (cons '^ value)))
      (*DEFAULT* . ,(lambda (tag . elems) (entag tag elems)))
      (*TEXT* . ,(lambda (trigger str) 
 		  (if (string? str) (string->goodHTML str) str)))
@@ -84,7 +84,7 @@
 ; above.
 
 (define (entag tag elems)
-  (if (and (pair? elems) (pair? (car elems)) (eq? '& (caar elems)))
+  (if (and (pair? elems) (pair? (car elems)) (eq? '^ (caar elems)))
     (list #\newline #\< tag (cdar elems) #\>
       (and (pair? (cdr elems))
 	(list (cdr elems) "</" tag #\>)))

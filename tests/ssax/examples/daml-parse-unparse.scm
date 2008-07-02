@@ -136,7 +136,7 @@
 ;   (values #f DAML-entities namespaces seed)
 ; (The original ssax:xml->sxml had '() in place of DAML-entities)
 ;
-; We also create (& (*NAMESPACES* . ns-assocs)) for each element
+; We also create (^ (*NAMESPACES* . ns-assocs)) for each element
 ; with a non-local element or attribute name. These local ns-assocs
 ; describe only the namespaces of the element-gi and its attributes.
 ; Sharing should be improved!
@@ -202,7 +202,7 @@
 			ns-id-used))
 		      (attrs
 		       (if (null? local-namespaces) attrs
-			   (cons (list '&
+			   (cons (list '^
 				   (cons '*NAMESPACES* local-namespaces))
 				  attrs)))
 		      (sxml-element	; newly created element
@@ -210,7 +210,7 @@
 			(if (symbol? elem-gi) elem-gi
 			    (RES-NAME->SXML elem-gi))
 			(if (null? attrs) seed
-			    (cons (cons '& attrs) seed))))
+			    (cons (cons '^ attrs) seed))))
 		      )
 		 (cons
 		  sxml-element parent-seed)
@@ -338,9 +338,9 @@
 	((ge . children)  (symbol? ge) ; regular node
 	 (let ((namespaces
 		(match-case-simple children
-		 ((('& . attrs) . _) ()
+		 ((('^ . attrs) . _) ()
 		  (cond
-		    ((assq '& attrs) =>
+		    ((assq '^ attrs) =>
 		      (lambda (annot-assoc)
 			(add-local-namespaces (cdr annot-assoc) namespaces)))
 		    (else namespaces)))
@@ -398,11 +398,11 @@
        namespaces))
 ;     (cerr namespaces nl)
 ;     (cerr translation nl)
-    `((&
+    `((^
       ((*DEFAULT*       ; local override for attributes
         . ,(lambda (attr-key . value) (enattr (translate attr-key) value)))
-       (& *PREORDER* . ,(lambda _ '()))) ; annotations handled already
-      . ,(lambda (trigger . value) (cons '& value)))
+       (^ *PREORDER* . ,(lambda _ '()))) ; annotations handled already
+      . ,(lambda (trigger . value) (cons '^ value)))
      (*DEFAULT* . ,(lambda (tag . elems) (entag (translate tag) elems)))
      (*TEXT* . ,(lambda (trigger str) 
 		  (if (string? str) (string->goodXML str) str)))
@@ -421,15 +421,15 @@
 	    (pre-post-order
 	     (match-case-simple root-elem
 			; the root element had its own attributes, add xmlns:
-	      ((rootname ('& . attrs) . children) ()
+	      ((rootname ('^ . attrs) . children) ()
 	       (list pis
 		 `(,rootname 
-		   (& ,@ns-attrs . ,attrs) . ,children)))
+		   (^ ,@ns-attrs . ,attrs) . ,children)))
 			; the root element had no attr list: make one
 	      ((rootname . children) ()
 	       (list pis
 		     `(,rootname
-		       (& . ,ns-attrs) . ,children)))
+		       (^ . ,ns-attrs) . ,children)))
 	      (else (error "shouldn't happen")))
 	    (this-ss namespaces translation)))))
      ))
@@ -440,7 +440,7 @@
 
 (define (entag tag elems)
   (match-case-simple elems
-    ((('& . attrs) . children) ()
+    ((('^ . attrs) . children) ()
       (list #\< tag attrs 
 	(if (null? children) "/>"
 	  (list #\> children "</" tag #\>))))

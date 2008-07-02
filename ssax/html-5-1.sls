@@ -1,10 +1,10 @@
 #!r6rs
 (library (xitomatl ssax html (5 1))
   (export
-    sxml->html
+    SXML->HTML
+    string->goodHTML
     enattr
-    entag
-    string->good-html   
+    entag   
     
     make-header
     make-navbar
