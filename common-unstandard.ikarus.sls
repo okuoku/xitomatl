@@ -5,6 +5,7 @@
     format printf fprintf pretty-print
     gensym
     time current-milliseconds
+    with-output-to-string
     ;; TODO: add to as needed/appropriate
     )
   (import

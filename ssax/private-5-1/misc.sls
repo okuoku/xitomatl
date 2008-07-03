@@ -8,7 +8,7 @@
     with-output-to-string)
   (import
     (rnrs)
-    (xitomatl ssax private-5-1 compat))
+    (only (xitomatl common-unstandard) with-output-to-string))
   
   (define (inc n) (+ n 1))  
   (define (dec n) (- n 1))

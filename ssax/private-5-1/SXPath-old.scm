@@ -1200,7 +1200,7 @@
 ; more title children
 ; See a similar example //td[@align] above.
 
-(cerr nl "Example with tree3: extracting the first lines of every stanza" nl)
+;(cerr nl "Example with tree3: extracting the first lines of every stanza" nl)
 (let ((tree tree3)
       (expected
        '("Let us go then, you and I," "In the room the women come and go")
