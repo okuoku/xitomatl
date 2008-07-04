@@ -31,6 +31,8 @@
               'unexpected-return)
             => #t)]))
 
+(define invalid-preds-spec-msg "invalid predicates specification")
+
 (define-generic g0)
 (check (procedure? g0) => #t)
 (check-no-spec g0 (g0))
@@ -77,11 +79,11 @@
 (define g1 (make-generic))
 (check-AV-who-msg specialize "not a generic" 
   (specialize 'oops '() values))
-(check-AV-who-msg specialize "not a valid specialization predicates list" 
+(check-AV-who-msg specialize invalid-preds-spec-msg 
   (specialize g1 'oops values))
-(check-AV-who-msg specialize "not a valid specialization predicates list" 
+(check-AV-who-msg specialize invalid-preds-spec-msg 
   (specialize g1 (list 'oops) values))
-(check-AV-who-msg specialize "not a valid specialization predicates list" 
+(check-AV-who-msg specialize invalid-preds-spec-msg 
   (specialize g1 (cons* char? number? 'oops) values))
 (check-AV-who-msg specialize "not a procedure"
   (specialize g1 (list number?) 'oops))
@@ -116,53 +118,59 @@
 (check (g2 #\1 #\z) => "1z")
 (check (g2 '(x)) => '((x)))
 (check (g2 's 3 's #\c) => '(#\c s 3 s))
-(check-AV-who-msg specialize "not a valid specialization predicates list" 
+(check-AV-who-msg specialize invalid-preds-spec-msg 
   (let ()
     (define-generic g1 
-      [([a 'oops]) values])
+      [([a 'oops]) (values)])
     g1))
-(check-AV-who-msg specialize "not a valid specialization predicates list" 
+(check-AV-who-msg specialize invalid-preds-spec-msg 
   (let ()
     (define-generic g1 
-      [#(a 'oops) values])
+      [#(a 'oops) (values)])
     g1))
-(check-AV-who-msg specialize "not a valid specialization predicates list" 
+(check-AV-who-msg specialize invalid-preds-spec-msg 
   (let ()
     (define-generic g1 
-      [([z char?] . #(a 'oops)) values])
+      [([z char?] . #(a 'oops)) (values)])
     g1))
 (check-SV (let ()
             (define-generic g1 
-              [(oops) values])
+              [(oops) (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [(oops oops2) values])
+              [(oops oops2) (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [oops values])
+              [oops (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [#(oops) values])
+              [#(oops) (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [([1 char?]) values])
+              [([1 char?]) (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [([a null?] . #(1 char?)) values])
+              [([a null?] . #(1 char?)) (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [#(1 char?) values])
+              [#(1 char?) (values)])
             g1))
 (check-SV (let ()
             (define-generic g1 
-              [(#(x char?)) values])
+              [(#(x char?)) (values)])
             g1))
-
+;; define-generic does not break internal define contexts
+(check (let ()
+         (define-generic g
+           [([a (lambda (a) #t)]) a])
+         (define x 'okay)
+         (g x))
+       => 'okay)
 
 (check-report)
