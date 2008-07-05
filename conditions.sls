@@ -2,7 +2,7 @@
 (library (xitomatl conditions)
   (export
     make-argument-name-condition argument-name-condition? condition-argument-name
-    assertion-violation/conditions
+    assertion-violation/conditions error/conditions
     make-predicate-condition predicate-condition? condition-pred
     make-port-position-condition port-position-condition? condition-port-position)
   (import
@@ -18,6 +18,13 @@
         (raise (apply condition ex cndts)))
       (lambda ()
         (apply assertion-violation who msg irrts))))
+  
+  (define (error/conditions who msg irrts . cndts)
+    (with-exception-handler
+      (lambda (ex)
+        (raise (apply condition ex cndts)))
+      (lambda ()
+        (apply error who msg irrts))))
       
   (define-condition-type &predicate &condition
     make-predicate-condition predicate-condition?
