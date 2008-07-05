@@ -46,13 +46,13 @@
                   ;; of the first invocation.
                   (return (lambda () (raise ex))))
                 (lambda () (apply proc args)))
-              (let ([gf (make-&coroutine-finished coroutine)])
+              (let ([cf (make-&coroutine-finished coroutine)])
                 ;; Set resume to this so that proc is not re-entered if the
                 ;; coroutine is invoked again after proc has returned.
-                (set! resume (lambda args (return (lambda () (raise gf)))))
+                (set! resume (lambda args (return (lambda () (raise cf)))))
                 ;; Raise in the dynamic environment of the current
                 ;; invocation of the coroutine.
-                (return (lambda () (raise gf))))))]
+                (return (lambda () (raise cf))))))]
          [return #f]
          [coroutine
           (lambda args
