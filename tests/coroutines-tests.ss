@@ -108,7 +108,7 @@
 (check (g6) => 2)
 (check (g6 3) => 3)
 (check-finished (g6))
-;; exceptions are raised in the dynamic environment of the particular call to a generic
+;; exceptions are raised in the dynamic environment of the particular call to a coroutine
 (define-coroutine (g7)
   (yield 1) 
   (yield 2))
