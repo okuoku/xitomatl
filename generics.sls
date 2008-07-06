@@ -14,9 +14,7 @@
   ;;; added by parties unknown to the creator of a generic.  Precedence is
   ;;; according to the temporal order specializations are added, which
   ;;; ensures the specializations added by the creator always have
-  ;;; precedence.  Performance is pretty good, only twice as slow and twice
-  ;;; the memory usage as normal procedure call for a single one-argument
-  ;;; specialization (on Ikarus); performance will lessen the more arguments a
+  ;;; precedence.  Performance will lessen the more arguments a
   ;;; specialization has and will depend on how many other specializations
   ;;; precede it.  Being fully run-time dynamic with a single simple way of
   ;;; reconfiguring the specializations of a generic, the design is open to
