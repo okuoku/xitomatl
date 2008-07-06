@@ -4,9 +4,13 @@
     read-all
     get-lines-all
     port-for-each
-    port-map)
+    port-map
+    open-binary-compound-input-port
+    open-textual-compound-input-port)
   (import
-    (rnrs))
+    (rnrs)
+    (only (xitomatl define extras) define/AV case-lambda/AV)
+    (only (xitomatl control) begin0))
   
   (define read-all
     (case-lambda 
@@ -43,4 +47,133 @@
          (reverse a))]
       [(proc reader) 
        (port-map proc reader (current-input-port))]))
+  
+  (define/AV (open-compound-input-port list-or-proc maybe-transcoder)
+    ;;; A compound input port is a custom port which represents the logical
+    ;;; concatenation of other input ports.  It starts out with an ordered
+    ;;; collection of input ports and reads from the first one until end of
+    ;;; file is reached, whereupon it reads from the second one, and so on,
+    ;;; until end of file is reached on the last of the contained input ports,
+    ;;; and then subsequent reads from the compound input port will return end
+    ;;; of file.  After each component port is exhausted, it is closed.
+    ;;; Closing a compound input port closes all remaining component ports.
+    ;;; get-position and set-position! are not supported.
+    ;;; 
+    ;;; The first argument to open-compound-input-port must be either a list
+    ;;; of components or a zero-argument procedure which returns components.
+    ;;; If it is a procedure, it is called each time the next component port
+    ;;; is needed and it must return the next component or #f to indicate
+    ;;; there are no more.  The second argument must be either a transcoder or
+    ;;; #f.  If it is a transcoder, the compound input port will be textual
+    ;;; and the acceptable values for components are textual input ports,
+    ;;; binary input ports, strings, and bytevectors; otherwise the compound
+    ;;; input port will be binary and the acceptable values are binary input
+    ;;; ports and bytevectors.  For a textual compound input port, binary
+    ;;; input port components are transcoded, bytevector components are used
+    ;;; as the source of transcoded bytevector input ports, textual input
+    ;;; ports are used directly and their transcoder may be different than
+    ;;; the compound input port's, and string components are used as the
+    ;;; source of string input ports.  For a binary compound input port,
+    ;;; binary input port components are used directly and bytevector
+    ;;; components are used as the source of raw bytevector input ports.
+    (define (make-handler prefix)
+      ;;; Returns a function which maps the allowable types into input-ports.
+      (define (invalid suffix x)
+        (AV (string-append prefix " " suffix) x))
+      (if maybe-transcoder
+        (lambda (n)
+          (cond [(input-port? n) 
+                 (if (textual-port? n) n (transcoded-port n maybe-transcoder))]
+                [(string? n) 
+                 (open-string-input-port n)]
+                [(bytevector? n)
+                 (open-bytevector-input-port n maybe-transcoder)]
+                [else 
+                 (invalid "Not an input port or string or bytevector." n)]))
+        (lambda (n)
+          (cond [(and (input-port? n) (binary-port? n))
+                 n]
+                [(bytevector? n)
+                 (open-bytevector-input-port n)]
+                [else
+                 (invalid "Not a binary input port or bytevector." n)]))))
+    (define next
+      ;;; Returns the next input-port, or #f if there are no more.
+      (cond 
+        [(or (pair? list-or-proc) (null? list-or-proc))
+         (let ([l list-or-proc]
+               [handle (make-handler "Invalid value in supplied list.")])
+           (lambda ()
+             (cond [(pair? l) (begin0 (handle (car l))
+                                      (set! l (cdr l)))]
+                   [(null? l) #f]
+                   [else (AV "not a proper list" list-or-proc)])))]
+        [(procedure? list-or-proc)
+         (let ([handle 
+                (make-handler "Invalid value returned from supplied procedure.")])
+           (lambda ()
+             (let ([n (list-or-proc)])
+               (and n (handle n)))))]
+        [else 
+         (AV "not a list or procedure" list-or-proc)]))
+    (define (make-compound-port make-custom id get-n! current)
+      (make-custom id
+        (letrec ([read! (lambda (str-or-bv start count)
+                          (if current
+                            (let ([x (get-n! current str-or-bv start count)])
+                              ;; This could be done to support weird ports that
+                              ;; return EOF but then can be read from again:
+                              ;; (set! x (get-n! current str-or-bv start count))
+                              (cond [(eof-object? x)
+                                     (close-port current)
+                                     (set! current (next))
+                                     (read! str-or-bv start count)]
+                                    [else
+                                     x]))
+                            0 #| EOF for this compound port |#))])
+          read!)
+        #f #f       ;; get-position and set-position! not supported
+        (lambda ()
+          ;; This `when' also prevents a finished `next'
+          ;; from being called more than once.
+          (when current
+            (close-port current)
+            (set! current #f)  ;; shouldn't be necessary, but just in case
+            (let loop ([n (next)])
+              (when n
+                (close-port n)
+                (loop (next))))))))
+    (let ([current (next)])
+      (if maybe-transcoder
+        (make-compound-port 
+          make-custom-textual-input-port
+          "<textual-compound-input-port>"
+          get-string-n!
+          current)
+        (make-compound-port 
+          make-custom-binary-input-port
+          "<binary-compound-input-port>"
+          get-bytevector-n!
+          current))))
+  
+  (define (open-binary-compound-input-port list-or-proc)
+    (open-compound-input-port list-or-proc #f))
+  
+  (define/AV open-textual-compound-input-port
+    (case-lambda/AV
+      [(list-or-proc)
+       (open-compound-input-port list-or-proc (native-transcoder))]
+      [(list-or-proc transcoder)
+       (unless transcoder
+         (AV "transcoder cannot be #f"))
+       (open-compound-input-port list-or-proc transcoder)]))
+  
+  ;; TODO: Pipe ports
+  
+  ;; TODO: Pushback ports
+  
+  ;; TODO?: Filter ports
+  
+  ;; TODO?: Line counting ports
+  
 )
