@@ -20,7 +20,7 @@
         (if (and (port? port) (port-has-port-position? port))
           (make-port-position-condition (port-position port))
           (condition))
-        (make-irritants-condition port)))))
+        (make-irritants-condition (list port))))))
    
   (define parser-error
     (make-f raise (make-error) 'ssax:parser))

@@ -1,10 +1,14 @@
 #!r6rs
 (library (xitomatl generics)
   (export
-    make-generic define-generic specialize)
+    make-generic define-generic/temporal
+    reconfigure/temporal)
   (import
-    (rnrs))
+    (rnrs)
+    (for (only (xitomatl macro-utils) identifier-append) expand)
+    (only (xitomatl define extras) define-values define/?))
 
+  ;;; TODO: update comment
   ;;; Generics are procedures which delegate to some underlying procedure 
   ;;; determined by the arguments to the generic.  A per-generic association
   ;;; of predicates to underlying-procedures is used to determine and find 
@@ -21,59 +25,60 @@
   ;;; possible future abilities such as removing specializations or reordering
   ;;; their precedence.
   
-  ;;; This special distinct object, only available inside this library,
-  ;;; is used as a key to (re)configure the specializations of a generic.
-  (define-record-type configure)
-  (define C (make-configure))
+  ;;; For reconfigure/temporal and reconfigure/reverse-temporal,
+  ;;; `preds' must be of the type <argument-predicates> described in the
+  ;;; above comment in about `specializations'.  That is,
+  ;;; `preds' must be: a possibly empty list of one-argument predicates which
+  ;;; return true or #f, or an improper list of predicates of the type just
+  ;;; described but with the final cdr being an any-number-of-arguments
+  ;;; predicate which returns true or #f, or a predicate of the type just
+  ;;; described for the final cdr of the improper list case.  This matches
+  ;;; the <formals> specification of a procedure's arguments:
+  ;;; (args ...) or (arg args ... . rest) or rest.
+  ;;; `proc' is the underlying procedure delegated to for the arguments case
+  ;;; specified by `preds'.  The number of arguments `proc' accepts must
+  ;;; match those specified by `preds'.  That is, `proc' must accept as many
+  ;;; arguments as there are one-argument predicates in `preds', and if there
+  ;;; is an any-number-of-arguments "rest arguments" predicate in/as `preds',
+  ;;; then `proc' must accept the additional, possibly variable, number of
+  ;;; "rest arguments" that the any-number-of-arguments predicate returned
+  ;;; true for.
   
-  (define (specialize generic preds proc)
-    ;;; `generic' is the generic to, dynamically at run-time, add a new
-    ;;; specialization for.
-    ;;; `preds' must be of the type <argument-predicates> described in the
-    ;;; below comment in `make-generic' about `specializations'.  That is,
-    ;;; `preds' must be: a possibly empty list of one-argument predicates which
-    ;;; return true or #f, or an improper list of predicates of the type just
-    ;;; described but with the final cdr being an any-number-of-arguments
-    ;;; predicate which returns true or #f, or a predicate of the type just
-    ;;; described for the final cdr of the improper list case.  This matches
-    ;;; the <formals> specification of a procedure's arguments:
-    ;;; (args ...) or (arg args ... . rest) or rest.
-    ;;; `proc' is the underlying procedure delegated to for the arguments case
-    ;;; specified by `preds'.  The number of arguments `proc' accepts must
-    ;;; match those specified by `preds'.  That is, `proc' must accept as many
-    ;;; arguments as there are one-argument predicates in `preds', and if there
-    ;;; is an any-number-of-arguments "rest arguments" predicate in/as `preds',
-    ;;; then `proc' must accept the additional, possibly variable, number of
-    ;;; "rest arguments" that the any-number-of-arguments predicate returned
-    ;;; true for.
-    (define who 'specialize)
-    (unless (procedure? generic)
-      (assertion-violation who "not a generic" generic))
-    (unless (valid-predicates-spec? preds)
-      (assertion-violation who "invalid predicates specification" preds))
-    (unless (procedure? proc)
-      (assertion-violation who "not a procedure" proc))
-    ;; append is used so that specializations have precedence according
-    ;; to the order they were added.
-    (generic C (lambda (specializations) 
-                 (append specializations (list (cons preds proc))))))
+  (define/? (reconfigure/temporal specializations 
+                                  [preds valid-predicates-specification?]
+                                  [proc procedure?])
+    (append specializations 
+            (list (list preds proc))))
   
-  (define (valid-predicates-spec? x)
-    (cond [(pair? x) (and (procedure? (car x)) (valid-predicates-spec? (cdr x)))]
-          [(null? x) #t]
-          [(procedure? x) #t]
+  #;(define/? (reconfigure/reverse-temporal specializations
+                                          [preds valid-predicates-specification?]
+                                          [proc procedure?])
+    (cons (cons preds proc) specializations))
+  
+  #|(define (reconfigure/type-domain ---)
+    ---)|#
+  
+  (define (valid-predicates-specification? x)
+    (cond [(pair? x) (and (procedure? (car x)) 
+                          (valid-predicates-specification? (cdr x)))]
+          [(null? x)]
+          [(procedure? x)]
           [else #f]))
   
-  (define configure-preds (list configure? procedure?))
+  #;(define (valid-specializations? x)
+    (cond [(pair? x) (and (valid-predicates-specification? (caar x))
+                          (procedure? (cadar x))
+                          (valid-specializations? (cdr x)))]
+          [(null? x)]
+          [else #f]))
   
-  (define make-generic
-    (case-lambda
-      [() (make-generic 'generic)]
-      [(who)
-       (unless (symbol? who)
-         (assertion-violation 'make-generic "not a symbol" who))
+  (define/? make-generic
+    (case-lambda/?
+      [(reconfigure) (make-generic reconfigure 'generic)]
+      [([reconfigure procedure?] [gwho symbol?])
        ;; specializations ::= (<specialization> ...)
-       ;; <specialization> ::= (<argument-predicates> . <specialized-procedure>)
+       ;; <specialization> ::= (<argument-predicates> <specialized-procedure>
+       ;;                       <supplemental> ...)
        ;; <argument-predicates> ::= (<predicate> ...)
        ;;                         | (<predicate> <predicate> ... . <rest-args-predicate>)
        ;;                         | <rest-args-predicate>
@@ -82,42 +87,54 @@
        ;;                            which returns true or #f.
        ;; <specialized-procedure> ::= Procedure with arity matching <argument-predicates>
        ;;                             which returns any number and type of values
-       (letrec ([specializations
-                 ;; The specialization for configure must
-                 ;; always be first so that other specializations
-                 ;; can never precede it so a generic can reliably
-                 ;; always be reconfigured.
-                 (list (cons configure-preds
-                             (lambda (ignore proc)
-                               (set! specializations 
-                                     (cons (car specializations)
-                                           (proc (cdr specializations)))))))])
-         (lambda args
-           (let ([proc
-                  (let next-spec ([specs specializations] [args args])
-                    (cond 
-                      [(pair? specs)
-                       (let next-pred ([preds (caar specs)] [test-args args] [args args])
-                         (cond 
-                           [(pair? preds)
-                            (if (and (pair? test-args)
-                                     ((car preds) (car test-args)))
-                              (next-pred (cdr preds) (cdr test-args) args)
-                              (next-spec (cdr specs) args))]
-                           [(null? preds)
-                            (if (null? test-args)
-                              (cdar specs)  ;; found the right specialized procedure
-                              (next-spec (cdr specs) args))]
-                           [else  ;; predicate for rest args
-                            (if (apply preds test-args)
-                              (cdar specs)  ;; found the right specialized procedure
-                              (next-spec (cdr specs) args))]))]
-                      [(null? specs) 
-                       (apply assertion-violation who "no specialization" args)]))])
-             (apply proc args))))]))
+       ;; <supplemental> ::= Any value. Used by reconfigure.
+       (let ([specializations '()])
+         (values
+           ;; The generic
+           (lambda args
+             (let ([proc
+                    (let next-spec ([specs specializations])
+                      (cond 
+                        [(pair? specs)
+                         (let next-pred ([preds (caar specs)] [test-args args])
+                           (cond 
+                             [(pair? preds)
+                              (if (and (pair? test-args)
+                                       ((car preds) (car test-args)))
+                                (next-pred (cdr preds) (cdr test-args))
+                                (next-spec (cdr specs)))]
+                             [(null? preds)
+                              (if (null? test-args)
+                                (cadar specs)  ;; found the right specialized procedure
+                                (next-spec (cdr specs)))]
+                             [else  ;; predicate for rest args
+                              (if (apply preds test-args)
+                                (cadar specs)  ;; found the right specialized procedure
+                                (next-spec (cdr specs)))]))]
+                        [(null? specs) 
+                         (apply assertion-violation gwho "no specialization" args)]
+                        [else
+                         (assertion-violation gwho 
+                           "invalid specializations value" specs)]))])
+               (apply proc args)))
+           ;; Its specializer
+           (lambda args
+             (set! specializations (apply reconfigure specializations args)))))]))
   
-  (define-syntax define-generic
-    ;;; The syntax of `define-generic' is similar to that of `case-lambda'.
+  (define-syntax define-generic--meta
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ name reconfig (sargs ...) ...)
+         (identifier? #'name)
+         (with-syntax ([specialize! (identifier-append #'name #'name "-specialize!")])
+           #'(define-values (name specialize!)
+               (let-values ([(g sg) (make-generic reconfig 'name)])
+                 (sg sargs ...)
+                 ...
+                 (values g sg))))])))
+  
+  (define-syntax define-generic/temporal
+    ;;; The syntax of `define-generic/temporal' is similar to that of `case-lambda'.
     ;;; Each clause specifies a specialization for the generic.
     ;;;
     ;;; (define-generic <identifier> <spec-clause> ...)    syntax
@@ -145,10 +162,7 @@
                                  [([a p] ... . #(ar pr))
                                   #'((cons* p ... pr) (a ... . ar))]))
                              #'(pred-frmls ...))])
-           #'(define name 
-               (let ([g (make-generic 'name)])                   
-                 (specialize g preds (lambda frmls . b))
-                 ...
-                 g)))])))
+           #'(define-generic--meta name reconfigure/temporal 
+               (preds (lambda frmls . b)) ...))])))
   
 )

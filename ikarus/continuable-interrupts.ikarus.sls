@@ -1,9 +1,66 @@
 (library (xitomatl ikarus continuable-interrupts)
   (export 
     with-continuable-interrupts
+    &interrupted-continuable?
+    make-&interrupted-continuable
+    &interrupted-continuable-continuation
+    #|with-continuable-interrupts
     with-continuable-interrupts*
-    with-continuable-interrupts/top-level)
-  (import (ikarus))
+    with-continuable-interrupts/top-level|#)
+  (import
+    (ikarus))
+
+  
+  (begin
+    (define &interrupted-continuable-rtd
+      (make-record-type-descriptor 
+       '&interrupted-continuable
+       (record-rtd (make-interrupted-condition))
+       #f #f #f 
+       '#((immutable continuation))))    
+    (define &interrupted-continuable?
+      (record-predicate &interrupted-continuable-rtd))      
+    (define &interrupted-continuable-cd
+      (make-record-constructor-descriptor 
+       &interrupted-continuable-rtd
+       (make-record-constructor-descriptor (record-rtd (make-interrupted-condition)) #f #f)
+       #f))      
+    (define make-&interrupted-continuable
+      (record-constructor &interrupted-continuable-cd))
+    (define &interrupted-continuable-continuation
+      (record-accessor &interrupted-continuable-rtd 0)))
+  
+  #;(define-record-type &interrupted-continuable 
+    (parent-rtd 
+      (record-rtd (make-interrupted-condition))
+      (make-record-constructor-descriptor 
+       (record-rtd (make-interrupted-condition)) #f #f))
+    (fields 
+      continuation))
+  
+  (define (with-continuable-interrupts thunk)
+    (with-exception-handler
+      (lambda (ex)
+        (if (interrupted-condition? ex)
+          (call/cc
+            (lambda (cc)
+              (raise-continuable (make-&interrupted-continuable cc))))
+          (raise-continuable ex)))
+      thunk))
+  
+  (define-syntax with-continuable-interrupts/REPL
+    (syntax-rules ()
+      [(_ resume-k-name thunk-expr)
+       (begin
+         (define resume-k-name)
+         (catch ex
+           ([(&interrupted-continuable? ex)
+             (set! resume-k-name (&interrupted-continuable-continuation ex))])
+           (thunk-expr)))]))
+  
+  
+  
+  #;(begin
   
   (define-syntax with-continuable-interrupts
     ;;; esc is given the continuation of the interrupt handler, 
@@ -46,5 +103,5 @@
     (syntax-rules ()
       [(_ int-k-name thunk)
        (with-continuable-interrupts* int-k-name thunk 
-                                     (lambda () (display "Back to top-level.\n")))]))
+                                     (lambda () (display "Back to top-level.\n")))])))
 )

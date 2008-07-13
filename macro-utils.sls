@@ -5,7 +5,7 @@
     duplicate-id unique-ids? unique-ids?/raise
     formals-ok?
     identifier-append
-    unwrap syntax->list #;syntax-map
+    #;unwrap syntax->list #;syntax-map
     with-syntax*)
   (import
     (rnrs))
@@ -57,15 +57,19 @@
                 (if (identifier? #'rest) (list #'rest) '())) 
               orig-stx))]))
   
-  (define (unwrap stx)
-    (guard (ex [(syntax-violation? ex) 
-                (assertion-violation 'unwrap "invalid argument" stx)])
-      (let uw ([stx stx])
-        (syntax-case stx ()
-          [(x . r) (cons (uw #'x) (uw #'r))]
-          [#(x ...) (apply vector (uw #'(x ...)))]
-          [x (identifier? #'x) #'x]
-          [x (syntax->datum #'x)]))))
+  #;(define (unwrap stx)
+    (with-exception-handler
+      (lambda (ex)
+        (if (syntax-violation? ex) 
+          (assertion-violation 'unwrap "invalid argument" stx)
+          (raise-continuable ex)))
+      (lambda ()
+        (let uw ([stx stx])
+          (syntax-case stx ()
+            [(x . r) (cons (uw #'x) (uw #'r))]
+            [#(x ...) (apply vector (uw #'(x ...)))]
+            [x (identifier? #'x) #'x]
+            [x (syntax->datum #'x)])))))
   
   (define (identifier-append ctxt . ids)
     (define who 'identifier-append)

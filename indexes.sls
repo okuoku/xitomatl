@@ -20,7 +20,7 @@
   (define (_enumerate len)
     (_iota (- len 1) '()))
   
-  (define-generic enumerate
+  (define-generic/temporal enumerate
     [([x list?]) (_enumerate (length x))]
     [([x vector?]) (_enumerate (vector-length x))]
     [([x string?]) (_enumerate (string-length x))]
