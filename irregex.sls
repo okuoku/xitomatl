@@ -29,7 +29,6 @@
 ;; Turned into an R6RS library by Derick Eddington
 ;; TODO: follow Shinn's comments for optimizing
 ;; TODO: use case-lambda for optional arguments
-;; TODO: irregex-search/all
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -41,7 +40,8 @@
     irregex-match-start irregex-match-end irregex-match-substring
     irregex-search irregex-search/matches irregex-match
     irregex-replace irregex-replace/all
-    irregex-quote irregex-opt sre->string string->sre)
+    irregex-quote irregex-opt sre->string string->sre
+    irregex-search/all irregex-search/all/strings)
   (import
     (rename (rnrs) (error rnrs:error))
     (rnrs mutable-strings)
@@ -49,8 +49,34 @@
     (rnrs r5rs)
     (only (xitomatl strings) string-intersperse))
   
+  (define irregex-search/all
+    (case-lambda
+      [(x str) 
+       (irregex-search/all x str 0)]
+      [(x str start)
+       (irregex-search/all x str start (string-length str))]
+      [(x str start end)
+       (irregex-search/all x str start end values)]
+      [(x str start end proc)
+       (let ([irx (irregex x)])
+         (let loop ([start start] [accum '()])
+           (let ([m (irregex-search irx str start end)])
+             (if m
+               (loop (irregex-match-end m 0) (cons (proc m) accum))
+               (reverse accum)))))]))
+  
+  (define irregex-search/all/strings
+    (case-lambda
+      [(x str) 
+       (irregex-search/all/strings x str 0)]
+      [(x str start)
+       (irregex-search/all/strings x str start (string-length str))]
+      [(x str start end)
+       (irregex-search/all x str start end
+         (lambda (m) (irregex-match-substring m 0)))]))
+  
 (define (error . args)
-  (apply rnrs:error '(library (xitomatl irregex)) args))
+  (apply rnrs:error "(library (xitomatl irregex))" args))
 
 (define irregex-tag '*irregex-tag*)
 
