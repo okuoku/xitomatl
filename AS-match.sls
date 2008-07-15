@@ -5,8 +5,9 @@
 ;; Public Domain.  All warranties are disclaimed.
 
 ;; Turned into an R6RS library by Derick Eddington, and modified to use 
-;; only-hygienic syntax-case so that ... can be used instead 
-;; (Alex Shinn's version had to use ___)
+;; only-hygienic syntax-case so that ... can be used (original version
+;; had to use ___), and modified to remove _ from syntax-rules/syntax-case
+;; literals lists.
 
 ;; This is a full superset of the popular MATCH package by Andrew
 ;; Wright.

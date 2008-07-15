@@ -11,7 +11,8 @@
   (import
     (except (rnrs) file-exists?)
     (xitomatl file-system paths)
-    (xitomatl file-system base compat))
+    (xitomatl file-system base compat)
+    (only (xitomatl define extras) define/?/AV case-lambda/?))
   
   (define (delete-directory/recursively fn)
     (for-each (lambda (x) 
@@ -25,69 +26,91 @@
           [(file-directory? fn #f)
            (delete-directory/recursively fn)]))
   
-  (define (_directory-walk/choice who proc path top-down/bottom-up on-error)
+  (define (_directory-walk/choice AV proc abs path top-down/bottom-up on-error)
     ;; Inspired by Python's os.walk
     (define (walk dirs)
       (for-each
         (lambda (d) 
-          (_directory-walk/choice who proc d top-down/bottom-up on-error))
-        (remp file-symbolic-link?
-              (map (lambda (d) (path-join path d)) 
-                   dirs))))
-    (unless (procedure? proc)
-      (assertion-violation who "not a procedure" proc))
-    (unless (absolute-path? path)
-      ;; Require an absolute path to always be safe.  Otherwise there are
-      ;; potential problems trying to use (current-directory) because it
-      ;; might be changed underneath our feet by threads, engines, or proc.
-      (assertion-violation who "not an absolute path" path))
+          (_directory-walk/choice AV proc abs d top-down/bottom-up on-error))
+        (map (lambda (d) (path-join path d)) dirs)))
     (call/cc
       (lambda (k)
-        (let-values ([(dirnames filenames)
-                      (partition (lambda (d) (guard (ex [else #f])
-                                               (file-directory? (path-join path d)))) 
-                                 (with-exception-handler
-                                   (lambda (ex) (on-error ex) (k))
-                                   (lambda () (directory-list path))))])
+        (let-values ([(dir-names file-names symlink-names)
+                      (let loop ([l (list-sort string>?
+                                      (with-exception-handler
+                                        (lambda (ex) (on-error ex) (k))
+                                        (lambda () 
+                                          (directory-list (path-join abs path)))))]
+                                 [d '()] [f '()] [s '()])
+                        (if (null? l)
+                          (values d f s)
+                          (let* ([n (car l)]
+                                 [abs-n (path-join abs path n)])
+                            (case (guard (ex [else 'other])
+                                    (cond [(file-regular? abs-n #f) 'file]
+                                          [(file-directory? abs-n #f) 'directory]
+                                          [(file-symbolic-link? abs-n) 'symbolic-link]
+                                          [else 'other]))
+                              [(file other)
+                               (loop (cdr l) d (cons n f) s)]
+                              [(directory)
+                               (loop (cdr l) (cons n d) f s)]
+                              [(symbolic-link)
+                               (loop (cdr l) d f (cons n s))]))))])
           (case top-down/bottom-up
             [(top-down)
-             (let ([dirs (proc path dirnames filenames)])
+             (let ([dirs (proc path dir-names file-names symlink-names)])
                (unless (and (list? dirs) (for-all relative-path? dirs))
-                 (assertion-violation who "not a list of relative paths" dirs))
+                 (AV "supplied procedure did not return a list of relative paths" dirs))
                (walk dirs))]
             [(bottom-up)
-             (walk dirnames)
-             (proc path dirnames filenames)]
-            [else
-             (assertion-violation who "not 'top-down or 'bottom-up" top-down/bottom-up)]))))
+             (walk dir-names)
+             (proc path dir-names file-names symlink-names)]
+            [else (AV "internal misuse")]))))
     (values))
   
-  (define directory-walk/choice
+  (define (top-down/bottom-up? x)
+    (memq x '(top-down bottom-up)))
+  
+  (define/?/AV directory-walk/choice
     ;; When 'top-down is chosen, proc must return a list of the sub-directories
-    ;; it wants the walk to descend into.  Symlinks are always ignored; if you
-    ;; want to descend into one, you must call directory-walk/choice manually.
-    (case-lambda
+    ;; it wants the walk to descend into.
+    (case-lambda/?
       [(proc path) 
        (directory-walk/choice proc path 'top-down)]
       [(proc path top-down/bottom-up)
        (directory-walk/choice proc path top-down/bottom-up values)]
-      [(proc path top-down/bottom-up on-error)
-       (_directory-walk/choice 'directory-walk/choice proc path top-down/bottom-up on-error)]))
+      [([proc procedure?] 
+        [path path?]
+        [top-down/bottom-up top-down/bottom-up?]
+        [on-error procedure?])
+       (_directory-walk/choice 
+         (lambda args (apply AV args)) 
+         proc
+         (if (absolute-path? path) (root-dir-str) (current-directory)) 
+         path
+         top-down/bottom-up
+         on-error)]))
   
-  (define directory-walk
+  (define/?/AV directory-walk
     ;; When 'top-down is chosen, all sub-directories are descended into.
-    ;; Symlinks are always ignored; if you want to descend into one, you 
-    ;; must call directory-walk manually.
-    (case-lambda
+    (case-lambda/?
       [(proc path)
        (directory-walk proc path 'top-down)]
       [(proc path top-down/bottom-up)
        (directory-walk proc path top-down/bottom-up values)]
-      [(proc path top-down/bottom-up on-error)
-       (_directory-walk/choice 'directory-walk 
-         (lambda (path dirnames filenames) 
-           (proc path dirnames filenames)
-           dirnames) 
-         path top-down/bottom-up on-error)]))
+      [([proc procedure?] 
+        [path path?]
+        [top-down/bottom-up top-down/bottom-up?]
+        [on-error procedure?])
+       (_directory-walk/choice
+         (lambda args (apply AV args)) 
+         (lambda (path dir-names file-names symlink-names) 
+           (proc path dir-names file-names symlink-names)
+           dir-names)
+         (if (absolute-path? path) (root-dir-str) (current-directory))
+         path
+         top-down/bottom-up
+         on-error)]))
   
 )

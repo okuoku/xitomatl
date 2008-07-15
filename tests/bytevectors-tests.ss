@@ -5,6 +5,15 @@
   (xitomatl bytevectors)
   (xitomatl srfi lightweight-testing))
 
+(check (bytevector) 
+       => #vu8())
+(check (bytevector 1) 
+       => #vu8(1))
+(check (bytevector 1 2 3 4) 
+       => #vu8(1 2 3 4))
+(check (bytevector 1 2 3 4 5 42 1 2 3 4 1 2 3 255 123) 
+       => #vu8(1 2 3 4 5 42 1 2 3 4 1 2 3 255 123))
+
 (check (bytevector-append)
        => #vu8())
 (check (bytevector-append #vu8())

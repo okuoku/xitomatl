@@ -12,7 +12,7 @@
     (prefix (only (ikarus) directory-list) ik:))
 
   (define (directory-list path)
-    (remp (lambda (x) (or (equal? x ".") (equal? x "..")))
+    (remp (lambda (x) (member x '("." "..")))
           (ik:directory-list path)))
   
 )

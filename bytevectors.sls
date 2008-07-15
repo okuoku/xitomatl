@@ -1,11 +1,15 @@
 #!r6rs
 (library (xitomatl bytevectors)
   (export
+    bytevector
     bytevector-append)
   (import
     (rnrs)
     (only (xitomatl define extras) define/?)
     (only (xitomatl predicates) list-of?))
+  
+  (define (bytevector . u8s)
+    (u8-list->bytevector u8s))
   
   (define/? (bytevector-append . #(bvs (list-of? bytevector?)))
     (let* ([lens (map bytevector-length bvs)]
