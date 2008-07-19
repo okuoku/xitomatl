@@ -33,7 +33,7 @@
           (let ([proc (make-proc yield)])
             (unless (procedure? proc)
               (AV "make-proc did not return a procedure" proc))
-            ;; The initial resume isn't actually "resuming".  It's what starts
+            ;; The initial `resume' isn't actually resuming.  It's what starts
             ;; the coroutine by calling the procedure which contains the body
             ;; of the coroutine.
             (lambda args

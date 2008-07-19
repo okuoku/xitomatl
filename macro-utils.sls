@@ -5,6 +5,8 @@
     duplicate-id unique-ids? unique-ids?/raise
     formals-ok?
     identifier-append
+    name=?
+    identifier?/name=?
     #;unwrap syntax->list #;syntax-map
     with-syntax*)
   (import
@@ -87,6 +89,20 @@
       (unless (positive? (string-length rs))
         (assertion-violation who "result length zero" rs))
       (datum->syntax ctxt (string->symbol rs))))
+  
+  (define (name=? x y . r)
+    (apply symbol=? 
+           (map (lambda (n) 
+                  (cond [(identifier? n) (syntax->datum n)]
+                        [(symbol? n) n]
+                        [(string? n) (string->symbol n)]
+                        [else (assertion-violation 'name=? 
+                               "not an identifier, symbol, or string" n)]))
+                (cons* x y r))))
+  
+  (define (identifier?/name=? id name)
+    (and (identifier? id)
+         (name=? id name)))
   
   #;(define-syntax define-syntax-iterate
     (lambda (stx)
