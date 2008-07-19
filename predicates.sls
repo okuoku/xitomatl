@@ -2,6 +2,7 @@
 (library (xitomatl predicates)
   (export
     exact-non-negative-integer?
+    positive-integer?
     symbol<?
     non-empty-string?
     list-of?)
@@ -10,6 +11,9 @@
 
   (define (exact-non-negative-integer? x)
     (and (integer? x) (exact? x) (not (negative? x))))
+  
+  (define (positive-integer? x)
+    (and (integer? x) (positive? x)))
   
   (define (symbol<? x y . r)
     (apply string<? (map symbol->string (cons* x y r))))
