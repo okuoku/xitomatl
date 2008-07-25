@@ -2,34 +2,28 @@
 (library (xitomatl bytevectors)
   (export
     bytevector
+    bytevector-concatenate
     bytevector-append)
   (import
-    (rnrs)
-    (only (xitomatl define extras) define/?)
-    (only (xitomatl predicates) list-of?))
+    (rnrs))
   
   (define (bytevector . u8s)
     (u8-list->bytevector u8s))
   
-  (define/? (bytevector-append . #(bvs (list-of? bytevector?)))
-    (let* ([lens (map bytevector-length bvs)]
-           [n (make-bytevector (apply + lens))])
-      (let loop ([bvs bvs] [lens lens] [npos 0])
+  (define (bytevector-concatenate bvs)
+    (let ([n (make-bytevector
+              (fold-left (lambda (len bv) (+ len (bytevector-length bv)))
+                         0 bvs))])
+      (let loop ([bvs bvs] [npos 0])
         (cond 
           [(null? bvs) n]
-          [else (bytevector-copy! (car bvs) 0 n npos (car lens))
-                (loop (cdr bvs) (cdr lens) (+ npos (car lens)))]))))
-#|  
-  (define (bytevector->string bv t)
-    (call-with-port (open-bytevector-input-port bv t)
-      (lambda (tcip)
-        (let ([r (get-string-all tcip)])
-          (if (eof-object? r) "" r)))))
+          [else 
+           (let* ([bv (car bvs)]
+                  [len (bytevector-length bv)])
+             (bytevector-copy! bv 0 n npos len)
+             (loop (cdr bvs) (+ npos len)))]))))
   
-  (define (string->bytevector str t)
-    (call-with-bytevector-output-port
-      (lambda (tcop)
-        (put-string tcop str))
-      t))
-|#
+  (define (bytevector-append . bvs)
+    (bytevector-concatenate bvs))
+  
 )

@@ -2,7 +2,7 @@
 (import
   (rnrs)
   (xitomatl ports)
-  (xitomatl smatch))
+  (xitomatl match))
 
 (define top-level-names
   (case-lambda
@@ -11,7 +11,7 @@
     [(input . look-for)
      (let ([look-for (map string->symbol look-for)])
        (for-each
-         (smatch-lambda
+         (match-lambda
            [(f (n . r) . b) 
             (and (symbol? f) (memq f look-for) (symbol? n))
             (begin (display n) (newline))]

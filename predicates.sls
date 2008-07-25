@@ -1,13 +1,20 @@
 #!r6rs
 (library (xitomatl predicates)
   (export
+    non-negative-integer?
     exact-non-negative-integer?
     positive-integer?
+    exact-positive-integer?
+    exact-integer?
     symbol<?
+    name=?
     non-empty-string?
     list-of?)
   (import
     (rnrs))
+  
+  (define (non-negative-integer? x)
+    (and (integer? x) (not (negative? x))))
 
   (define (exact-non-negative-integer? x)
     (and (integer? x) (exact? x) (not (negative? x))))
@@ -15,11 +22,31 @@
   (define (positive-integer? x)
     (and (integer? x) (positive? x)))
   
+  (define (exact-positive-integer? x)
+    (and (integer? x) (exact? x) (positive? x)))
+  
+  (define (exact-integer? x)
+    (and (integer? x) (exact? x)))
+
+  ;;--------------------------------------------------------------------------
+  
   (define (symbol<? x y . r)
     (apply string<? (map symbol->string (cons* x y r))))
   
+  (define (name=? x y . r)
+    (apply symbol=? 
+           (map (lambda (n) 
+                  (cond [(identifier? n) (syntax->datum n)]
+                        [(symbol? n) n]
+                        [(string? n) (string->symbol n)]
+                        [else (assertion-violation 'name=? 
+                               "not an identifier, symbol, or string" n)]))
+                (cons* x y r))))
+  
   (define (non-empty-string? x)
     (and (string? x) (positive? (string-length x))))
+
+  ;;--------------------------------------------------------------------------
   
   (define (list-of? pred)
     (letrec ([list-of?-pred

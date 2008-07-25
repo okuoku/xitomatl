@@ -151,7 +151,7 @@
     read-all get-lines-all port-for-each port-map
     ;; macro-utils
     gen-temp duplicate-id unique-ids? unique-ids?/raise
-    formals-ok? identifier-append unwrap syntax->list
+    formals-ok? identifier-append #;unwrap syntax->list
     with-syntax*
     ;; keyword-args
     lambda/kw lambda/kw-r define/kw define/kw-r :-
@@ -162,8 +162,8 @@
     intersperse remove-dups remv-dups remq-dups
     ;; strings
     string-intersperse string-split
-    ;; smatch
-    smatch smatch-lambda smatch-let smatch-let*
+    ;; match
+    match match-lambda match-lambda* match-let match-let*
     ;; SRFI-61: more general cond
     cond
     )
@@ -177,6 +177,6 @@
     (xitomatl indexes)
     (xitomatl lists)
     (xitomatl strings)
-    (xitomatl smatch)
+    (xitomatl match)
     (xitomatl srfi general-cond))
 )
