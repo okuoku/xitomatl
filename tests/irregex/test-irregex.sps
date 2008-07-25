@@ -1,9 +1,8 @@
-#!/usr/bin/env scheme-script
 #!r6rs
 (import 
   (rnrs)
   (xitomatl irregex)
-  (xitomatl smatch)
+  (xitomatl match)
   (only (xitomatl strings) string-split)
   (only (xitomatl common-unstandard) format)
   (only (xitomatl ports) port-for-each)
@@ -46,7 +45,7 @@
                  (lp)))))))))))
 
 (define (test-re matcher line)
-  (smatch (string-split line "\t" #t)
+  (match (string-split line "\t" #t)
     [(pattern input result subst output)
      (let ((name (format "~a  ~a  ~a" pattern input result)))
        (cond
@@ -77,6 +76,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Pregexp not passing tests.  Not sure if Alex knows this already.
 #;(test-group "pregexp"
   (with-input-from-file "re-tests.txt"
     (lambda ()
@@ -84,5 +84,20 @@
        (lambda (line) (test-re pregexp-match line))
        get-line))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#;(test-group "regex"
+   (with-input-from-file "re-tests.txt"
+     (lambda ()
+       (port-for-each
+        (lambda (line) (test-re string-search line))
+        read-line))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(test-group "utils"
+  (test "h*ll* w*rld"
+      (irregex-replace/all "[aeiou]" "hello world" "*")))
+
 (test-end)
-(test-exit 252)
+(test-exit 251)

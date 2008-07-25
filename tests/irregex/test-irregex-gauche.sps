@@ -1,4 +1,3 @@
-#!/usr/bin/env scheme-script
 #!r6rs
 (import 
   (rename (rnrs) (substring rnrs:substring))
@@ -6,8 +5,6 @@
   (xitomatl irregex)
   (xitomatl tests irregex test))
 
-(define (irregex-submatches x) (vector-ref x 6))
-(define (irregex-match-string m) (vector-ref m 1))
 (define substring
   (case-lambda
     [(str s) (rnrs:substring str s (string-length str))]

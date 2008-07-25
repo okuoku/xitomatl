@@ -2,7 +2,7 @@
 (library (xitomatl tests irregex test)
   (export
     test test-assert test-error test-group
-    test-end test-exit)
+    test-begin test-end test-exit)
   (import
     (rnrs)
     (xitomatl srfi lightweight-testing))
@@ -19,7 +19,7 @@
       [(_ name expr)
        (test-assert expr)]
       [(_ expr)
-       (check (not expr) => #f)]))
+       (check (and expr #t) => #t)]))
   
   (define-syntax test-error
     (syntax-rules ()
@@ -37,8 +37,16 @@
   (define-syntax test-group
     (syntax-rules () [(_ name expr) expr]))
   
+  (define-syntax test-begin
+    (syntax-rules ()
+      [(_)
+       (begin)]))
+  
   (define (test-end) (check-report))
   
-  (define (test-exit n) (exit (if (check-passed? n) 0 1)))
+  (define (test-exit n) 
+    (if (check-passed? n)
+      (exit)
+      (exit #f)))
   
 )
