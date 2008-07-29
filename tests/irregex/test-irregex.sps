@@ -96,6 +96,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-group "utils"
+  (test "h*llo world"
+      (irregex-replace "[aeiou]" "hello world" "*"))
   (test "h*ll* w*rld"
       (irregex-replace/all "[aeiou]" "hello world" "*")))
 

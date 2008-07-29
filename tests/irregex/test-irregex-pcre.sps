@@ -16,6 +16,11 @@
 (test-error (irregex-search "<[[=alpha=]]+>" "<abc>"))
 (test-error (irregex-search "<[[.alpha.]]+>" "<abc>"))
 
+(test-assert (irregex-match "\\Q.*\\+" ".*\\+"))
+(test-assert (irregex-match "\\Q.*\\+\\E" ".*\\+"))
+(test-assert (not (irregex-match "\\Q.*\\+\\E" "x*\\+")))
+(test-assert (irregex-match "\\Q.*\\" ".*\\"))
+
 (test-end)
 (test-exit 8)
 

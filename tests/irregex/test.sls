@@ -35,7 +35,9 @@
               => #t)]))
   
   (define-syntax test-group
-    (syntax-rules () [(_ name expr) expr]))
+    (syntax-rules () 
+      [(_ name expr0 expr ...)
+       (begin expr0 expr ...)]))
   
   (define-syntax test-begin
     (syntax-rules ()

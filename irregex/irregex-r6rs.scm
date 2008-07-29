@@ -17,6 +17,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; History
 ;;
+;; 0.6.2: 2008/07/26 - minor bugfixes, allow global disabling of utf8 mode,
+;;                     friendlier error messages in parsing, \Q..\E support
 ;; 0.6.1: 2008/07/21 - added utf8 mode, more utils, bugfixes
 ;;   0.6: 2008/05/01 - most of PCRE supported
 ;;   0.5: 2008/04/24 - fully portable R4RS, many PCRE features implemented
@@ -124,6 +126,9 @@
 ;;;; ASCII version, offset to not assume 0-255
 ;; (define *all-chars* `(/ ,(integer->char (- (char->integer #\space) 32)) ,(integer->char (+ (char->integer #\space) 223))))
 
+;; set to #f to ignore even an explicit request for utf8 handling
+(define *allow-utf8-mode?* #f)
+
 ;; (define *named-char-properties* '())
 
 (define (string-scan-char str c . o)
@@ -203,10 +208,6 @@
 
 ;; SRFI-1 extracts (simplified 1-ary versions)
 
-#;(define (find pred ls)
-  (cond ((find-tail pred ls) => car)
-	(else #f)))
-
 (define (find-tail pred ls)
   (let lp ((ls ls))
     (cond ((null? ls) #f)
@@ -221,37 +222,11 @@
             (lp (cdr ls))
             (car ls)))))
 
-#;(define (any pred ls)
-  (and (pair? ls)
-       (let lp ((head (car ls)) (tail (cdr ls)))
-         (if (null? tail)
-             (pred head)
-             (or (pred head) (lp (car tail) (cdr tail)))))))
-
-#;(define (every pred ls)
-  (or (null? ls)
-      (let lp ((head (car ls))  (tail (cdr ls)))
-        (if (null? tail)
-            (pred head)
-            (and (pred head) (lp (car tail) (cdr tail)))))))
-
 (define (fold kons knil ls)
   (let lp ((ls ls) (res knil))
     (if (null? ls)
         res
         (lp (cdr ls) (kons (car ls) res)))))
-
-#;(define (filter pred ls)
-  (let lp ((ls ls) (res '()))
-    (if (null? ls)
-        (reverse res)
-        (lp (cdr ls) (if (pred (car ls)) (cons (car ls) res) res)))))
-
-#;(define (remove pred ls)
-  (let lp ((ls ls) (res '()))
-    (if (null? ls)
-        (reverse res)
-        (lp (cdr ls) (if (pred (car ls)) res (cons (car ls) res))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; flags
@@ -320,7 +295,7 @@
   (let ((end (string-length str))
         (flags (symbol-list->flags o)))
 
-    (let lp ((i 0) (from 0) (flags flags) (res '()) (stack '()))
+    (let lp ((i 0) (from 0) (flags flags) (res '()) (st '()))
 
       ;; handle case sensitivity at the literal char/string level
       (define (cased-char ch)
@@ -346,7 +321,9 @@
            ((< j from)
             res)
            (else
-            (let ((c (cased-char (utf8-string-ref str (- i j) j ))))
+            (let ((c (cased-char (if utf8?
+                                     (utf8-string-ref str j (- i j) )
+                                     (string-ref str j)))))
               (cond
                ((= j from)
                 (cons c res))
@@ -408,11 +385,11 @@
              ((eq? 'or (car ls)) (lp (cdr ls) '() (shift)))
              (else (lp (cdr ls) (cons (car ls) term) res))))))
       (define (save)
-        (cons (cons flags (collect)) stack))
+        (cons (cons flags (collect)) st))
 
       ;; main parsing
       (if (>= i end)
-          (if (pair? stack)
+          (if (pair? st)
               (error "unterminated parenthesis in regexp" str)
               (collect/terms))
           (let ((c (string-ref str i)))
@@ -421,7 +398,7 @@
                (lp (+ i 1) (+ i 1) flags
                    (cons (if (flag-set? flags ~single-line?) 'any 'nonl)
                          (collect))
-                   stack))
+                   st))
               ((#\?)
                (let ((res (collect/single)))
                  (if (null? res)
@@ -442,7 +419,7 @@
                                   (else `(? ,x)))
                                 `(? ,x))
                             (cdr res))
-                           stack)))))
+                           st)))))
               ((#\+ #\*)
                (let* ((res (collect/single))
                       (x (car res))
@@ -455,23 +432,33 @@
                   (else
                    (lp (+ i 1) (+ i 1) flags
                        (cons (list op x) (cdr res))
-                       stack)))))
+                       st)))))
               ((#\()
-               (if (not (eqv? #\? (string-ref str (+ i 1))))
-                   (lp (+ i 1) (+ i 1) (flag-join flags ~save?) '() (save))
-                   (case (string-ref str (+ i 2))
-                     ((#\#)
-                      (let ((j (string-scan-char str #\) (+ i 3))))
-                        (lp (+ j i) (+ j 1) flags (collect) stack)))
-                     ((#\:)
-                      (lp (+ i 3) (+ i 3) (flag-clear flags ~save?) '() (save)))
-                     ((#\=)
-                      (lp (+ i 3) (+ i 3) (flag-clear flags ~save?)
-                          '(look-ahead) (save)))
-                     ((#\!)
-                      (lp (+ i 3) (+ i 3) (flag-clear flags ~save?)
-                          '(neg-look-ahead) (save)))
-                     ((#\<)
+               (cond
+                ((>= (+ i 1) end)
+                 (error "unterminated parenthesis in regexp" str))
+                ((not (eqv? #\? (string-ref str (+ i 1))))
+                 (lp (+ i 1) (+ i 1) (flag-join flags ~save?) '() (save)))
+                ((>= (+ i 2) end)
+                 (error "unterminated parenthesis in regexp" str))
+                (else
+                 (case (string-ref str (+ i 2))
+                   ((#\#)
+                    (let ((j (string-scan-char str #\) (+ i 3))))
+                      (lp (+ j i) (+ j 1) flags (collect) st)))
+                   ((#\:)
+                    (lp (+ i 3) (+ i 3) (flag-clear flags ~save?) '() (save)))
+                   ((#\=)
+                    (lp (+ i 3) (+ i 3) (flag-clear flags ~save?)
+                        '(look-ahead) (save)))
+                   ((#\!)
+                    (lp (+ i 3) (+ i 3) (flag-clear flags ~save?)
+                        '(neg-look-ahead) (save)))
+                   ((#\<)
+                    (cond
+                     ((>= (+ i 3) end)
+                      (error "unterminated parenthesis in regexp" str))
+                     (else
                       (case (string-ref str (+ i 3))
                         ((#\=)
                          (lp (+ i 4) (+ i 4) (flag-clear flags ~save?)
@@ -488,86 +475,90 @@
                                    `(,(string->symbol (substring str (+ i 3) j))
                                      submatch-named)
                                    (save))
-                               (error "invalid (?< sequence" str))))))
-                     ((#\>)
-                      (lp (+ i 3) (+ i 3) (flag-clear flags ~save?)
-                          '(atomic) (save)))
-                     ;;((#\' #\P) ; named subpatterns
-                     ;; )
-                     ;;((#\R) ; recursion
-                     ;; )
-                     ((#\()
-                      (cond
-                       ((char-numeric? (string-ref str (+ i 3)))
-                        (let* ((j (string-scan-char str #\) (+ i 3)))
-                               (n (string->number (substring str (+ i 3) j))))
-                          (if (not n)
-                              (error "invalid conditional reference" str)
-                              (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
-                                  `(,n if) (save)))))
-                       ((char-alphabetic? (string-ref str (+ i 3)))
-                        (let* ((j (string-scan-char str #\) (+ i 3)))
-                               (s (string->symbol (substring str (+ i 3) j))))
-                          (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
-                              `(,s if) (save))))
-                       (else
-                        (lp (+ i 2) (+ i 2) (flag-clear flags ~save?)
-                            '(if) (save)))))
-                     ((#\{)
-                      (error "unsupported Perl-style cluster" str))
+                               (error "invalid (?< sequence" str))))))))
+                   ((#\>)
+                    (lp (+ i 3) (+ i 3) (flag-clear flags ~save?)
+                        '(atomic) (save)))
+                   ;;((#\' #\P) ; named subpatterns
+                   ;; )
+                   ;;((#\R) ; recursion
+                   ;; )
+                   ((#\()
+                    (cond
+                     ((>= (+ i 3) end)
+                      (error "unterminated parenthesis in regexp" str))
+                     ((char-numeric? (string-ref str (+ i 3)))
+                      (let* ((j (string-scan-char str #\) (+ i 3)))
+                             (n (string->number (substring str (+ i 3) j))))
+                        (if (not n)
+                            (error "invalid conditional reference" str)
+                            (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
+                                `(,n if) (save)))))
+                     ((char-alphabetic? (string-ref str (+ i 3)))
+                      (let* ((j (string-scan-char str #\) (+ i 3)))
+                             (s (string->symbol (substring str (+ i 3) j))))
+                        (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
+                            `(,s if) (save))))
                      (else
-                      (let ((old-flags flags))
-                        (let lp2 ((j (+ i 2)) (flags flags) (invert? #f))
-                          (define (join x)
-                            ((if invert? flag-clear flag-join) flags x))
-                          (define (new-res res)
-                            (let ((before (flag-set? old-flags ~utf8?))
-                                  (after (flag-set? flags ~utf8?)))
-                              (if (eq? before after)
-                                  res
-                                  (cons (if after 'w/utf8 'w/noutf8) res))))
-                          (cond
-                           ((>= j end)
-                            (error "incomplete cluster" str i))
-                           (else
-                            (case (string-ref str j)
-                              ((#\i)
-                               (lp2 (+ j 1) (join ~case-insensitive?) invert?))
-                              ((#\m)
-                               (lp2 (+ j 1) (join ~multi-line?) invert?))
-                              ((#\x)
-                               (lp2 (+ j 1) (join ~ignore-space?) invert?))
-                              ((#\u)
-                               (lp2 (+ j 1) (join ~utf8?) invert?))
-                              ((#\-)
-                               (lp2 (+ j 1) flags (not invert?)))
-                              ((#\))
-                               (lp (+ j 1) (+ j 1) flags (new-res (collect))
-                                   stack))
-                              ((#\:)
-                               (lp (+ j 1) (+ j 1) flags (new-res '())
-                                   (cons (cons old-flags (collect)) stack)))
-                              (else
-                               (error "unknown regex cluster modifier" str)
-                               ))))))))))
+                      (lp (+ i 2) (+ i 2) (flag-clear flags ~save?)
+                          '(if) (save)))))
+                   ((#\{)
+                    (error "unsupported Perl-style cluster" str))
+                   (else
+                    (let ((old-flags flags))
+                      (let lp2 ((j (+ i 2)) (flags flags) (invert? #f))
+                        (define (join x)
+                          ((if invert? flag-clear flag-join) flags x))
+                        (define (new-res res)
+                          (let ((before (flag-set? old-flags ~utf8?))
+                                (after (flag-set? flags ~utf8?)))
+                            (if (eq? before after)
+                                res
+                                (cons (if after 'w/utf8 'w/noutf8) res))))
+                        (cond
+                         ((>= j end)
+                          (error "incomplete cluster" str i))
+                         (else
+                          (case (string-ref str j)
+                            ((#\i)
+                             (lp2 (+ j 1) (join ~case-insensitive?) invert?))
+                            ((#\m)
+                             (lp2 (+ j 1) (join ~multi-line?) invert?))
+                            ((#\x)
+                             (lp2 (+ j 1) (join ~ignore-space?) invert?))
+                            ((#\u)
+                             (if *allow-utf8-mode?*
+                                 (lp2 (+ j 1) (join ~utf8?) invert?)
+                                 (lp2 (+ j 1) flags invert?)))
+                            ((#\-)
+                             (lp2 (+ j 1) flags (not invert?)))
+                            ((#\))
+                             (lp (+ j 1) (+ j 1) flags (new-res (collect))
+                                 st))
+                            ((#\:)
+                             (lp (+ j 1) (+ j 1) flags (new-res '())
+                                 (cons (cons old-flags (collect)) st)))
+                            (else
+                             (error "unknown regex cluster modifier" str)
+                             )))))))))))
               ((#\))
-               (if (null? stack)
+               (if (null? st)
                    (error "too many )'s in regexp" str)
                    (lp (+ i 1)
                        (+ i 1)
-                       (caar stack)
-                       (cons (collect/terms) (cdar stack))
-                       (cdr stack))))
+                       (caar st)
+                       (cons (collect/terms) (cdar st))
+                       (cdr st))))
               ((#\[)
                (apply
                 (lambda (sre j)
-                  (lp (+ j 1) (+ j 1) flags (cons sre (collect)) stack))
+                  (lp (+ j 1) (+ j 1) flags (cons sre (collect)) st))
                 (string-parse-cset str (+ i 1) flags)))
               ((#\{)
                (if (or (>= (+ i 1) end)
                        (not (or (char-numeric? (string-ref str (+ i 1)))
                                 (eqv? #\, (string-ref str (+ i 1))))))
-                   (lp (+ i 1) from flags res stack)
+                   (lp (+ i 1) from flags res st)
                    (let* ((res (collect/single))
                           (x (car res))
                           (tail (cdr res))
@@ -577,120 +568,141 @@
                           (m (and (pair? (cdr s2)) (string->number (cadr s2)))))
                      (cond
                       ((null? (cdr s2))
-                       (lp (+ j 1) (+ j 1) flags `((= ,n ,x) ,@tail) stack))
+                       (lp (+ j 1) (+ j 1) flags `((= ,n ,x) ,@tail) st))
                       (m
-                       (lp (+ j 1) (+ j 1) flags `((** ,n ,m ,x) ,@tail) stack))
+                       (lp (+ j 1) (+ j 1) flags `((** ,n ,m ,x) ,@tail) st))
                       (else
-                       (lp (+ j 1) (+ j 1) flags `((>= ,n ,x) ,@tail) stack)
+                       (lp (+ j 1) (+ j 1) flags `((>= ,n ,x) ,@tail) st)
                        )))))
               ((#\\)
-               (let ((c (string-ref str (+ i 1))))
-                 (case c
-                   ((#\d)
-                    (lp (+ i 2) (+ i 2) flags `(numeric ,@(collect)) stack))
-                   ((#\D)
-                    (lp (+ i 2) (+ i 2) flags `((~ numeric) ,@(collect)) stack))
-                   ((#\s)
-                    (lp (+ i 2) (+ i 2) flags `(space ,@(collect)) stack))
-                   ((#\S)
-                    (lp (+ i 2) (+ i 2) flags `((~ space) ,@(collect)) stack))
-                   ((#\w)
-                    (lp (+ i 2) (+ i 2) flags
-                        `((or alphanumeric ("_")) ,@(collect)) stack))
-                   ((#\W)
-                    (lp (+ i 2) (+ i 2) flags
-                        `((~ (or alphanumeric ("_"))) ,@(collect)) stack))
-                   ((#\b)
-                    (lp (+ i 2) (+ i 2) flags
-                        `((or bow eow) ,@(collect)) stack))
-                   ((#\B)
-                    (lp (+ i 2) (+ i 2) flags `(nwb ,@(collect)) stack))
-                   ((#\A)
-                    (lp (+ i 2) (+ i 2) flags `(bos ,@(collect)) stack))
-                   ((#\Z)
-                    (lp (+ i 2) (+ i 2) flags
-                        `((? #\newline) eos ,@(collect)) stack))
-                   ((#\z)
-                    (lp (+ i 2) (+ i 2) flags `(eos ,@(collect)) stack))
-                   ((#\R)
-                    (lp (+ i 2) (+ i 2) flags `(newline ,@(collect)) stack))
-                   ((#\K)
-                    (lp (+ i 2) (+ i 2) flags `(reset ,@(collect)) stack))
-                   ;; these two are from Emacs and TRE, but not PCRE
-                   ((#\<)
-                    (lp (+ i 2) (+ i 2) flags `(bow ,@(collect)) stack))
-                   ((#\>)
-                    (lp (+ i 2) (+ i 2) flags `(eow ,@(collect)) stack))
-                   ((#\x)
-                    (apply
-                     (lambda (ch j)
-                       (lp (+ j 1) (+ j 1) flags `(,ch ,@(collect)) stack))
-                     (string-parse-hex-escape str (+ i 2))))
-                   ((#\k)
-                    (let ((c (string-ref str (+ i 2))))
-                      (if (not (memv c '(#\< #\{ #\')))
-                          (error "bad \\k usage, expected \\k<...>" str)
-                          (let* ((terminal (char-mirror c))
-                                 (j (string-scan-char str terminal (+ i 2)))
-                                 (s (and j (substring str (+ i 3) j)))
-                                 (backref
-                                  (if (flag-set? flags ~case-insensitive?)
-                                      'backref-ci
-                                      'backref)))
-                            (if (not j)
-                                (error "interminated named backref" str)
-                                (lp (+ j 1) (+ j 1) flags
-                                    `((,backref ,(string->symbol s))
-                                      ,@(collect))
-                                    stack))))))
-                   ;;((#\p)  ; XXXX unicode properties
-                   ;; )
-                   ;;((#\P)
-                   ;; )
-                   (else
-                    (cond
-                     ((char-numeric? c)
-                      (let* ((j (or (string-scan-pred
-                                     str
-                                     (lambda (c) (not (char-numeric? c)))
-                                     (+ i 2))
-                                    end))
-                             (backref
-                              (if (flag-set? flags ~case-insensitive?)
-                                  'backref-ci
-                                  'backref))
-                             (res `((,backref ,(string->number
-                                                (substring str (+ i 1) j)))
-                                    ,@(collect))))
-                        (lp j j flags res stack)))
-                     ((char-alphabetic? c)
-                      (let ((cell (assv c posix-escape-sequences)))
-                        (if cell
-                            (lp (+ i 2) (+ i 2) flags
-                                (cons (cdr cell) (collect)) stack)
-                            (error "unknown escape sequence" str c))))
+               (cond
+                ((>= (+ i 1) end)
+                 (error "incomplete escape sequence" str))
+                (else
+                 (let ((c (string-ref str (+ i 1))))
+                   (case c
+                     ((#\d)
+                      (lp (+ i 2) (+ i 2) flags `(numeric ,@(collect)) st))
+                     ((#\D)
+                      (lp (+ i 2) (+ i 2) flags `((~ numeric) ,@(collect)) st))
+                     ((#\s)
+                      (lp (+ i 2) (+ i 2) flags `(space ,@(collect)) st))
+                     ((#\S)
+                      (lp (+ i 2) (+ i 2) flags `((~ space) ,@(collect)) st))
+                     ((#\w)
+                      (lp (+ i 2) (+ i 2) flags
+                          `((or alphanumeric ("_")) ,@(collect)) st))
+                     ((#\W)
+                      (lp (+ i 2) (+ i 2) flags
+                          `((~ (or alphanumeric ("_"))) ,@(collect)) st))
+                     ((#\b)
+                      (lp (+ i 2) (+ i 2) flags
+                          `((or bow eow) ,@(collect)) st))
+                     ((#\B)
+                      (lp (+ i 2) (+ i 2) flags `(nwb ,@(collect)) st))
+                     ((#\A)
+                      (lp (+ i 2) (+ i 2) flags `(bos ,@(collect)) st))
+                     ((#\Z)
+                      (lp (+ i 2) (+ i 2) flags
+                          `((? #\newline) eos ,@(collect)) st))
+                     ((#\z)
+                      (lp (+ i 2) (+ i 2) flags `(eos ,@(collect)) st))
+                     ((#\R)
+                      (lp (+ i 2) (+ i 2) flags `(newline ,@(collect)) st))
+                     ((#\K)
+                      (lp (+ i 2) (+ i 2) flags `(reset ,@(collect)) st))
+                     ;; these two are from Emacs and TRE, but not PCRE
+                     ((#\<)
+                      (lp (+ i 2) (+ i 2) flags `(bow ,@(collect)) st))
+                     ((#\>)
+                      (lp (+ i 2) (+ i 2) flags `(eow ,@(collect)) st))
+                     ((#\x)
+                      (apply
+                       (lambda (ch j)
+                         (lp (+ j 1) (+ j 1) flags `(,ch ,@(collect)) st))
+                       (string-parse-hex-escape str (+ i 2) end)))
+                     ((#\k)
+                      (let ((c (string-ref str (+ i 2))))
+                        (if (not (memv c '(#\< #\{ #\')))
+                            (error "bad \\k usage, expected \\k<...>" str)
+                            (let* ((terminal (char-mirror c))
+                                   (j (string-scan-char str terminal (+ i 2)))
+                                   (s (and j (substring str (+ i 3) j)))
+                                   (backref
+                                    (if (flag-set? flags ~case-insensitive?)
+                                        'backref-ci
+                                        'backref)))
+                              (if (not j)
+                                  (error "interminated named backref" str)
+                                  (lp (+ j 1) (+ j 1) flags
+                                      `((,backref ,(string->symbol s))
+                                        ,@(collect))
+                                      st))))))
+                     ((#\Q)  ;; \Q..\E escapes
+                      (let ((res (collect)))
+                        (let lp2 ((j (+ i 2)))
+                          (cond
+                           ((>= j end)
+                            (lp j (+ i 2) flags res st))
+                           ((eqv? #\\ (string-ref str j))
+                            (cond
+                             ((>= (+ j 1) end)
+                              (lp (+ j 1) (+ i 2) flags res st))
+                             ((eqv? #\E (string-ref str (+ j 1)))
+                              (lp (+ j 2) (+ j 2) flags
+                                  (cons (substring str (+ i 2) j) res) st))
+                             (else
+                              (lp2 (+ j 2)))))
+                           (else
+                            (lp2 (+ j 1)))))))
+                     ;;((#\p)  ; XXXX unicode properties
+                     ;; )
+                     ;;((#\P)
+                     ;; )
                      (else
-                      (lp (+ i 2) (+ i 1) flags (collect) stack)))))))
+                      (cond
+                       ((char-numeric? c)
+                        (let* ((j (or (string-scan-pred
+                                       str
+                                       (lambda (c) (not (char-numeric? c)))
+                                       (+ i 2))
+                                      end))
+                               (backref
+                                (if (flag-set? flags ~case-insensitive?)
+                                    'backref-ci
+                                    'backref))
+                               (res `((,backref ,(string->number
+                                                  (substring str (+ i 1) j)))
+                                      ,@(collect))))
+                          (lp j j flags res st)))
+                       ((char-alphabetic? c)
+                        (let ((cell (assv c posix-escape-sequences)))
+                          (if cell
+                              (lp (+ i 2) (+ i 2) flags
+                                  (cons (cdr cell) (collect)) st)
+                              (error "unknown escape sequence" str c))))
+                       (else
+                        (lp (+ i 2) (+ i 1) flags (collect) st)))))))))
               ((#\|)
-               (lp (+ i 1) (+ i 1) flags (cons 'or (collect)) stack))
+               (lp (+ i 1) (+ i 1) flags (cons 'or (collect)) st))
               ((#\^)
                (let ((sym (if (flag-set? flags ~multi-line?) 'bol 'bos)))
-                 (lp (+ i 1) (+ i 1) flags (cons sym (collect)) stack)))
+                 (lp (+ i 1) (+ i 1) flags (cons sym (collect)) st)))
               ((#\$)
                (let ((sym (if (flag-set? flags ~multi-line?) 'eol 'eos)))
-                 (lp (+ i 1) (+ i 1) flags (cons sym (collect)) stack)))
+                 (lp (+ i 1) (+ i 1) flags (cons sym (collect)) st)))
               ((#\space)
                (if (flag-set? flags ~ignore-space?)
-                   (lp (+ i 1) (+ i 1) flags (collect) stack)
-                   (lp (+ i 1) from flags res stack)))
+                   (lp (+ i 1) (+ i 1) flags (collect) st)
+                   (lp (+ i 1) from flags res st)))
               ((#\#)
                (if (flag-set? flags ~ignore-space?)
                    (let ((j (or (string-scan-char str #\newline (+ i 1))
                                 (- end 1))))
-                     (lp (+ j 1) (+ j 1) flags (collect) stack))
-                   (lp (+ i 1) from flags res stack)))
+                     (lp (+ j 1) (+ j 1) flags (collect) st))
+                   (lp (+ i 1) from flags res st)))
               (else
-               (lp (+ i 1) from flags res stack))))))))
+               (lp (+ i 1) from flags res st))))))))
 
 (define posix-escape-sequences
   `((#\n . #\newline)
@@ -707,17 +719,27 @@
 (define (char-mirror c)
   (case c ((#\<) #\>) ((#\{) #\}) ((#\() #\)) ((#\[) #\]) (else c)))
 
-(define (string-parse-hex-escape str i)
-  (if (eqv? #\{ (string-ref str i))
-      (let* ((j (string-scan-char-escape str #\} (+ i 1)))
-             (n (string->number
-                 (substring str (+ i 1) j)
-                 16)))
-        (list (integer->char n) j))
-      (let ((n (string->number
-                (substring str i (+ i 2))
-                16)))
-        (list (integer->char n) (+ i 2)))))
+(define (string-parse-hex-escape str i end)
+  (cond
+   ((>= i end)
+    (error "incomplete hex escape" str i))
+   ((eqv? #\{ (string-ref str i))
+    (let ((j (string-scan-char-escape str #\} (+ i 1))))
+      (if (not j)
+          (error "incomplete hex brace escape" str i)
+          (let* ((s (substring str (+ i 1) j))
+                 (n (string->number s 16)))
+            (if n
+                (list (integer->char n) j)
+                (error "bad hex brace escape" s))))))
+   ((>= (+ i 1) end)
+    (error "incomplete hex escape" str i))
+   (else
+    (let* ((s (substring str i (+ i 2)))
+           (n (string->number s 16)))
+      (if n
+          (list (integer->char n) (+ i 2))
+          (error "bad hex escape" s))))))
 
 (define (string-parse-cset str start flags)
   (let ((end (string-length str))
@@ -732,8 +754,8 @@
                (if (and (null? chars) (null? ranges))
                    (go (+ i 1) (cons #\] chars) ranges)
                    (let ((ci? (flag-set? flags ~case-insensitive?))
-                         (hi-chars (if utf8? (filter hi-char? chars) '()))
-                         (chars (if utf8? (remove hi-char? chars) chars)))
+                         (hi-chars (if utf8? (filter high-char? chars) '()))
+                         (chars (if utf8? (remove high-char? chars) chars)))
                      (list
                       ((lambda (res)
                          (if invert? (cons '~ res) (sre-alternate res)))
@@ -768,7 +790,7 @@
                         (c2 (string-ref str (+ i 1)))
                         (len (if utf8? (utf8-start-char->length c2) 1))
                         (c2 (if (and utf8? (<= #x80 (char->integer c2) #xFF))
-                                (utf8-string-ref str len (+ i 1))
+                                (utf8-string-ref str (+ i 1) len)
                                 c2)))
                    (if (char<? c2 c1)
                        (error "inverted range in char-set" c1 c2)
@@ -805,7 +827,7 @@
                     (apply
                      (lambda (ch j)
                        (go (+ j 1) (cons ch chars) ranges))
-                     (string-parse-hex-escape str (+ i 2))))
+                     (string-parse-hex-escape str (+ i 2) end)))
                    (else
                     (let ((c (cond ((assv c posix-escape-sequences) => cdr)
                                    (else c))))
@@ -816,7 +838,7 @@
                (if (and utf8? (<= #x80 (char->integer c) #xFF))
                    (let ((len (utf8-start-char->length c)))
                      (go (+ i len)
-                         (cons (utf8-string-ref str len i) chars)
+                         (cons (utf8-string-ref str i len) chars)
                          ranges))
                    (go (+ i 1) (cons c chars) ranges)))))))
     (if invert?
@@ -845,260 +867,13 @@
 ;;             [b..f][x80..xFF][x80..xFF][x80..xFF]|
 ;;             g[x80..g][x80..xFF][x80..xFF]|gh[x80..h][x80..xFF]|ghi[x80..j]
 
-(define (hi-char? c) (<= #x80 (char->integer c)))
+(define (high-char? c) (<= #x80 (char->integer c)))
 
 ;; number of total bytes in a utf8 char given the 1st byte
-(define utf8-start-char->length
-  (let ((table '#(
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 0x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 1x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 2x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 3x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 4x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 5x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 6x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 7x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 8x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; 9x
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; ax
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ; bx
-2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 ; cx
-2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 ; dx
-3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 ; ex
-4 4 4 4 4 4 4 4 5 5 5 5 6 6 0 0 ; fx
-)))
-    (lambda (c) (vector-ref table (char->integer c)))))
 
-(define (utf8-string-ref str len i)
-  (define (byte n) (char->integer (string-ref str n)))
-  (case len
-    ((1) ; shouldn't happen in this module
-     (string-ref str i))
-    ((2)
-     (integer->char
-      (+ (bit-shl (bit-and (byte i) #b00011111) 6)
-         (bit-and (byte (+ i 1)) #b00111111))))
-    ((3)
-     (integer->char
-      (+ (bit-shl (bit-and (byte i) #b00001111) 12)
-         (bit-shl (bit-and (byte (+ i 1)) #b00111111) 6)
-         (bit-and (byte (+ i 2)) #b00111111))))
-    ((4)
-     (integer->char
-      (+ (bit-shl (bit-and (byte i) #b00000111) 18)
-         (bit-shl (bit-and (byte (+ i 1)) #b00111111) 12)
-         (bit-shl (bit-and (byte (+ i 2)) #b00111111) 6)
-         (bit-and (byte (+ i 3)) #b00111111))))
-    (else
-     (error "invalid utf8 length" str len i))))
+(define (utf8-string-ref str i len) str)
 
-(define (utf8-backup-to-initial-char str i)
-  (let lp ((i i))
-    (if (= i 0)
-        0
-        (let ((c (char->integer (string-ref str i))))
-          (if (or (< c #x80) (>= c #xC0))
-              i
-              (lp (- i 1)))))))
-
-(define (utf8-lowest-digit-of-length len)
-  (case len
-    ((1) 0) ((2) #xC0) ((3) #xE0) ((4) #xF0)
-    (else (error "invalid utf8 length" len))))
-
-(define (utf8-highest-digit-of-length len)
-  (case len
-    ((1) #x7F) ((2) #xDF) ((3) #xEF) ((4) #xF7)
-    (else (error "invalid utf8 length" len))))
-
-(define (char->utf8-list c)
-  (let ((i (char->integer c)))
-    (cond
-     ((<= i #x7F) (list i))
-     ((<= i #x7FF)
-      (list (bit-ior #b11000000 (bit-shr i 6))
-            (bit-ior #b10000000 (bit-and i #b111111))))
-     ((<= i #xFFFF)
-      (list (bit-ior #b11100000 (bit-shr i 12))
-            (bit-ior #b10000000 (bit-and (bit-shr i 6) #b111111))
-            (bit-ior #b10000000 (bit-and i #b111111))))
-     ((<= i #x1FFFFF)
-      (list (bit-ior #b11110000 (bit-shr i 18))
-            (bit-ior #b10000000 (bit-and (bit-shr i 12) #b111111))
-            (bit-ior #b10000000 (bit-and (bit-shr i 6) #b111111))
-            (bit-ior #b10000000 (bit-and i #b111111))))
-     (else (error "unicode codepoint out of range:" i)))))
-
-(define (unicode-range->utf8-pattern lo hi)
-  (let ((lo-ls (char->utf8-list lo))
-        (hi-ls (char->utf8-list hi)))
-    (if (not (= (length lo-ls) (length hi-ls)))
-        (sre-alternate (list (unicode-range-climb-digits lo-ls hi-ls)
-                             (unicode-range-up-to hi-ls)))
-        (let lp ((lo-ls lo-ls) (hi-ls hi-ls))
-          (cond
-           ((null? lo-ls)
-            '())
-           ((= (car lo-ls) (car hi-ls))
-            (sre-sequence
-             (list (integer->char (car lo-ls))
-                   (lp (cdr lo-ls) (cdr hi-ls)))))
-           ((= (+ (car lo-ls) 1) (car hi-ls))
-            (sre-alternate (list (unicode-range-up-from lo-ls)
-                                 (unicode-range-up-to hi-ls))))
-           (else
-            (sre-alternate (list (unicode-range-up-from lo-ls)
-                                 (unicode-range-middle lo-ls hi-ls)
-                                 (unicode-range-up-to hi-ls)))))))))
-
-(define (unicode-range-helper one ls prefix res)
-  (if (null? ls)
-      res
-      (unicode-range-helper
-       one
-       (cdr ls)
-       (cons (car ls) prefix)
-       (cons (sre-sequence
-              `(,@(map integer->char prefix)
-                ,(one (car ls))
-                ,@(map (lambda (_)
-                         `(/ ,(integer->char #x80)
-                             ,(integer->char #xFF)))
-                       (cdr ls))))
-             res))))
-
-(define (unicode-range-up-from lo-ls)
-  (sre-sequence
-   (list (integer->char (car lo-ls))
-         (sre-alternate
-          (unicode-range-helper
-           (lambda (c)
-             `(/ ,(integer->char (+ (car lo-ls) 1)) ,(integer->char #xFF)))
-           (cdr (reverse (cdr lo-ls)))
-           '()
-           (list
-            (sre-sequence
-             (append
-              (map integer->char (reverse (cdr (reverse (cdr lo-ls)))))
-              `((/ ,(integer->char (last lo-ls))
-                   ,(integer->char #xFF)))))))))))
-
-(define (unicode-range-up-to hi-ls)
-  (sre-sequence
-   (list (integer->char (car hi-ls))
-         (sre-alternate
-          (unicode-range-helper
-           (lambda (c)
-             `(/ ,(integer->char #x80) ,(integer->char (- (car hi-ls) 1))))
-           (cdr (reverse (cdr hi-ls)))
-           '()
-           (list
-            (sre-sequence
-             (append
-              (map integer->char (reverse (cdr (reverse (cdr hi-ls)))))
-              `((/ ,(integer->char #x80)
-                   ,(integer->char (last hi-ls))))))))))))
-
-(define (unicode-range-climb-digits lo-ls hi-ls)
-  (let ((lo-len (length lo-ls)))
-    (sre-alternate
-     (append
-      (list
-       (sre-sequence
-        (cons `(/ ,(integer->char (car lo-ls))
-                  ,(integer->char (if (<= (car lo-ls) #x7F) #x7F #xFF)))
-              (map (lambda (_)
-                     `(/ ,(integer->char #x80) ,(integer->char #xFF)))
-                   (cdr lo-ls)))))
-      (map
-       (lambda (i)
-         (sre-sequence
-          (cons
-           `(/ ,(integer->char (utf8-lowest-digit-of-length (+ i lo-len 1)))
-               ,(integer->char (utf8-highest-digit-of-length (+ i lo-len 1))))
-           (map (lambda (_)
-                  `(/ ,(integer->char #x80) ,(integer->char #xFF)))
-                (zero-to (+ i lo-len))))))
-       (zero-to (- (length hi-ls) lo-len 1)))
-      (list
-       (sre-sequence
-        (cons `(/ ,(integer->char
-                    (utf8-lowest-digit-of-length
-                     (utf8-start-char->length
-                      (integer->char (- (car hi-ls) 1)))))
-                  ,(integer->char (- (car hi-ls) 1)))
-              (map (lambda (_)
-                     `(/ ,(integer->char #x80) ,(integer->char #xFF)))
-                   (cdr hi-ls)))))))))
-
-(define (unicode-range-middle lo-ls hi-ls)
-  (let ((lo (integer->char (+ (car lo-ls) 1)))
-        (hi (integer->char (- (car hi-ls) 1))))
-    (sre-sequence
-     (cons (if (char=? lo hi) lo `(/ ,lo ,hi))
-           (map (lambda (_) `(/ ,(integer->char #x80) ,(integer->char #xFF)))
-                (cdr lo-ls))))))
-
-(define (cset->utf8-pattern cset)
-  (let lp ((ls cset) (alts '()) (lo-cset '()))
-    (cond
-     ((null? ls)
-      (sre-alternate (append (reverse alts)
-                             (if (null? lo-cset)
-                                 '()
-                                 (list (cons '/ (reverse lo-cset)))))))
-     ((char? (car ls))
-      (if (hi-char? (car ls))
-          (lp (cdr ls) (cons (car ls) alts) lo-cset)
-          (lp (cdr ls) alts (cons (car ls) lo-cset))))
-     (else
-      (if (or (hi-char? (caar ls))  (hi-char? (cdar ls)))
-          (lp (cdr ls)
-              (cons (unicode-range->utf8-pattern (caar ls) (cdar ls)) alts)
-              lo-cset)
-          (lp (cdr ls) alts (cons (cdar ls) (cons (caar ls) lo-cset))))))))
-
-(define (sre-adjust-utf8 sre flags)
-  (let adjust ((sre sre)
-               (utf8? (flag-set? flags ~utf8?))
-               (ci? (flag-set? flags ~case-insensitive?)))
-    (define (rec sre) (adjust sre utf8? ci?))
-    (cond
-     ((pair? sre)
-      (case (car sre)
-        ((w/utf8) (adjust (sre-sequence (cdr sre)) #t ci?))
-        ((w/noutf8) (adjust (sre-sequence (cdr sre)) #f ci?))
-        ((w/case) (adjust (sre-sequence (cdr sre)) utf8? #f))
-        ((w/nocase) (adjust (sre-sequence (cdr sre)) utf8? #t))
-        ((/ ~ & -)
-         (if (not utf8?)
-             sre
-             (let ((cset (sre->cset sre ci?)))
-               (if (any (lambda (x)
-                          (if (pair? x)
-                              (or (hi-char? (car x)) (hi-char? (cdr x)))
-                              (hi-char? x)))
-                        cset)
-                   (if ci?
-                       (list 'w/case (cset->utf8-pattern cset))
-                       (cset->utf8-pattern cset))
-                   sre))))
-        ((*)
-         (case (sre-sequence (cdr sre))
-           ;; special case optimization: .* w/utf8 == .* w/noutf8
-           ((any) '(* any))
-           ((nonl) '(* nonl))
-           (else (cons '* (map rec (cdr sre))))))
-        (else
-         (cons (car sre) (map rec (cdr sre))))))
-     (else
-      (case sre
-        ((any) 'utf8-any)
-        ((nonl) 'utf8-nonl)
-        (else
-         (if (and utf8? (char? sre) (hi-char? sre))
-             (sre-sequence (map integer->char (char->utf8-list sre)))
-             sre)))))))
+(define (sre-adjust-utf8 sre flags) sre)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; compilation
@@ -1114,7 +889,9 @@
 
 (define (sre->irregex sre . o)
   (let* ((pat-flags (symbol-list->flags o))
-         (sre (sre-adjust-utf8 sre pat-flags))
+         (sre (if *allow-utf8-mode?*
+                  (sre-adjust-utf8 sre pat-flags)
+                  sre))
          (searcher? (sre-searcher? sre))
          (sre-dfa (if searcher? (sre-remove-initial-bos sre) sre))
          (dfa-limit (cond ((memq 'small o) 1) ((memq 'fast o) 50) (else 10)))

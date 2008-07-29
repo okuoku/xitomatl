@@ -1,5 +1,5 @@
 #!r6rs
-(library (xitomatl irregex (0 6 1))
+(library (xitomatl irregex (0 6 2))
   (export
     irregex string->irregex sre->irregex irregex? irregex-match-data?
     irregex-new-matches irregex-reset-matches!
@@ -75,7 +75,13 @@
     (syntax-rules ()
       [(_ expr)
        expr]))
-    
-  (include/resolve ("xitomatl" "irregex") "irregex.scm")
+
+  (define (utf8-backup-to-initial-char . args)
+    (apply error "utf8-backup-to-initial-char" args))
+  
+  (define (utf8-start-char->length . args)
+    (apply error "utf8-start-char->length" args))
+  
+  (include/resolve ("xitomatl" "irregex") "irregex-r6rs.scm")
   (include/resolve ("xitomatl" "irregex") "irregex-utils.scm")
 )

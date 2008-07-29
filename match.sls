@@ -225,8 +225,7 @@
           ;; prevent misuse of pattern syntax keywords
           [(invalid . _)
            (keyword? #'invalid)
-           (syntax-violation #f "misuse of pattern syntax" 
-                             in-stx pat-stx)]          
+           (syntax-violation #f "misuse of pattern syntax" in-stx pat-stx)]          
           ;; pair / list / improper list
           [(pat-car . pat-cdr)
            (with-syntax ([(car-M car-V ...) (P #'pat-car)]
