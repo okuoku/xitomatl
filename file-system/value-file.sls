@@ -95,15 +95,12 @@
     (call-with-port (OFOP fn)
       (lambda (fop) (write v fop))))
   
-  (define/?/AV value-file-set! 
+  (define/? value-file-set! 
     (case-lambda/?
       [([vf value-file?] v) 
        (_value-file-set! (_value-file-path vf) v)]
       [([vd value-directory?] [vf value-file?] v)
-       (let ([vfp (_value-file-path vf)])
-         (unless (relative-path? vfp)
-           (AV "not a relative path" vfp))
-         (_value-file-set! (path-join (_value-directory-path vd) vfp) v))]))
+       (_value-file-set! (path-join (_value-directory-path vd) (_value-file-path vf)) v)]))
 
   (define/?/AV (value-directory-set! [vd value-directory?] l)
     ;; Any duplicate path-names in l will overwrite each other, 
@@ -128,9 +125,9 @@
                          (and (pair? x)
                               (let ([v (car x)])
                                 (or (and (value-file? v)
-                                         (relative-path? (_value-file-path v)))
+                                         #;(relative-path? (_value-file-path v)))
                                     (and (value-directory? v)
-                                         (relative-path? (_value-directory-path v))
+                                         #;(relative-path? (_value-directory-path v))
                                          (check (cdr x)))))))
                        l)))])
       (unless (check l) 

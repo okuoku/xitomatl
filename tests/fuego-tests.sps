@@ -20,8 +20,8 @@
        (equal? msg (condition-message ex))
        (irritants-condition? ex)
        (equal? (condition-irritants ex) irrts)
-       (&fuego? ex)
-       (eq? (&fuego-object ex) obj)))
+       (fuego-condition? ex)
+       (eq? (condition-fuego-object ex) obj)))
 
 (define (unknown-exn? irrts obj)
   (lambda (ex) (fuego-exn? ex "unknown key" irrts obj)))

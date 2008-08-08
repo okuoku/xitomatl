@@ -20,7 +20,7 @@
     ; Convenient syntaxes    
     object define-values
     ; Exception condition
-    &fuego? &fuego-object)  
+    fuego-condition? condition-fuego-object)  
   (import
     (rnrs)
     (only (xitomatl define extras) define/? define-values)
@@ -38,12 +38,12 @@
   ;-----------------------------------------------------------------------------    
   
   (define-condition-type &fuego &condition 
-    make-&fuego &fuego?
-    (object &fuego-object))
+    make-fuego-condition fuego-condition?
+    (object condition-fuego-object))
   
   (define (AV/F obj msg . irrts)
     (assertion-violation/conditions '(library (xitomatl fuego))
-                                    msg irrts (make-&fuego obj)))
+                                    msg irrts (make-fuego-condition obj)))
   
   ;-----------------------------------------------------------------------------  
   

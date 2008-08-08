@@ -5,8 +5,8 @@
     coroutine
     case-coroutine
     define-coroutine
-    &coroutine-finished?
-    &coroutine-finished-coroutine)
+    coroutine-finished-condition?
+    condition-finished-coroutine)
   (import
     (rnrs)
     (only (xitomatl define extras) define/?/AV))
@@ -18,8 +18,8 @@
   ;;;       and a coroutine must not call itself.
   
   (define-condition-type &coroutine-finished &condition
-    make-&coroutine-finished &coroutine-finished?
-    (coroutine &coroutine-finished-coroutine))
+    make-coroutine-finished-condition coroutine-finished-condition?
+    (coroutine condition-finished-coroutine))
   
   (define/?/AV (make-coroutine [make-proc procedure?])
     (letrec* 
@@ -46,7 +46,7 @@
                   ;; of the first invocation.
                   (return (lambda () (raise ex))))
                 (lambda () (apply proc args)))
-              (let ([cf (make-&coroutine-finished coroutine)])
+              (let ([cf (make-coroutine-finished-condition coroutine)])
                 ;; Set resume to this so that proc is not re-entered if the
                 ;; coroutine is invoked again after proc has returned.
                 (set! resume (lambda args (return (lambda () (raise cf)))))

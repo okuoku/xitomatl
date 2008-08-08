@@ -387,5 +387,14 @@
 (check (string-split "::a:::::b:c:::::::::::::::::d:e::f::::::::::::::::::" ":" #t)
        => '("" "" "a" "" "" "" "" "b" "c" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "d" "e" "" "f" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""))
 
+(check (string-end=? "" "") => #t)
+(check (string-end=? "foo bar" "") => #t)
+(check (string-end=? "foo bar" "r") => #t)
+(check (string-end=? "foo bar" "ar") => #t)
+(check (string-end=? "foo bar" "o bar") => #t)
+(check (string-end=? "foo bar" "a") => #f)
+(check (string-end=? "foo bar" "ba") => #f)
+(check (string-end=? "foo bar" "λ") => #f)
+
 
 (check-report)

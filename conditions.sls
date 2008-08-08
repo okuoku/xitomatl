@@ -13,18 +13,22 @@
     (n condition-argument-name))
   
   (define (assertion-violation/conditions who msg irrts . cndts)
-    (with-exception-handler
-      (lambda (ex)
-        (raise (apply condition ex cndts)))
-      (lambda ()
-        (apply assertion-violation who msg irrts))))
+    (raise 
+     (apply condition
+            (make-assertion-violation)
+            (make-who-condition who)
+            (make-message-condition msg)
+            (make-irritants-condition irrts)
+            cndts)))
   
   (define (error/conditions who msg irrts . cndts)
-    (with-exception-handler
-      (lambda (ex)
-        (raise (apply condition ex cndts)))
-      (lambda ()
-        (apply error who msg irrts))))
+    (raise 
+     (apply condition
+            (make-error)
+            (make-who-condition who)
+            (make-message-condition msg)
+            (make-irritants-condition irrts)
+            cndts)))
       
   (define-condition-type &predicate &condition
     make-predicate-condition predicate-condition?

@@ -2,7 +2,8 @@
 (library (xitomatl strings)
   (export
     string-intersperse
-    string-split)
+    string-split
+    string-end=?)
   (import
     (rnrs)
     (rnrs mutable-pairs)
@@ -12,6 +13,7 @@
     (apply string-append (intersperse sl ssep)))
   
   (define string-split
+    ;; Taken from Chicken Scheme
     (case-lambda
       [(str) (string-split str "\t\n\r " #f)]
       [(str delim-strs) (string-split str delim-strs #f)]
@@ -43,4 +45,10 @@
                                  (loop i2 (add from i last) i2)
                                  (loop i2 last i2)))]
                             [else (scan (fx+ j 1))])))])))]))
+  
+  (define (string-end=? str end)
+    (let ([sl (string-length str)]
+          [el (string-length end)])
+      (and (>= sl el)
+           (string=? (substring str (- sl el) sl) end))))
 )
