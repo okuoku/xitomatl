@@ -153,8 +153,8 @@
     gen-temp duplicate-id unique-ids? unique-ids?/raise
     formals-ok? identifier-append #;unwrap syntax->list
     with-syntax*
-    ;; keyword-args
-    lambda/kw lambda/kw-r define/kw define/kw-r :-
+    ;; keywords
+    case-lambda/kw lambda/kw define/kw
     ;; indexes
     iota enumerate
     ;; lists
@@ -173,7 +173,7 @@
     (xitomatl common-unstandard)
     (xitomatl ports)
     (xitomatl macro-utils)
-    (xitomatl keyword-args)
+    (xitomatl keywords)
     (xitomatl indexes)
     (xitomatl lists)
     (xitomatl strings)
