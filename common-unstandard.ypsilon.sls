@@ -9,7 +9,8 @@
     )
   (import
     (rnrs)
-    (core))
+    (only (core) format pretty-print gensym microsecond set-current-output-port!)
+    (only (time) time))
   
   (define (add1 x) (+ x 1))
 
@@ -20,18 +21,23 @@
   
   (define (printf fmt-str . fmt-args)
     (apply fprintf (current-output-port) fmt-str fmt-args))
-  
-  (define-syntax time
-    (lambda (stx)
-      (syntax-violation #f "not implemented" stx)))
-  
+    
   (define (current-milliseconds)
     ;; Returns: fixnum of the "current" millisecond, the reference point isn't
     ;; known, and so should only be used for calculating a difference between 
     ;; other values returned by this procedure, within a reasonable time span 
     ;; before the fixnum overflows/wraps. 
-    (assertion-violation 'current-milliseconds "not implemented"))
-  
-  (define (with-output-to-string . args)
-    (error 'with-output-to-string "not available from this implementation"))
+    (div (microsecond) 1000))
+
+  (define (with-output-to-string thunk)
+    (let-values ([(sop get) (open-string-output-port)])
+      (let ((temp #f))
+        (dynamic-wind
+         (lambda ()
+           (set! temp (current-output-port))
+           (set-current-output-port! sop))
+         (lambda () (thunk))
+         (lambda ()
+           (set-current-output-port! temp)))
+        (get))))
 )
