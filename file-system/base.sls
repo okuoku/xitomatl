@@ -66,7 +66,7 @@
             [(bottom-up)
              (walk dir-names)
              (proc path dir-names file-names symlink-names)]
-            [else (AV "internal misuse")]))))
+            [else (assert #f)]))))
     (values))
   
   (define (top-down/bottom-up? x)
@@ -85,12 +85,12 @@
         [top-down/bottom-up top-down/bottom-up?]
         [on-error procedure?])
        (_directory-walk/choice 
-         (lambda args (apply AV args)) 
-         proc
-         (if (absolute-path? path) (root-dir-str) (current-directory)) 
-         path
-         top-down/bottom-up
-         on-error)]))
+        AV 
+        proc
+        (if (absolute-path? path) (root-dir-str) (current-directory)) 
+        path
+        top-down/bottom-up
+        on-error)]))
   
   (define/?/AV directory-walk
     ;; When 'top-down is chosen, all sub-directories are descended into.
@@ -104,13 +104,13 @@
         [top-down/bottom-up top-down/bottom-up?]
         [on-error procedure?])
        (_directory-walk/choice
-         (lambda args (apply AV args)) 
-         (lambda (path dir-names file-names symlink-names) 
-           (proc path dir-names file-names symlink-names)
-           dir-names)
-         (if (absolute-path? path) (root-dir-str) (current-directory))
-         path
-         top-down/bottom-up
-         on-error)]))
+        AV 
+        (lambda (path dir-names file-names symlink-names) 
+          (proc path dir-names file-names symlink-names)
+          dir-names)
+        (if (absolute-path? path) (root-dir-str) (current-directory))
+        path
+        top-down/bottom-up
+        on-error)]))
   
 )

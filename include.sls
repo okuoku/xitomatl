@@ -21,8 +21,8 @@
       (syntax-case stx ()
         [(_ ctxt filename)
          (and (identifier? #'ctxt)
-              (or (absolute-path? (syntax->datum #'filename))
-                  (syntax-violation #f "not an absolute path" stx #'filename)))
+              (or (path? (syntax->datum #'filename))
+                  (syntax-violation #f "not a path" stx #'filename)))
          (let ([fn (syntax->datum #'filename)])
            (with-exception-handler
              (lambda (ex)

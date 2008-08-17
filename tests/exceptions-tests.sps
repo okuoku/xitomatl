@@ -87,39 +87,39 @@
   (check exits => 1))
 (let ([enters 0] [exits 0])
   (check (with-exception-handler
-         (lambda (ex) 'R)
-         (lambda ()
-           (catch ex2 ([(null? ex2) 'bad]
-                       [(eqv? ex2 1) 'ok])
-             (lambda ()
-               (catch ex1 ([(char? ex1) 'bad]
-                           [(list? ex1) 'bad])
-                 (lambda ()
-                   (catch ex0 ([(string? ex0) 'bad])
-                     (lambda ()
-                       (dynamic-wind
-                         (lambda () (set! enters (+ 1 enters)))
-                         (lambda () (raise-continuable 2))
-                         (lambda () (set! exits (+ 1 exits)))))))))))) 
+           (lambda (ex) 'R)
+           (lambda ()
+             (catch ex2 ([(null? ex2) 'bad]
+                         [(eqv? ex2 1) 'ok])
+               (lambda ()
+                 (catch ex1 ([(char? ex1) 'bad]
+                             [(list? ex1) 'bad])
+                   (lambda ()
+                     (catch ex0 ([(string? ex0) 'bad])
+                       (lambda ()
+                         (dynamic-wind
+                           (lambda () (set! enters (+ 1 enters)))
+                           (lambda () (raise-continuable 2))
+                           (lambda () (set! exits (+ 1 exits)))))))))))) 
          => 'R)
   (check enters => 1)
   (check exits => 1))
 (let ([enters 0] [exits 0])
   (check (with-exception-handler
-         (lambda (ex) 'R)
-         (lambda ()
-           (catch ex2 ([(null? ex2) 'bad]
-                       [(eqv? ex2 1) 'ok])
-             (lambda ()
-               (catch ex1 ([(char? ex1) 'ok]
-                           [(list? ex1) 'bad])
-                 (lambda ()
-                   (catch ex0 ([(string? ex0) 'bad])
-                     (lambda ()
-                       (dynamic-wind
-                         (lambda () (set! enters (+ 1 enters)))
-                         (lambda () (raise #\C))
-                         (lambda () (set! exits (+ 1 exits)))))))))))) 
+           (lambda (ex) 'R)
+           (lambda ()
+             (catch ex2 ([(null? ex2) 'bad]
+                         [(eqv? ex2 1) 'ok])
+               (lambda ()
+                 (catch ex1 ([(char? ex1) 'ok]
+                             [(list? ex1) 'bad])
+                   (lambda ()
+                     (catch ex0 ([(string? ex0) 'bad])
+                       (lambda ()
+                         (dynamic-wind
+                           (lambda () (set! enters (+ 1 enters)))
+                           (lambda () (raise #\C))
+                           (lambda () (set! exits (+ 1 exits)))))))))))) 
          => 'ok)
   (check enters => 1)
   (check exits => 1))
