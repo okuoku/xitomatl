@@ -6,11 +6,16 @@
     port-for-each
     port-map
     open-binary-compound-input-port
-    open-textual-compound-input-port)
+    open-textual-compound-input-port
+    #|open-binary-pipe-ports
+    open-textual-pipe-ports|#)
   (import
     (rnrs)
     (only (xitomatl define extras) define/AV case-lambda/AV)
-    (only (xitomatl control) begin0))
+    (only (xitomatl control) begin0)
+    #|(only (xitomatl bytevectors) subbytevector)
+    (only (xitomatl strings) string-copy!)
+    (xitomatl queue)|#)
   
   (define read-all
     (case-lambda 
@@ -121,9 +126,6 @@
         (letrec ([read! (lambda (str-or-bv start count)
                           (if current
                             (let ([x (get-n! current str-or-bv start count)])
-                              ;; This could be done to support weird ports that
-                              ;; return EOF but then can be read from again:
-                              ;; (set! x (get-n! current str-or-bv start count))
                               (cond [(eof-object? x)
                                      (close-port current)
                                      (set! current (next))
@@ -167,9 +169,91 @@
        (unless transcoder
          (AV "transcoder cannot be #f"))
        (open-compound-input-port list-or-proc transcoder)]))
+#|  
+  (define (make-open-pipe-ports mcop opid mcip ipid sub copy! len)
+    ;; TODO: Need a mutex for each pipe so that it can be made safe for a
+    ;;       thread to use one of a pipe's ports and another thread to use the
+    ;;       other port.  Need a way for the input port to block until there 
+    ;;       is something ready to be read.
+    (begin  ;; Just for superficial non-threaded testing
+      (define (make-mutex) #f)
+      (define (acquire-mutex m) (values))
+      (define (release-mutex m) (values))
+      (define-syntax synchronized (syntax-rules () [(_ _ expr ...) (begin expr ...)]))
+      (define (block-until-something-enqueued) (values)))
+    ;; NOTE: The safety of concurrent use of the same port is not the 
+    ;;       responsibility of this pipes implementation.
+    (lambda ()
+      (let ([mutex (make-mutex)]
+            [q (make-empty-queue)]
+            [closed #f])
+        (values
+         (mcop opid
+          (lambda (bv-or-str start count)
+            (let ([x (if (positive? count)
+                       (sub bv-or-str start (+ start count))
+                       (eof-object))])
+              (synchronized mutex
+                (when closed
+                  (assertion-violation opid "input end closed"))
+                (enqueue! q x)))
+            count)
+          #f #f  ;; get-position and set-position! not supported
+          (lambda ()
+            (synchronized mutex
+              (set! closed #t))))
+         (let ([current #f] [pos #f])
+           (mcip ipid
+            (letrec ([read!
+                      (lambda (bv-or-str start count)
+                        (if current
+                          (let* ([curlen (- (len current) pos)]
+                                 [copylen (min count curlen)])
+                            (copy! current pos bv-or-str start copylen)
+                            (if (= curlen copylen)
+                              (begin
+                                (set! current #f)
+                                (set! pos #f))
+                              (set! pos (+ pos copylen)))
+                            copylen)
+                          (if (begin (acquire-mutex mutex)
+                                     (positive? (queue-length q)))
+                            (let ([x (dequeue! q)])
+                              (release-mutex mutex)
+                              (if (eof-object? x)
+                                0  ;; EOF, but still possible to read again
+                                (begin (set! current x)
+                                       (set! pos 0)
+                                       (read! bv-or-str start count))))
+                            (if (begin0 closed
+                                        (release-mutex mutex))
+                              0  ;; return EOF from now on
+                              (begin (block-until-something-enqueued)
+                                     (read! bv-or-str start count))))))])
+              read!)
+            #f #f  ;; get-position and set-position! not supported
+            (lambda ()
+              (synchronized mutex 
+                (set! q #f)
+                (set! closed #t))
+              (set! current #f))))))))
   
-  ;; TODO: Pipe ports
+  (define open-binary-pipe-ports
+    (make-open-pipe-ports 
+     make-custom-binary-output-port "<binary-pipe-output-port>"
+     make-custom-binary-input-port "<binary-pipe-input-port>"
+     subbytevector
+     bytevector-copy!
+     bytevector-length))
   
+  (define open-textual-pipe-ports
+    (make-open-pipe-ports 
+     make-custom-textual-output-port "<textual-pipe-output-port>"
+     make-custom-textual-input-port "<textual-pipe-input-port>"
+     substring
+     string-copy!
+     string-length))
+|#  
   ;; TODO: Pushback ports
   
   ;; TODO?: Filter ports

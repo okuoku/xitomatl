@@ -95,6 +95,12 @@
 (check bb => 1)
 (check cc => 2)
 (check r1 => '())
+(check (let ()
+         (define a 1)
+         (define-values (b c) (values 2 3))
+         (define d 4)
+         (+ a b c d))
+       => 10)
 (check-assertion-error
   (define-values (a) (values 1 2)))
 (check-assertion-error

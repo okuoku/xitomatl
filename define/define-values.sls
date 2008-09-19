@@ -16,28 +16,22 @@
     (lambda (stx)
       (syntax-case stx ()
         [(_ (id* ... . rid) expr)
-         (formals-ok? #'(id* ... . rid) stx)
-         (with-syntax ([(t* ...) (generate-temporaries #'(id* ...))]
-                       [(rt ...) (generate-temporaries 
-                                   (if (identifier? #'rid) '(1) '()))])
-           #`(begin
-               (define t*) ...
-               (define rt) ...
-               (define dummy 
-                 (call-with-values 
-                  (lambda () #f expr) ;; #f first to prevent internal defines
-                  (case-lambda
-                    [(id* ... . rid)
-                     (set! t* id*) ...
-                     (set! rt rid) ...
-                     #f]
-                    [otherwise
-                     (define-values-error #,(length #'(id* ...)) otherwise)])))
-               (define id* 
-                 (let ([v t*]) (set! t* #f) v)) 
-               ...
-               (define rid 
-                 (let ([v rt]) (set! rt #f) v)) 
-               ...))])))  
+         (formals-ok? #'(id* ... . rid) stx)         
+         #`(begin
+             (define t 
+               (call-with-values 
+                (lambda () #f expr) ;; #f first to prevent internal defines
+                (case-lambda
+                  [(id* ... . rid)
+                   (list id* ... #,@(if (identifier? #'rid) (list #'rid) '()))]
+                  [otherwise
+                   (define-values-error #,(length #'(id* ...)) otherwise)])))
+             (define id*
+               (let ([v (car t)]) (set! t (cdr t)) v))
+             ...
+             #,@(if (identifier? #'rid)
+                  (list #'(define rid
+                            (let ([v (car t)]) (set! t (cdr t)) v)))
+                  '()))])))  
   
 )

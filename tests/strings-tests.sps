@@ -396,5 +396,15 @@
 (check (string-end=? "foo bar" "ba") => #f)
 (check (string-end=? "foo bar" "λ") => #f)
 
+(define s0 (string-copy "This is a sentence."))
+(define s1 (make-string 10))
+(string-copy! s0 3 s1 0 10)
+(check s1 => "s is a sen")
+(string-copy! s0 11 s1 1 6)
+(check s1 => "sentencsen")
+(string-copy! s0 2 s0 13 4)
+(check s0 => "This is a senis ie.")
+(string-copy! s0 5 s0 0 10)
+(check s0 => "is a senissenis ie.")
 
 (check-report)

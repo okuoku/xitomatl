@@ -210,8 +210,7 @@
             (my:newline newline) (my:read-char read-char) 
             (my:write-char write-char) (my:peek-char peek-char)))
   (import 
-    (rnrs)
-    (xitomatl macro-utils)) 
+    (rnrs))
   
   (define (my:read p)
     (read p))

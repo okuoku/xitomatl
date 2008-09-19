@@ -31,4 +31,17 @@
                           #vu8() #vu8() #vu8(1 2 3) #vu8() #vu8(255 123))
        => #vu8(1 2 3 4 5 42 1 2 3 4 1 2 3 255 123))
 
+(check (subbytevector #vu8() 0 0)
+       => #vu8())
+(check (subbytevector #vu8(1 2 3 4 5) 0 0)
+       => #vu8())
+(check (subbytevector #vu8(1 2 3 4 5) 0 1)
+       => #vu8(1))
+(check (subbytevector #vu8(1 2 3 4 5) 3 4)
+       => #vu8(4))
+(check (subbytevector #vu8(1 2 3 4 5) 1 4)
+       => #vu8(2 3 4))
+(check (subbytevector #vu8(1 2 3 4 5) 0 5)
+       => #vu8(1 2 3 4 5))
+
 (check-report)

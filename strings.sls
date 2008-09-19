@@ -3,11 +3,14 @@
   (export
     string-intersperse
     string-split
-    string-end=?)
+    string-end=?
+    ;; from (xitomatl strings compat)
+    string-copy!)
   (import
     (rnrs)
     (rnrs mutable-pairs)
-    (only (xitomatl lists) intersperse))
+    (only (xitomatl lists) intersperse)
+    (xitomatl strings compat))
   
   (define (string-intersperse sl ssep)
     (apply string-append (intersperse sl ssep)))

@@ -9,7 +9,7 @@
     (rnrs)
     (only (ikarus) engine-handler fxadd1 void die)
     (only (ikarus system $interrupts) $swap-engine-counter!))    
-
+  
   ;;; Based off of The Scheme Programming Language engines.
   ;;; NOTE: not currently thread safe
   
@@ -54,7 +54,7 @@
     ;; by Ikarus's $do-event.  This gives a consistent logic to processes
     ;; which calculated they should only need X more ticks to complete.
     ;; NOTE: this will probably need to be adjusted as Ikarus changes.
-    (start-timer (fxadd1 (call/cc do-expire))))
+    (start-timer (call/cc do-expire)))
   
   (define (new-engine resume)
     (define (engine ticks complete expire)
