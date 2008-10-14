@@ -39,8 +39,6 @@
   (only (xitomatl macro-utils))
   (only (xitomatl match))
   (only (xitomatl memoize))
-  (only (xitomatl module))
-  (only (xitomatl parameters))
   (only (xitomatl persistence base))
   (only (xitomatl persistence transcoded-serializing))
   (only (xitomatl ports))
