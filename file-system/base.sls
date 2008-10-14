@@ -12,7 +12,8 @@
     (except (rnrs) file-exists?)
     (xitomatl file-system paths)
     (xitomatl file-system base compat)
-    (only (xitomatl define extras) define/?/AV case-lambda/?))
+    (only (xitomatl define extras) define/?/AV case-lambda/?)
+    (only (xitomatl common-unstandard) fprintf))
   
   (define (delete-directory/recursively fn)
     (for-each (lambda (x) 
@@ -72,6 +73,11 @@
   (define (top-down/bottom-up? x)
     (memq x '(top-down bottom-up)))
   
+  (define (on-error--default ex)
+    (fprintf (current-error-port)
+             "WARNING: Exception raised from directory walking: ~s\n"
+             (if (condition? ex) (simple-conditions ex) ex)))
+  
   (define/?/AV directory-walk/choice
     ;; When 'top-down is chosen, proc must return a list of the sub-directories
     ;; it wants the walk to descend into.
@@ -79,7 +85,7 @@
       [(proc path) 
        (directory-walk/choice proc path 'top-down)]
       [(proc path top-down/bottom-up)
-       (directory-walk/choice proc path top-down/bottom-up values)]
+       (directory-walk/choice proc path top-down/bottom-up on-error--default)]
       [([proc procedure?] 
         [path path?]
         [top-down/bottom-up top-down/bottom-up?]
@@ -98,7 +104,7 @@
       [(proc path)
        (directory-walk proc path 'top-down)]
       [(proc path top-down/bottom-up)
-       (directory-walk proc path top-down/bottom-up values)]
+       (directory-walk proc path top-down/bottom-up on-error--default)]
       [([proc procedure?] 
         [path path?]
         [top-down/bottom-up top-down/bottom-up?]

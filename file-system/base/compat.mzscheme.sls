@@ -45,7 +45,7 @@
     (unless (fixnum? mode)
       (assertion-violation 'change-mode "not a fixnum" mode))
     (assertion-violation 'change-mode "BUG: not implemented")
-    #;(Use MzScheme's FFI to use C chmod, I guess))
+    #|(Use MzScheme's FFI to use C chmod, I guess)|#)
   
   (define file-exists?
     (case-lambda 

@@ -74,7 +74,7 @@
     match-let match-let*)
   (import
     (rnrs)
-    (only (xitomatl irregex)
+    (only (xitomatl irregex (0 6 (>= 1)))
           irregex irregex-match irregex-match-substring)
     (only (xitomatl records)
           record-type-accessors)
@@ -200,8 +200,8 @@
                       [_ #f])))
            (with-syntax ([rtd-expr 
                           (syntax-case #'rtype () 
-                            [(RTD x) (identifier?/name=? #'RTD 'RTD) #'x]
-                            [rtype-stx #'(record-type-descriptor rtype-stx)])]
+                            [(_ x) #'x]
+                            [x #'(record-type-descriptor x)])]
                          [num (length #'(pat ...))]
                          [((M V ...) ...) (map P #'(pat ...))])
              #'((make-matcher M-record rtd-expr num (vector M ...))
@@ -381,25 +381,38 @@
             (and vars
                  (loop (+ 1 i) vars)))))))
   
+  ;; TODO?: Cache pre-compiled irregex'es for string irx below
+  
   (define (M-irregex obj vars irx idxs matchers)
     (and (string? obj)
          (let ([m (irregex-match irx obj)])
            (and m
-                ;; irregex 0.6.1 irregex-match anchors at both beginning and end 
-                #;(= 0 (irregex-match-start m))
-                #;(= (string-length obj) (irregex-match-end m))
                 (do-sub-matching 
                  (vector-map (lambda (i) (irregex-match-substring m i))
                              idxs)
                  matchers
                  vars)))))
   
+  ;;; FIXME: need to use a weak hashtable
+  #;(define rtd-ht (make-eq-hashtable))
+  
   (define (M-record obj vars rtd num matchers)
     (and ((record-predicate rtd) obj)
          (let ([fields-vals (vector-map (lambda (a) (a obj))
                                         (record-type-accessors rtd))])
            (and (= num (vector-length fields-vals))
-                (do-sub-matching fields-vals matchers vars)))))
+                (do-sub-matching fields-vals matchers vars))))
+    #;(let ([predicate.accessors 
+           (or (hashtable-ref rtd-ht rtd #f)
+               (let ([predicate.accessors (cons (record-predicate rtd)
+                                                (record-type-accessors rtd))])
+                 (hashtable-set! rtd-ht rtd predicate.accessors)
+                 predicate.accessors))])
+      (and ((car predicate.accessors) obj)
+           (let ([fields-vals (vector-map (lambda (a) (a obj))
+                                          (cdr predicate.accessors))])
+             (and (= num (vector-length fields-vals))
+                  (do-sub-matching fields-vals matchers vars))))))
   
   (define (M-predicate obj vars pred)
     (and (pred obj)

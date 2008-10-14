@@ -16,6 +16,17 @@
   ;;; 
   ;;; NOTE: These coroutines are not thread/engine safe,
   ;;;       and a coroutine must not call itself.
+  ;;;
+  ;;; NOTE: These coroutines have a problem with the dynamic environment.
+  ;;;       Because call/cc is used in the body of the coroutine, every time
+  ;;;       the coroutine is resumed, the dynamic environment of the initial
+  ;;;       call to the coroutine is re-established, but the right thing would
+  ;;;       be to keep the d.e. of the current invocation and extend it with
+  ;;;       the d.e. of only the coroutine's body (but not the rest of the
+  ;;;       d.e. of the initial call).  I try to do the right thing for
+  ;;;       exception handling, but there's still an issue with possible
+  ;;;       &non-continuable exceptions.
+  ;;;       Contact Derick if you want to know more.
   
   (define-condition-type &coroutine-finished &condition
     make-coroutine-finished-condition coroutine-finished-condition?
@@ -28,7 +39,9 @@
             (call/cc
               (lambda (k)
                 (set! resume k)
-                (return (lambda () (apply values args))))))]
+                (return (lambda () 
+                          (set! return #f)
+                          (apply values args))))))]
          [resume 
           (let ([proc (make-proc yield)])
             (unless (procedure? proc)
@@ -39,20 +52,30 @@
             (lambda args
               (with-exception-handler
                 (lambda (ex)
-                  ;; Doing this makes the dynamic environment (e.g. the
-                  ;; exception handlers) of the raise of the exception 
-                  ;; from inside proc be that of the current invocation of
+                  ;; Escaping to `return' makes the dynamic environment (e.g.
+                  ;; the exception handlers) of the raise of the exception
+                  ;; from inside `proc' be that of the current invocation of
                   ;; the coroutine.  Otherwise, it would always be that
                   ;; of the first invocation.
-                  (return (lambda () (raise ex))))
+                  (call/cc
+                   (lambda (k)
+                     (return (lambda ()
+                               (let ([saved return])
+                                 (set! return #f)
+                                 (let-values ([vals (raise-continuable ex)])
+                                   (set! return saved)
+                                   (apply k vals))))))))
                 (lambda () (apply proc args)))
-              (let ([cf (make-coroutine-finished-condition coroutine)])
+              (let* ([cf (make-coroutine-finished-condition coroutine)]
+                     [rp/cf (lambda ()
+                              (set! return #f)
+                              (raise cf))])
                 ;; Set resume to this so that proc is not re-entered if the
                 ;; coroutine is invoked again after proc has returned.
-                (set! resume (lambda args (return (lambda () (raise cf)))))
+                (set! resume (lambda args (return rp/cf)))
                 ;; Raise in the dynamic environment of the current
                 ;; invocation of the coroutine.
-                (return (lambda () (raise cf))))))]
+                (return rp/cf))))]
          [return #f]
          [coroutine
           (lambda args
@@ -63,7 +86,6 @@
                                  (lambda (k)
                                    (set! return k)
                                    (apply resume args)))])
-              (set! return #f)
               (return-proc)))])
       coroutine))
   
