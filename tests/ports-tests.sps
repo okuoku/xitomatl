@@ -1,3 +1,5 @@
+;;; NOTE: The compound-input-port uses of coroutines are known to fail on PLT Scheme.
+
 #!r6rs
 (import
   (rnrs)

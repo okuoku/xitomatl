@@ -9,6 +9,7 @@
     symbol<?
     name=?
     non-empty-string?
+    char-line-ending?
     list-of?)
   (import
     (rnrs))
@@ -45,6 +46,10 @@
   
   (define (non-empty-string? x)
     (and (string? x) (positive? (string-length x))))
+  
+  (define (char-line-ending? c)
+    (and (memv c '(#\xa #\xd #\x85 #\x2028))
+         #t))
 
   ;;--------------------------------------------------------------------------
   

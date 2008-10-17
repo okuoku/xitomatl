@@ -1,21 +1,19 @@
 #!r6rs
 (library (xitomatl ports)
   (export
-    read-all
-    get-lines-all
-    port-for-each
-    port-map
-    open-binary-compound-input-port
-    open-textual-compound-input-port
-    #|open-binary-pipe-ports
-    open-textual-pipe-ports|#)
+    port-closed?  ;; from (xitomatl ports compat)
+    read-all get-lines-all
+    port-for-each port-map
+    open-binary-compound-input-port open-textual-compound-input-port
+    #|open-binary-pipe-ports open-textual-pipe-ports|#)
   (import
     (rnrs)
     (only (xitomatl define extras) define/AV case-lambda/AV)
     (only (xitomatl control) begin0)
     #|(only (xitomatl bytevectors) subbytevector)
     (only (xitomatl strings) string-copy!)
-    (xitomatl queue)|#)
+    (xitomatl queue)|#
+    (xitomatl ports compat))
   
   (define read-all
     (case-lambda 
