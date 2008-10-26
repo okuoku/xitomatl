@@ -445,7 +445,7 @@
 
 (check (match-let* ([(a b) '(1 (2 3))]
                     [(a b) b]
-                    (#(#(b) "s" a) `#(#(,(- a)) "s" ,(* 2 b))))
+                    [#(#(b) "s" a) `#(#(,(- a)) "s" ,(* 2 b))])
          (list a b))
        => '(6 -2))
 (check-dups-error

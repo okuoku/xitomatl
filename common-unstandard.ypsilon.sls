@@ -9,7 +9,8 @@
     )
   (import
     (rnrs)
-    (only (core) format pretty-print gensym microsecond set-current-output-port!)
+    (only (core) format gensym microsecond set-current-output-port!)
+    (prefix (only (core) pretty-print) ypsilon:)
     (only (time) time))
   
   (define (add1 x) (+ x 1))
@@ -21,6 +22,14 @@
   
   (define (printf fmt-str . fmt-args)
     (apply fprintf (current-output-port) fmt-str fmt-args))
+  
+  (define pretty-print
+    (case-lambda
+      [(x)
+       (pretty-print (current-output-port))]
+      [(x p)
+       (ypsilon:pretty-print x p)
+       (newline p)]))
     
   (define (current-milliseconds)
     ;; Returns: fixnum of the "current" millisecond, the reference point isn't

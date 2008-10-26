@@ -65,7 +65,7 @@
          (lambda (ex) 'R)
          (lambda ()
            (catch ex2 ([(null? ex2) 'bad]
-                       [(eqv? ex2 1) 'ok])
+                       [(eqv? ex2 1) 'bad])
              (lambda ()
                (catch ex1 ([(char? ex1) 'bad]
                            [(list? ex1) 'bad])
@@ -90,7 +90,7 @@
            (lambda (ex) 'R)
            (lambda ()
              (catch ex2 ([(null? ex2) 'bad]
-                         [(eqv? ex2 1) 'ok])
+                         [(eqv? ex2 1) 'bad])
                (lambda ()
                  (catch ex1 ([(char? ex1) 'bad]
                              [(list? ex1) 'bad])
@@ -109,7 +109,7 @@
            (lambda (ex) 'R)
            (lambda ()
              (catch ex2 ([(null? ex2) 'bad]
-                         [(eqv? ex2 1) 'ok])
+                         [(eqv? ex2 1) 'bad])
                (lambda ()
                  (catch ex1 ([(char? ex1) 'ok]
                              [(list? ex1) 'bad])

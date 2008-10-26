@@ -13,6 +13,7 @@
   (only (xitomatl control))
   (only (xitomatl coroutines))
   (only (xitomatl curry))
+  (only (xitomatl debug))
   (only (xitomatl define define-values))
   (only (xitomatl define extras))
   (only (xitomatl define traced))

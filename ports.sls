@@ -1,6 +1,8 @@
 #!r6rs
 (library (xitomatl ports)
   (export
+    binary-input-port? binary-output-port?
+    textual-input-port? textual-output-port?
     port-closed?  ;; from (xitomatl ports compat)
     read-all get-lines-all
     port-for-each port-map
@@ -15,6 +17,19 @@
     (xitomatl queue)|#
     (xitomatl ports compat))
   
+  (define (binary-input-port? x)
+    (and (input-port? x)
+         (binary-port? x)))
+  (define (binary-output-port? x)
+    (and (output-port? x)
+         (binary-port? x)))
+  (define (textual-input-port? x)
+    (and (input-port? x)
+         (textual-port? x)))
+  (define (textual-output-port? x)
+    (and (output-port? x)
+         (textual-port? x)))
+
   (define read-all
     (case-lambda 
       [(port)
