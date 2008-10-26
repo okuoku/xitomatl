@@ -74,7 +74,7 @@
     match-let match-let*)
   (import
     (rnrs)
-    (only (xitomatl irregex (0 6 (>= 1)))
+    (only (xitomatl irregex (or (0 6 (>= 2)) (0 (>= 7)) ((>= 1))))
           irregex irregex-match irregex-match-substring)
     (only (xitomatl records)
           record-type-accessors)
@@ -129,7 +129,7 @@
       ;;; bound by the pattern.  P is used recursively as a recursive match
       ;;; pattern is parsed.
       (define (P pat-stx)
-        (syntax-case pat-stx (quote quasiquote)
+        (syntax-case pat-stx ()
           ;; empty list
           [()
            #'(M-null)]
@@ -146,11 +146,13 @@
            (identifier? #'var)
            #'(M-variable
               var)]
-          ;; quoted datum
-          [(quote datum)
+          ;; quote'd datum
+          [(q datum)
+           (identifier?/name=? #'q 'quote)
            #'((make-matcher M-datum (quote datum)))]
-          ;; quasiquote datum 
-          [(quasiquote datum)
+          ;; quasiquote'd datum
+          [(qq datum)
+           (identifier?/name=? #'qq 'quasiquote)
            #'((make-matcher M-datum (quasiquote datum)))]
           ;; and
           [(:and pat ...)

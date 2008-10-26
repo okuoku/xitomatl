@@ -6,7 +6,7 @@
 (define rx-special-chars
   "\\|[](){}.*+?^$#")
 
-;;; Already defined in irregex.scm
+;;; Already defined in irregex-r6rs.scm
 #;(define (string-scan-char str c . o)
   (let ((end (string-length str)))
     (let scan ((i (if (pair? o) (car o) 0)))
