@@ -4,7 +4,8 @@
 (import
   (rnrs)
   (xitomatl irregex)
-  (xitomatl srfi lightweight-testing))
+  (xitomatl srfi lightweight-testing)
+  (xitomatl enumerators))
 
 (define-syntax check-ex/not-advancing
   (syntax-rules ()
@@ -60,17 +61,23 @@
 
 ;;----------------------------------------------------------------------------
 
-;; pair-chain-chunking-lose-refs! 
-;; (Same procedure as list-chunking-lose-refs! and port-chunking-lose-refs!)
+;; pair-chain-chunking-lose-refs 
+;; (currently same procedure as list-chunking-lose-refs and port-chunking-lose-refs)
 
-(let* ([chunk (list "This" "is" "a" "test" "of" "losing" "refs")]
+(let* ([chunk (apply list  ;; ensure we have newly allocated pairs and strings
+                     (map string-copy
+                          '("This" "is" "a" "test" "of" "losing" "refs")))]
+       [saved (apply list chunk)]
        [submatch-chunks (list chunk (cddddr chunk)
                               (cdr chunk) (cdddr chunk)
                               (cddr chunk) (cddddr chunk)
                               (cddddr chunk) (cddddr chunk))]
-       [replacements (pair-chain-chunking-lose-refs! submatch-chunks)])      
-  (check (length chunk) => 5)
-  (check (for-all eq? replacements submatch-chunks) => #t)
+       [replacements (pair-chain-chunking-lose-refs submatch-chunks)])      
+  (check chunk => '("This" "is" "a" "test" "of" "losing" "refs"))
+  (check (for-all eq? chunk saved) => #t)
+  (check (length replacements) => (length submatch-chunks))
+  (check (for-all eq? (map car replacements) (map car submatch-chunks)) => #t)
+  (check (exists eq? replacements submatch-chunks) => #f)
   (check (list-ref replacements 0) => '("This" "is" "a" "test" "of"))
   (check (list-ref replacements 1) => '("of"))
   (check (list-ref replacements 2) => '("is" "a" "test" "of"))
@@ -85,34 +92,30 @@
 (define chunked-text0 
   '("Once u" "" "p" "on " "" "a time." "." ". " 
     " There was a string " "used for tes" "ting ch" "unks!" ""))
-(define (list-copy l)
-  (map values l))
 
 ;; irregex-search/chunked/all
 
 (check (irregex-search/chunked/all "foobar" list-chunker '(""))
        => '())
 (check (irregex-search/chunked/all "foobar" list-chunker (list "")
-                                   list-chunking-lose-refs!)
+                                   list-chunking-lose-refs)
        => '())
 (check (irregex-search/chunked/all "foobar" list-chunker '("" "" "" ""))
        => '())
 (check (irregex-search/chunked/all "foobar" list-chunker (list "" "" "" "")
-                                   list-chunking-lose-refs!)
+                                   list-chunking-lose-refs)
        => '())
 (check (irregex-search/chunked/all "foobar" list-chunker chunked-text0)
        => '())
-(check (irregex-search/chunked/all "foobar" list-chunker
-                                   (list-copy chunked-text0)
-                                   list-chunking-lose-refs!)
+(check (irregex-search/chunked/all "foobar" list-chunker chunked-text0
+                                   list-chunking-lose-refs)
        => '())
 (check (let ([ms (irregex-search/chunked/all "\\w+" list-chunker chunked-text0)])
          (and (for-all irregex-match-data? ms)
               (length ms)))
        => 12)
-(check (let ([ms (irregex-search/chunked/all "\\w+" list-chunker 
-                                             (list-copy chunked-text0)
-                                             list-chunking-lose-refs!)])
+(check (let ([ms (irregex-search/chunked/all "\\w+" list-chunker chunked-text0
+                                             list-chunking-lose-refs)])
          (and (for-all irregex-match-data? ms)
               (length ms)))
        => 12)
@@ -121,41 +124,36 @@
        => '("Once" "upon" "a" "time" 
             "There" "was" "a" "string" "used" "for" "testing" "chunks"))
 (check (map irregex-match-substring
-            (irregex-search/chunked/all "\\w+" list-chunker
-                                        (list-copy chunked-text0)
-                                        list-chunking-lose-refs!))
+            (irregex-search/chunked/all "\\w+" list-chunker chunked-text0
+                                        list-chunking-lose-refs))
        => '("Once" "upon" "a" "time" 
             "There" "was" "a" "string" "used" "for" "testing" "chunks"))
 (check (map (lambda (m) (irregex-match-substring m 1))
             (irregex-search/chunked/all "[Oo](\\w)" list-chunker chunked-text0))
        => '("n" "n" "r"))
 (check (map (lambda (m) (irregex-match-substring m 1))
-            (irregex-search/chunked/all "[Oo](\\w)" list-chunker
-                                        (list-copy chunked-text0)
-                                        list-chunking-lose-refs!))
+            (irregex-search/chunked/all "[Oo](\\w)" list-chunker chunked-text0
+                                        list-chunking-lose-refs))
        => '("n" "n" "r"))
 (check (map (lambda (m) (irregex-match-substring m 4))
             (irregex-search/chunked/all "(e)((\\w+)(e))" list-chunker chunked-text0))
        => '("e"))
 (check (map (lambda (m) (irregex-match-substring m 4))
-            (irregex-search/chunked/all "(e)((\\w+)(e))" list-chunker
-                                        (list-copy chunked-text0)
-                                        list-chunking-lose-refs!))
+            (irregex-search/chunked/all "(e)((\\w+)(e))" list-chunker chunked-text0
+                                        list-chunking-lose-refs))
        => '("e"))
 (check (map irregex-match-substring
             (irregex-search/chunked/all "^.+$" list-chunker chunked-text0))
        => '("Once upon a time...  There was a string used for testing chunks!"))
 (check (map irregex-match-substring
-            (irregex-search/chunked/all "^.+$" list-chunker
-                                        (list-copy chunked-text0)
-                                        list-chunking-lose-refs!))
+            (irregex-search/chunked/all "^.+$" list-chunker chunked-text0
+                                        list-chunking-lose-refs))
        => '("Once upon a time...  There was a string used for testing chunks!"))
 (check-ex/not-advancing 
  (irregex-search/chunked/all "^.*$" list-chunker chunked-text0))
 (check-ex/not-advancing 
- (irregex-search/chunked/all "^.*$" list-chunker
-                             (list-copy chunked-text0)
-                             list-chunking-lose-refs!))
+ (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
+                             list-chunking-lose-refs))
 
 ;; irregex-search/chunked/all/strings
 
@@ -187,30 +185,9 @@
 (check-AV (make-port-chunker 0))
 (check-AV (make-port-chunker -1))
 
-(define port-chunker-one (make-port-chunker 1))
-(define port-chunker-two (make-port-chunker 2))
-(define port-chunker-seven (make-port-chunker 7))
-(define port-chunker-1e4 (make-port-chunker 10000))
 (define (make-sip) 
   (open-string-input-port
    "The best way to implement the future is to avoid having to predict it."))
-
-;; irregex-search-port 
-#|
-(define sip0 (make-sip))
-(check (let ([m (irregex-search-port "\\w+\\s+(\\w+)" sip0)])
-         (and m (irregex-match-substring m 1)))
-       => "best")
-(check (let ([m (irregex-search-port "\\w+\\s+(\\w+)" sip0)])
-         (and m (irregex-match-substring m 1)))
-       => "to")
-(check (let ([m (irregex-search-port "\\w+\\s+(\\w+)" sip0)])
-         (and m (irregex-match-substring m 1)))
-       => "the")
-(check (irregex-search-port "foo bar baz" sip0)
-       => #f)
-(check (eof-object? (get-char sip0)) => #t)
-|#
 
 ;; irregex-search-port/all 
 
@@ -220,44 +197,32 @@
 (check (map irregex-match-substring 
             (irregex-search-port/all "\\s" (make-sip)))
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip)
-                                irregex-match-substring port-chunker-one)
+(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip) irregex-match-substring 1)
        => '("to implement the future is to"))
-(check (irregex-search-port/all "\\s" (make-sip) 
-                                irregex-match-substring port-chunker-one)
+(check (irregex-search-port/all "\\s" (make-sip) irregex-match-substring 1)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip)
-                                irregex-match-substring port-chunker-two)
+(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip) irregex-match-substring 2)
        => '("to implement the future is to"))
-(check (irregex-search-port/all "\\s" (make-sip) 
-                                irregex-match-substring port-chunker-two)
+(check (irregex-search-port/all "\\s" (make-sip)  irregex-match-substring 2)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip)
-                                irregex-match-substring port-chunker-seven)
+(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip) irregex-match-substring 7)
        => '("to implement the future is to"))
-(check (irregex-search-port/all "\\s" (make-sip) 
-                                irregex-match-substring port-chunker-seven)
+(check (irregex-search-port/all "\\s" (make-sip) irregex-match-substring 7)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip)
-                                irregex-match-substring port-chunker-1e4)
+(check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip) irregex-match-substring #e1e4)
        => '("to implement the future is to"))
-(check (irregex-search-port/all "\\s" (make-sip) 
-                                irregex-match-substring port-chunker-1e4)
+(check (irregex-search-port/all "\\s" (make-sip) irregex-match-substring #e1e4)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
 (check-ex/not-advancing (irregex-search-port/all "" (make-sip)))
-(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values port-chunker-one))
-(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values port-chunker-two))
-(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values port-chunker-seven))
-(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values port-chunker-1e4))
+(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values 1))
+(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values 4))
+(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values 29))
+(check-ex/not-advancing (irregex-search-port/all "" (make-sip) values 100))
 (check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip)))
-(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 
-                                                 port-chunker-one))
-(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 
-                                                 port-chunker-two))
-(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 
-                                                 port-chunker-seven))
-(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 
-                                                 port-chunker-1e4))
+(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 5))
+(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 18))
+(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 40))
+(check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values #e2e4))
 
 ;; irregex-search-port/all/strings
 
@@ -265,39 +230,88 @@
        => '("to implement the future is to"))
 (check (irregex-search-port/all/strings "\\s" (make-sip))
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) port-chunker-one)
+(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) 1)
        => '("to implement the future is to"))
-(check (irregex-search-port/all/strings "\\s" (make-sip) port-chunker-one)
+(check (irregex-search-port/all/strings "\\s" (make-sip) 1)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) port-chunker-two)
+(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) 2)
        => '("to implement the future is to"))
-(check (irregex-search-port/all/strings "\\s" (make-sip) port-chunker-two)
+(check (irregex-search-port/all/strings "\\s" (make-sip) 2)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) port-chunker-seven)
+(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) 7)
        => '("to implement the future is to"))
-(check (irregex-search-port/all/strings "\\s" (make-sip) port-chunker-seven)
+(check (irregex-search-port/all/strings "\\s" (make-sip) 7)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
-(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) port-chunker-1e4)
+(check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip) #e1e4)
        => '("to implement the future is to"))
-(check (irregex-search-port/all/strings "\\s" (make-sip) port-chunker-1e4)
+(check (irregex-search-port/all/strings "\\s" (make-sip) #e1e4)
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
 (check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip)))
-(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) port-chunker-one))
-(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) port-chunker-two))
-(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) port-chunker-seven))
-(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) port-chunker-1e4))
+(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) 1))
+(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) 2))
+(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) 7))
+(check-ex/not-advancing (irregex-search-port/all/strings "" (make-sip) #e1e4))
 (check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip)))
-(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 
-                                                         port-chunker-one))
-(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 
-                                                         port-chunker-two))
-(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 
-                                                         port-chunker-seven))
-(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 
-                                                         port-chunker-1e4))
+(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 3))
+(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 5))
+(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 13))
+(check-ex/not-advancing (irregex-search-port/all/strings "x*y*" (make-sip) 321))
 
+;; All the above procedures currently use the enumerators internally, so they test
+;; most of the enumerators' logic.  The below only tests what the above has not.
 
-;;; TODO: Test memory usage of chunked irregex-search-port and irregex-search-port/all
+;; enumerators 
+
+(check (fold/enumerator (irregex-string-enumerator "(\\w+)-\\w+")
+                        "this-will-search-until-stop-and-this-won't-be-seen"
+                        (lambda (m) 
+                          (let ([s (irregex-match-substring m 1)])
+                            (or (not (string=? s "stop"))
+                                (values #f s)))))
+       => "stop")
+(check (fold/enumerator (irregex-chunk-enumerator ".+" list-chunker)
+                        '("zabbo")
+                        (lambda (_) (values #f 'ok)))
+       => 'ok)
+(check (fold/enumerator (irregex-list-enumerator ".")
+                        chunked-text0
+                        (lambda (m i) (values #t (+ 1 i)))
+                        0)
+       => 64)
+(check (fold/enumerator (irregex-list-enumerator "")
+                        '()
+                        (lambda (_) (assert #f))
+                        'ok)
+       => 'ok)
+(check (fold/enumerator (irregex-port-enumerator "\\w{8,}")
+                        (make-sip)
+                        (lambda (m a) (values #t (cons (irregex-match-substring m) a)))
+                        '())
+       => '("implement"))
+(check (fold/enumerator (irregex-port-enumerator "\\w{8,}" 3)
+                        (make-sip)
+                        (lambda (m a) (values #t (cons (irregex-match-substring m) a)))
+                        '())
+       => '("implement"))
+(check (fold/enumerator (irregex-enumerator "i.")
+                        "generic is convenient"
+                        (lambda (m x) (values #t (irregex-match-substring m)))
+                        #f)
+       => "ie")
+(check (fold/enumerator (irregex-enumerator "i.")
+                        '("IiIi" "Fooi" "B")
+                        (lambda (m a) (values #t (cons (irregex-match-substring m) a)))
+                        '())
+       => '("iB" "iF" "iI"))
+(check (fold/enumerator (irregex-enumerator "i.")
+                        (make-sip)
+                        (lambda (m i) 
+                          (if (< i 3)
+                            (values #t (+ 1 i))
+                            (values #f (irregex-match-substring m))))
+                        0)
+       => "in")
+(check-AV (fold/enumerator (irregex-enumerator "") 'bad-type (lambda _ (raise 'bork))))
 
 
 (check-report)

@@ -6,6 +6,7 @@
     path-join path-split cleanse-path)
   (import
     (rnrs)
+    (xitomatl srfi cond-expand)
     (xitomatl strings))
   
   ;; If anyone ever wants to use my libraries on Windows,
@@ -50,5 +51,12 @@
   
   (define (cleanse-path p)
     (apply path-join (path-split p)))
+  
+  ;;--------------------------------------------------------------------------
+
+  (cond-expand 
+    [posix]  ;; OK
+    [else (error "(library (xitomatl file-system paths))"
+                 "Only POSIX currently supported.")])
   
 )
