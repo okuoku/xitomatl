@@ -22,7 +22,7 @@
     (cond ((irregex-search irx input)
            => (lambda (match)
                 (map (lambda (n) (irregex-match-substring match n))
-                     (iota (+ 1 (irregex-submatches irx))))))
+                     (iota (+ 1 (irregex-num-submatches irx))))))
           (else #f))))
 
 (define (rxmatch-after m . o)

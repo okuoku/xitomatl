@@ -31,6 +31,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; History
 ;;
+;; 0.7.1: 2008/10/30 - several bugfixes (thanks to Derick Eddington)
 ;; 0.7.0: 2008/10/20 - support abstract chunked strings
 ;; 0.6.2: 2008/07/26 - minor bugfixes, allow global disabling of utf8 mode,
 ;;                     friendlier error messages in parsing, \Q..\E support
@@ -63,12 +64,13 @@
 (define (irregex-dfa/extract x) (vector-ref x 3))
 (define (irregex-nfa x) (vector-ref x 4))
 (define (irregex-flags x) (vector-ref x 5))
-(define (irregex-submatches x) (vector-ref x 6))
+(define (irregex-num-submatches x) (vector-ref x 6))
 (define (irregex-lengths x) (vector-ref x 7))
 (define (irregex-names x) (vector-ref x 8))
 
 (define (irregex-new-matches irx)
-  (make-irregex-match (irregex-submatches irx) (irregex-names irx)))
+  (make-irregex-match (irregex-num-submatches irx) (irregex-names irx)))
+
 (define (irregex-reset-matches! m)
   (do ((i (- (vector-length m) 1) (- i 1)))
       ((<= i 3) m)
@@ -78,7 +80,7 @@
 
 (define (irregex-match-data? obj)
   (and (vector? obj)
-       (<= 11 (vector-length obj))
+       (>= (vector-length obj) 11)
        (eq? irregex-match-tag (vector-ref obj 0))))
 
 (define (make-irregex-match count names)
@@ -130,7 +132,7 @@
   (let* ((cnk (irregex-match-chunker m))
          (n (irregex-match-index m opt)))
     (and (irregex-match-valid-index? m n)
-         ((chunk-get-substring cnk)
+         ((chunker-get-substring cnk)
           (irregex-match-start-source m n)
           (irregex-match-start-index m n)
           (irregex-match-end-source m n)
@@ -138,30 +140,60 @@
 
 (define (irregex-match-subchunk m . opt)
   (let* ((cnk (irregex-match-chunker m))
-         (n (irregex-match-index m opt)))
-    (and (irregex-match-valid-index? m n)
-         ((or (chunk-get-subchunk cnk) (chunk-get-substring cnk))
-          (irregex-match-start-source m n)
-          (irregex-match-start-index m n)
-          (irregex-match-end-source m n)
-          (irregex-match-end-index m n)))))
+         (n (irregex-match-index m opt))
+         (get-subchunk (chunker-get-subchunk cnk)))
+    (if (not get-subchunk)
+        (error "this chunk type does not support match subchunks")
+        (and (irregex-match-valid-index? m n)
+             (get-subchunk
+              (irregex-match-start-source m n)
+              (irregex-match-start-index m n)
+              (irregex-match-end-source m n)
+              (irregex-match-end-index m n))))))
 
 ;; chunkers tell us how to navigate through chained chunks of strings
 
-(define (make-irregex-chunker next str start end substr . o)
-  (vector next str start end substr (and (pair? o) (car o))))
+(define (make-irregex-chunker get-next get-str . o)
+  (let* ((get-start (or (and (pair? o) (car o)) (lambda (cnk) 0)))
+         (o (if (pair? o) (cdr o) o))
+         (get-end (or (and (pair? o) (car o))
+                      (lambda (cnk) (string-length (get-str cnk)))))
+         (o (if (pair? o) (cdr o) o))
+         (get-substr
+          (or (and (pair? o) (car o))
+              (lambda (cnk1 start cnk2 end)
+                (if (eq? cnk1 cnk2)
+                    (substring (get-str cnk1) start end)
+                    (let loop ((cnk (get-next cnk1))
+                               (res (list (substring (get-str cnk1)
+                                                     start
+                                                     (get-end cnk1)))))
+                      (if (eq? cnk cnk2)
+                          (string-cat-reverse
+                           (cons (substring (get-str cnk)
+                                            (get-start cnk)
+                                            end)
+                                 res))
+                          (loop (get-next cnk)
+                                (cons (substring (get-str cnk)
+                                                 (get-start cnk)
+                                                 (get-end cnk))
+                                      res))))))))
+         (o (if (pair? o) (cdr o) o))
+         (get-subchunk (and (pair? o) (car o))))
+    (vector get-next get-str get-start get-end get-substr get-subchunk)))
 
-(define (chunk-get-next cnk) (vector-ref cnk 0))
-(define (chunk-get-str cnk) (vector-ref cnk 1))
-(define (chunk-get-start cnk) (vector-ref cnk 2))
-(define (chunk-get-end cnk) (vector-ref cnk 3))
-(define (chunk-get-substring cnk) (vector-ref cnk 4))
-(define (chunk-get-subchunk cnk) (vector-ref cnk 5))
+(define (chunker-get-next cnk) (vector-ref cnk 0))
+(define (chunker-get-str cnk) (vector-ref cnk 1))
+(define (chunker-get-start cnk) (vector-ref cnk 2))
+(define (chunker-get-end cnk) (vector-ref cnk 3))
+(define (chunker-get-substring cnk) (vector-ref cnk 4))
+(define (chunker-get-subchunk cnk) (vector-ref cnk 5))
 
 (define (chunker-prev-chunk cnk start end)
   (if (eq? start end)
       #f
-      (let ((get-next (chunk-get-next cnk)))
+      (let ((get-next (chunker-get-next cnk)))
         (let lp ((start start))
           (let ((next (get-next start)))
             (if (eq? next end)
@@ -171,22 +203,22 @@
 (define (chunker-prev-char cnk start end)
   (let ((prev (chunker-prev-chunk cnk start end)))
     (and prev
-         (string-ref ((chunk-get-str cnk) prev)
-                     (- ((chunk-get-end cnk) prev) 1)))))
+         (string-ref ((chunker-get-str cnk) prev)
+                     (- ((chunker-get-end cnk) prev) 1)))))
 
 (define (chunker-next-char cnk src)
-  (let ((next ((chunk-get-next cnk) src)))
+  (let ((next ((chunker-get-next cnk) src)))
     (and next
-         (string-ref ((chunk-get-str cnk) next)
-                     ((chunk-get-start cnk) next)))))
+         (string-ref ((chunker-get-str cnk) next)
+                     ((chunker-get-start cnk) next)))))
 
 (define (chunk-before? cnk a b)
   (and (not (eq? a b))
-       (let ((next ((chunk-get-next cnk) a)))
+       (let ((next ((chunker-get-next cnk) a)))
          (and next
               (if (eq? next b)
                   #t
-                  (chunk-before? next b))))))
+                  (chunk-before? cnk next b))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; string utilities
@@ -1356,7 +1388,7 @@
    ((irregex-dfa irx)
     (cond
      ((flag-set? (irregex-flags irx) ~searcher?)
-      (let ((start ((chunk-get-start cnk) src)))
+      (let ((start ((chunker-get-start cnk) src)))
         (cond
          ((dfa-match/longest (irregex-dfa irx) cnk src start #f #f matches 0)
           (irregex-match-start-source-set! matches 0 src)
@@ -1371,9 +1403,9 @@
           #f))))
      ((dfa-match/shortest (irregex-dfa/search irx) cnk src matches 0)
       (let ((dfa (irregex-dfa irx))
-            (get-start (chunk-get-start cnk))
-            (get-end (chunk-get-end cnk))
-            (get-next (chunk-get-next cnk)))
+            (get-start (chunker-get-start cnk))
+            (get-end (chunker-get-end cnk))
+            (get-next (chunker-get-next cnk)))
         (let lp1 ((src src))
           (let ((end (get-end src)))
             (let lp2 ((i (get-start src)))
@@ -1396,10 +1428,10 @@
       #f)))
    (else
     (let ((matcher (irregex-nfa irx))
-          (str ((chunk-get-str cnk) src))
-          (i ((chunk-get-start cnk) src))
-          (end ((chunk-get-end cnk) src))
-          (get-next (chunk-get-next cnk)))
+          (str ((chunker-get-str cnk) src))
+          (i ((chunker-get-start cnk) src))
+          (end ((chunker-get-end cnk) src))
+          (get-next (chunker-get-next cnk)))
       (if (flag-set? (irregex-flags irx) ~searcher?)
           (matcher cnk src src str i end matches (lambda () #f))
           (let lp ((src2 src)
@@ -1417,9 +1449,9 @@
               (let ((src2 (get-next src2)))
                 (if src2
                     (lp src2
-                        ((chunk-get-str cnk) src2)
-                        ((chunk-get-start cnk) src2)
-                        ((chunk-get-end cnk) src2))
+                        ((chunker-get-str cnk) src2)
+                        ((chunker-get-start cnk) src2)
+                        ((chunker-get-end cnk) src2))
                     #f))))))))))
 
 (define (irregex-match irx str . o)
@@ -1437,27 +1469,27 @@
      ((irregex-dfa irx)
       (and
        (dfa-match/longest
-        (irregex-dfa irx) cnk src ((chunk-get-start cnk) src) #f #f matches 0)
-       (= ((chunk-get-end cnk) (irregex-match-end-source matches 0))
+        (irregex-dfa irx) cnk src ((chunker-get-start cnk) src) #f #f matches 0)
+       (= ((chunker-get-end cnk) (irregex-match-end-source matches 0))
           (irregex-match-end-index matches 0))
        (begin
          (irregex-match-start-source-set! matches 0 src)
-         (irregex-match-start-index-set! matches 0 ((chunk-get-start cnk) src))
+         (irregex-match-start-index-set! matches 0 ((chunker-get-start cnk) src))
          ((irregex-dfa/extract irx)
-          cnk src ((chunk-get-start cnk) src)
+          cnk src ((chunker-get-start cnk) src)
           (irregex-match-end-source matches 0)
           (irregex-match-end-index matches 0)
           matches)
          matches)))
      (else
       (let* ((matcher (irregex-nfa irx))
-             (str ((chunk-get-str cnk) src))
-             (i ((chunk-get-start cnk) src))
-             (end ((chunk-get-end cnk) src))
+             (str ((chunker-get-str cnk) src))
+             (i ((chunker-get-start cnk) src))
+             (end ((chunker-get-end cnk) src))
              (m (matcher cnk src src str i end matches (lambda () #f))))
         (and m
-             (not ((chunk-get-next cnk) (irregex-match-end-source m 0)))
-             (= ((chunk-get-end cnk) (irregex-match-end-source m 0))
+             (not ((chunker-get-next cnk) (irregex-match-end-source m 0)))
+             (= ((chunker-get-end cnk) (irregex-match-end-source m 0))
                 (irregex-match-end-index m 0))
              m))))))
 
@@ -1474,10 +1506,10 @@
 
 ;; this searches for the first end index for which a match is possible
 (define (dfa-match/shortest dfa cnk src matches index)
-  (let ((get-str (chunk-get-str cnk))
-        (get-start (chunk-get-start cnk))
-        (get-end (chunk-get-end cnk))
-        (get-next (chunk-get-next cnk)))
+  (let ((get-str (chunker-get-str cnk))
+        (get-start (chunker-get-start cnk))
+        (get-end (chunker-get-end cnk))
+        (get-next (chunker-get-next cnk)))
     (let lp1 ((src src) (state (dfa-init-state dfa)))
       (and
        src
@@ -1506,10 +1538,10 @@
 
 ;; this finds the longest match starting at a given index
 (define (dfa-match/longest dfa cnk src start end-src end matches index)
-  (let ((get-str (chunk-get-str cnk))
-        (get-start (chunk-get-start cnk))
-        (get-end (chunk-get-end cnk))
-        (get-next (chunk-get-next cnk))
+  (let ((get-str (chunker-get-str cnk))
+        (get-start (chunker-get-start cnk))
+        (get-end (chunker-get-end cnk))
+        (get-next (chunker-get-next cnk))
         (start-is-final? (dfa-final-state? dfa (dfa-init-state dfa))))
     (cond
      (index
@@ -2081,14 +2113,14 @@
                (let lp1 ((end2 end) (j2 j) (best-src #f) (best-index #f))
                  (let ((limit (if (eq? start end2)
                                   i
-                                  ((chunk-get-start cnk) end2))))
+                                  ((chunker-get-start cnk) end2))))
                    (let lp2 ((k j2) (best-src best-src) (best-index best-index))
                      (if (< k limit)
                          (cond
                           ((not (eq? start end2))
                            (let ((prev (chunker-prev-chunk cnk start end2)))
                              (lp1 prev
-                                  ((chunk-get-end cnk) prev)
+                                  ((chunker-get-end cnk) prev)
                                   best-src
                                   best-index)))
                           (best-src
@@ -2115,7 +2147,7 @@
                                 ((or (not best-src)
                                      (if (eq? best-src right-src)
                                          (> right best-index)
-                                         (chunk-before? best-src right-src)))
+                                         (chunk-before? cnk best-src right-src)))
                                  (lp2 (- k 1) right-src right))
                                 (else
                                  (lp2 (- k 1) best-src best-index))))
@@ -2197,7 +2229,7 @@
            (next (lambda (cnk init src str i end matches fail)
                    (irregex-match-start-source-set! matches 0 init)
                    (irregex-match-start-index-set!
-                    matches 0 ((chunk-get-start cnk) init))
+                    matches 0 ((chunker-get-start cnk) init))
                    (irregex-match-end-source-set! matches 0 src)
                    (irregex-match-end-index-set! matches 0 i)
                    matches)))
@@ -2373,9 +2405,9 @@
                         flags
                         (lambda (cnk init src str i end matches fail) i))))
                (lambda (cnk init src str i end matches fail)
-                 (let* ((prev ((chunk-get-substring cnk)
+                 (let* ((prev ((chunker-get-substring cnk)
                                init
-                               ((chunk-get-start cnk) init)
+                               ((chunker-get-start cnk) init)
                                src
                                i))
                         (len (string-length prev))
@@ -2437,11 +2469,36 @@
                  (let ((s (irregex-match-substring matches n)))
                    (if (not s)
                        (fail)
-                       (let ((j (+ i (string-length s))))
-                         (if (and (<= j (string-length str))
-                                  (compare s (substring str i j)))
-                             (next cnk init src str j end matches fail)
-                             (fail))))))))
+                       ;; XXXX create an abstract subchunk-compare
+                       (let lp ((src src)
+                                (str str)
+                                (i i)
+                                (end end)
+                                (j 0)
+                                (len (string-length s)))
+                         (cond
+                          ((<= len (- end i))
+                           (cond
+                            ((compare (substring s j (string-length s))
+                                      (substring str i (+ i len)))
+                             (next cnk init src str (+ i len) end matches fail))
+                            (else
+                             (fail))))
+                          (else
+                           (cond
+                            ((compare (substring s j (+ j (- end i)))
+                                      (substring str i end))
+                             (let ((src2 ((chunker-get-next cnk) src)))
+                               (if src2
+                                   (lp src2
+                                       ((chunker-get-str cnk) src2)
+                                       ((chunker-get-start cnk) src2)
+                                       ((chunker-get-end cnk) src2)
+                                       (+ j (- end i))
+                                       (- len (- end i)))
+                                   (fail))))
+                            (else
+                             (fail)))))))))))
             ((dsm)
              (lp (sre-sequence (cdddr sre)) (+ n (cadr sre)) flags next))
             ((submatch)
@@ -2485,11 +2542,11 @@
          (lambda (cnk init src str i end matches fail)
            (if (< i end)
                (next cnk init src str (+ i 1) end matches fail)
-               (let ((src2 ((chunk-get-next cnk) src)))
+               (let ((src2 ((chunker-get-next cnk) src)))
                  (if src2
-                     (let ((str2 ((chunk-get-str cnk) src2))
-                           (i2 ((chunk-get-start cnk) src2))
-                           (end2 ((chunk-get-end cnk) src2)))
+                     (let ((str2 ((chunker-get-str cnk) src2))
+                           (i2 ((chunker-get-start cnk) src2))
+                           (end2 ((chunker-get-end cnk) src2)))
                        (next cnk init src2 str2 (+ i2 1) end2 matches fail))
                      (fail))))))
         ((nonl)
@@ -2498,59 +2555,59 @@
                (if (not (eqv? #\newline (string-ref str i)))
                    (next cnk init src str (+ i 1) end matches fail)
                    (fail))
-               (let ((src2 ((chunk-get-next cnk) src)))
+               (let ((src2 ((chunker-get-next cnk) src)))
                  (if src2
-                     (let ((str2 ((chunk-get-str cnk) src2))
-                           (i2 ((chunk-get-start cnk) src2))
-                           (end2 ((chunk-get-end cnk) src2)))
+                     (let ((str2 ((chunker-get-str cnk) src2))
+                           (i2 ((chunker-get-start cnk) src2))
+                           (end2 ((chunker-get-end cnk) src2)))
                        (if (not (eqv? #\newline (string-ref str2 i2)))
                            (next cnk init src2 str2 (+ i2 1) end2 matches fail)
                            (fail)))
                      (fail))))))
         ((bos)
          (lambda (cnk init src str i end matches fail)
-           (if (and (eq? src init) (eqv? i ((chunk-get-start cnk) init)))
+           (if (and (eq? src init) (eqv? i ((chunker-get-start cnk) init)))
                (next cnk init src str i end matches fail)
                (fail))))
         ((bol)
          (lambda (cnk init src str i end matches fail)
-           (if (or (and (eq? src init) (eqv? i ((chunk-get-start cnk) init)))
-                   (and (> i ((chunk-get-start cnk) src))
+           (if (or (and (eq? src init) (eqv? i ((chunker-get-start cnk) init)))
+                   (and (> i ((chunker-get-start cnk) src))
                         (eqv? #\newline (string-ref str (- i 1)))))
                (next cnk init src str i end matches fail)
                (fail))))
         ((bow)
          (lambda (cnk init src str i end matches fail)
-           (if (and (or (if (> i ((chunk-get-start cnk) src))
+           (if (and (or (if (> i ((chunker-get-start cnk) src))
                             (not (char-alphanumeric? (string-ref str (- i 1))))
                             (let ((ch (chunker-prev-char cnk src end)))
                               (and ch (not (char-alphanumeric? ch)))))
                         (and (eq? src init)
-                             (eqv? i ((chunk-get-start cnk) init))))
+                             (eqv? i ((chunker-get-start cnk) init))))
                     (if (< i end)
                         (char-alphanumeric? (string-ref str i))
-                        (let ((next ((chunk-get-next))))
+                        (let ((next ((chunker-get-next cnk) src)))
                           (and next
                                (char-alphanumeric?
-                                (string-ref ((chunk-get-str cnk) next)
-                                            ((chunk-get-start cnk) next)))))))
+                                (string-ref ((chunker-get-str cnk) next)
+                                            ((chunker-get-start cnk) next)))))))
                (next cnk init src str i end matches fail)
                (fail))))
         ((eos)
          (lambda (cnk init src str i end matches fail)
-           (if (and (>= i end) (not ((chunk-get-next cnk) src)))
+           (if (and (>= i end) (not ((chunker-get-next cnk) src)))
                (next cnk init src str i end matches fail)
                (fail))))
         ((eol)
          (lambda (cnk init src str i end matches fail)
            (if (if (< i end)
                    (eqv? #\newline (string-ref str i))
-                   (let ((src2 ((chunk-get-next cnk) src)))
+                   (let ((src2 ((chunker-get-next cnk) src)))
                      (if (not src2)
                          #t
                          (eqv? #\newline
-                               (string-ref ((chunk-get-str cnk) src2)
-                                           ((chunk-get-start cnk) src2))))))
+                               (string-ref ((chunker-get-str cnk) src2)
+                                           ((chunker-get-start cnk) src2))))))
                (next cnk init src str i end matches fail)
                (fail))))
         ((eow)
@@ -2560,7 +2617,7 @@
                         (let ((ch (chunker-next-char cnk src)))
                           (or (not ch) (not (char-alphanumeric? ch)))))
                 (char-alphanumeric?
-                 (if (> i ((chunk-get-start cnk) src))
+                 (if (> i ((chunker-get-start cnk) src))
                      (string-ref str (- i 1))
                      (chunker-prev-char cnk init src))))
                (next cnk init src str i end matches fail)
@@ -2570,7 +2627,7 @@
            (let ((c1 (if (< i end)
                          (string-ref str i)
                          (chunker-next-char cnk src)))
-                 (c2 (if (> i ((chunk-get-start cnk) src))
+                 (c2 (if (> i ((chunker-get-start cnk) src))
                          (string-ref str (- i 1))
                          (chunker-prev-char cnk init src))))
              (if (and c1 c2
@@ -2591,13 +2648,13 @@
           ;; case-insensitive
           (lambda (cnk init src str i end matches fail)
             (if (>= i end)
-                (let lp ((src2 ((chunk-get-next cnk) src)))
+                (let lp ((src2 ((chunker-get-next cnk) src)))
                   (if src2
-                      (let ((str2 ((chunk-get-str cnk) src2))
-                            (i2 ((chunk-get-start cnk) src2))
-                            (end2 ((chunk-get-end cnk) src2)))
+                      (let ((str2 ((chunker-get-str cnk) src2))
+                            (i2 ((chunker-get-start cnk) src2))
+                            (end2 ((chunker-get-end cnk) src2)))
                         (if (>= i2 end2)
-                            (lp ((chunk-get-next cnk) src2))
+                            (lp ((chunker-get-next cnk) src2))
                             (if (char-ci=? sre (string-ref str2 i2))
                                 (next cnk init src2 str2 (+ i2 1) end2
                                       matches fail)
@@ -2609,13 +2666,13 @@
           ;; case-sensitive
           (lambda (cnk init src str i end matches fail)
             (if (>= i end)
-                (let lp ((src2 ((chunk-get-next cnk) src)))
+                (let lp ((src2 ((chunker-get-next cnk) src)))
                   (if src2
-                      (let ((str2 ((chunk-get-str cnk) src2))
-                            (i2 ((chunk-get-start cnk) src2))
-                            (end2 ((chunk-get-end cnk) src2)))
+                      (let ((str2 ((chunker-get-str cnk) src2))
+                            (i2 ((chunker-get-start cnk) src2))
+                            (end2 ((chunker-get-end cnk) src2)))
                         (if (>= i2 end2)
-                            (lp ((chunk-get-next cnk) src2))
+                            (lp ((chunker-get-next cnk) src2))
                             (if (char=? sre (string-ref str2 i2))
                                 (next cnk init src2 str2 (+ i2 1) end2
                                       matches fail)
@@ -2650,11 +2707,11 @@
         (if (cset-contains? cset (string-ref str i))
             (next cnk init src str (+ i 1) end matches fail)
             (fail))
-        (let ((src2 ((chunk-get-next cnk) src)))
+        (let ((src2 ((chunker-get-next cnk) src)))
           (if src2
-              (let ((str2 ((chunk-get-str cnk) src2))
-                    (i2 ((chunk-get-start cnk) src2))
-                    (end2 ((chunk-get-end cnk) src2)))
+              (let ((str2 ((chunker-get-str cnk) src2))
+                    (i2 ((chunker-get-start cnk) src2))
+                    (end2 ((chunker-get-end cnk) src2)))
                 (if (cset-contains? cset (string-ref str2 i2))
                     (next cnk init src2 str2 (+ i2 1) end2 matches fail)
                     (fail)))

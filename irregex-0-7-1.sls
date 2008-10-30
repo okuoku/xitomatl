@@ -1,5 +1,5 @@
 #!r6rs
-(library (xitomatl irregex (0 7 0))
+(library (xitomatl irregex (0 7 1))
   (export
     irregex string->irregex sre->irregex irregex? irregex-match-data?
     irregex-new-matches irregex-reset-matches!
@@ -11,7 +11,7 @@
     irregex-search/chunked irregex-match/chunked
     make-irregex-chunker irregex-match-subchunk
     irregex-dfa irregex-dfa/search irregex-dfa/extract
-    irregex-nfa irregex-flags irregex-submatches irregex-lengths irregex-names
+    irregex-nfa irregex-flags irregex-num-submatches irregex-lengths irregex-names
     irregex-quote irregex-opt sre->string string->sre
     ;; Xitomatl additions
     irregex-search/all irregex-search/all/strings
@@ -33,7 +33,6 @@
     (only (xitomatl define extras) define/? define/AV)
     (only (xitomatl strings) string-intersperse)
     (only (xitomatl common-unstandard) with-output-to-string)
-    (only (xitomatl srfi strings) string-concatenate-reverse)
     (only (xitomatl predicates) exact-positive-integer?)
     (only (xitomatl ports) textual-input-port?)
     (only (xitomatl enumerators) fold/enumerator))
@@ -180,9 +179,9 @@
        (irregex-chunk-enumerator irx chunker #f)]
       [(irx chunker lose-refs)
        (let ([irx-c (irregex irx)]
-             [get-start (chunk-get-start chunker)]
-             [get-end (chunk-get-end chunker)]
-             [get-subchunk (chunk-get-subchunk chunker)])
+             [get-start (chunker-get-start chunker)]
+             [get-end (chunker-get-end chunker)]
+             [get-subchunk (chunker-get-subchunk chunker)])
          (assert (procedure? get-subchunk))
          ;; This must be true of the get-subchunk of the chunker used with this
          ;; enumerator: (eq? (get-next end) (get-next (get-subchunk start i end j))) 
@@ -267,7 +266,7 @@
                                       (substring s start (string-length s))))])
                 (assert (pair? next))
                 (if (eq? next chunkB)
-                  (string-concatenate-reverse (cons (substring (car next) 0 end) res))
+                  (string-cat-reverse (cons (substring (car next) 0 end) res))
                   (loop (cdr next) (cons (car next) res))))))]
          [get-subchunk 
           (lambda (chunkA start chunkB end)
