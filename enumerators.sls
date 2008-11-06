@@ -17,16 +17,16 @@
     input-port-enumerator hashtable-enumerator)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/AV)
+    (only (xitomatl define extras) define/? define/AV)
     (only (xitomatl generics) define-generic/temporal))
   
-  (define (fold/enumerator enum coll proc . seeds)
+  (define/? (fold/enumerator [enum procedure?] coll [proc procedure?] . seeds)
     (enum coll proc seeds))
   
-  (define (fold coll proc . seeds)
+  (define/? (fold coll [proc procedure?] . seeds)
     ((enumerator coll) coll proc seeds))
   
-  (define (fold-specialize! pred enum)
+  (define/? (fold-specialize! [pred procedure?] [enum procedure?])
     (enumerator-specialize! (list pred) (lambda (_) enum)))
   
   (define-generic/temporal enumerator
@@ -65,7 +65,7 @@
           (apply values seeds)
           (AV "not a proper list" coll)))))
   
-  (define (sequence-enumerator len ref)
+  (define/? (sequence-enumerator [len procedure?] [ref procedure?])
     (lambda (coll proc seeds)
       (let ([l (len coll)])
         (let loop ([i 0] [seeds seeds])
@@ -96,7 +96,7 @@
          [()
           (apply values seeds)]))))
   
-  (define (input-port-enumerator reader)
+  (define/? (input-port-enumerator [reader procedure?])
     (lambda (coll proc seeds)
       ;; NOTE: does not close the port
       (let loop ([seeds seeds])

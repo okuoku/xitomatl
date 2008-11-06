@@ -52,7 +52,7 @@
        (delete-file (path-join (value-directory-path vd) (value-file-path vf)))]))
   
   (define (delete-value-directory vd)
-    (delete-directory/recursively (value-directory-path vd)))
+    (delete-any (value-directory-path vd)))
   
   (define value-file-ref 
     (case-lambda
@@ -88,7 +88,7 @@
   (define value-file-set! 
     (let ([%value-file-set! (lambda (fn v)
                               (when (file-exists? fn #f)
-                                (delete-file/directory/link fn))
+                                (delete-any fn))
                               (call-with-port (OFOP fn)
                                 (lambda (fop) (write v fop))))])
       (case-lambda
@@ -132,7 +132,7 @@
     ;; file-system happens if l is invalid.
     (let ([d (value-directory-path vd)])
       (when (file-exists? d #f)
-        (delete-file/directory/link d))
+        (delete-any d))
       (%value-directory-set! d l)))
     
   (define (OFOP fn)

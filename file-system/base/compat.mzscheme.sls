@@ -4,8 +4,8 @@
     current-directory
     directory-list
     delete-file
-    (rename (mz:delete-directory delete-directory)
-            (mz:make-file-or-directory-link make-symbolic-link))
+    delete-directory
+    (rename (mz:make-file-or-directory-link make-symbolic-link))
     make-directory
     change-mode
     file-exists?
@@ -17,7 +17,8 @@
     (prefix (only (scheme base) 
                   link-exists? directory-exists? path->string make-directory
                   directory-list delete-directory file-exists? 
-                  make-file-or-directory-link current-directory) 
+                  make-file-or-directory-link current-directory
+                  with-handlers exn:fail:filesystem? exn-message) 
             mz:)
     (prefix (only (scheme mpair) list->mlist) mz:))
   
@@ -27,7 +28,32 @@
       [(x) (mz:current-directory x)]))
   
   (define (directory-list path)
-    (map mz:path->string (mz:list->mlist (mz:directory-list path))))
+    (define who 'directory-list)
+    (map mz:path->string 
+         (mz:list->mlist
+          (mz:with-handlers ([mz:exn:fail:filesystem? 
+                              (lambda (ex)
+                                (raise (condition 
+                                        (make-i/o-filename-error path)
+                                        (make-who-condition who)
+                                        (make-message-condition (mz:exn-message ex)))))])
+            (mz:directory-list path)))))
+  
+  (define delete-directory
+    (case-lambda
+      [(path) 
+       (delete-directory path #f)]
+      [(path want-error)
+       (define who 'delete-directory)
+       (let ([r (mz:with-handlers ([mz:exn:fail:filesystem? mz:exn-message])
+                  (mz:delete-directory path)
+                  #t)])
+         (if want-error
+           (unless (eq? r #t) 
+             (raise (condition (make-i/o-filename-error path)
+                               (make-who-condition who)
+                               (make-message-condition r))))
+           (eq? r #t)))]))
   
   (define make-directory
     (case-lambda 
@@ -40,11 +66,12 @@
        (change-mode path mode)]))
   
   (define (change-mode path mode)
+    (define who 'change-mode)
     (unless (string? path)
-      (assertion-violation 'change-mode "not a string" path))
+      (assertion-violation who "not a string" path))
     (unless (fixnum? mode)
-      (assertion-violation 'change-mode "not a fixnum" mode))
-    (assertion-violation 'change-mode "BUG: not implemented")
+      (assertion-violation who "not a fixnum" mode))
+    (assertion-violation who "not implemented")
     #|(Use MzScheme's FFI to use C chmod, I guess)|#)
   
   (define file-exists?
