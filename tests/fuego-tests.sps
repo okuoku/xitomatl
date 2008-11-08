@@ -15,7 +15,7 @@
 (define (fuego-exn? ex msg irrts obj)
   (and (assertion-violation? ex)
        (who-condition? ex)
-       (equal? '(library (xitomatl fuego)) (condition-who ex))
+       (equal? "(library (xitomatl fuego))" (condition-who ex))
        (message-condition? ex)
        (equal? msg (condition-message ex))
        (irritants-condition? ex)

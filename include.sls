@@ -7,8 +7,8 @@
   (import 
     (rnrs)
     (for (xitomatl include compat) expand)
-    (for (xitomatl file-system paths) expand)
-    (for (xitomatl conditions) expand))
+    (for (only (xitomatl file-system paths) path-join path?) expand)
+    (for (only (xitomatl exceptions) error/conditions) expand))
   
   (define-syntax include
     (lambda (stx)

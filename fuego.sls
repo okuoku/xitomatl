@@ -24,7 +24,7 @@
   (import
     (rnrs)
     (only (xitomatl define extras) define/? define-values)
-    (only (xitomatl conditions) assertion-violation/conditions)
+    (only (xitomatl exceptions) assertion-violation/conditions)
     (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand))
   
   ;-----------------------------------------------------------------------------    
@@ -33,7 +33,7 @@
     (opaque #t) (sealed #t)
     (fields (mutable slots) (mutable parents)))
     
-  (define-record-type key (fields name))
+  (define-record-type key (fields name))  ;; field not used, only for informative printing
   
   ;-----------------------------------------------------------------------------    
   
@@ -42,7 +42,7 @@
     (object condition-fuego-object))
   
   (define (AV/F obj msg . irrts)
-    (assertion-violation/conditions '(library (xitomatl fuego))
+    (assertion-violation/conditions "(library (xitomatl fuego))"
                                     msg irrts (make-fuego-condition obj)))
   
   ;-----------------------------------------------------------------------------  
@@ -79,7 +79,7 @@
       [(self resend) (root-clone self resend (make-key 'cloned-parent))]
       [(self resend pk)
        (let ([o (make-fuego-object '() '())])
-         (root-add-parent! o 'no-resend pk self)
+         (root-add-parent! o #f pk self)
          o)]))
   
   (define (root-delete! self resend key)
@@ -94,7 +94,7 @@
     (if (assq key (fuego-object-slots self)) #t #f))
 
   (define/? (root-add-method! self resend key [proc procedure?])
-    (if (root-has? self 'no-resend key)
+    (if (root-has? self #f key)
       (send self :already-exists key proc)
       (fuego-object-slots-set! self
         (cons (cons key proc) (fuego-object-slots self)))))
@@ -105,13 +105,13 @@
       [(self resend key val mutable)
        (define (ina s args) 
          (AV/F s "value method called with invalid number of arguments" (length args)))
-       (root-add-method! self 'no-resend key
+       (root-add-method! self #f key
          (if mutable
            (case-lambda 
              [(s r) val] 
              [(s r n) (if (eq? s self)
                         (set! val n)
-                        (root-add-value! s 'no-resend key n mutable))]
+                        (root-add-value! s #f key n mutable))]
              [(s r . args) (ina s args)])
            (case-lambda 
              [(s r) val]
@@ -125,7 +125,7 @@
                     (AV/F self "parent cycle" obj)
                     (detect (fuego-object-parents o))))
                 (map cdr check)))
-    (root-add-value! self 'no-resend key obj)
+    (root-add-value! self #f key obj)
     (fuego-object-parents-set! self
       (append (fuego-object-parents self) (list (cons key obj)))))
     
@@ -168,73 +168,80 @@
     (lambda (stx)
       (syntax-case stx ()
         [(kw body ...)
-         (with-syntax ([method (datum->syntax #'kw 'method)]
-                       [value (datum->syntax #'kw 'value)]
-                       [parent (datum->syntax #'kw 'parent)])
+         (with-syntax ([m (datum->syntax #'kw 'method)]
+                       [v (datum->syntax #'kw 'value)]
+                       [p (datum->syntax #'kw 'parent)])
            #'(let ([o (make-fuego-object '() '())]
                    [has-parent #f]
                    [keys '()])
-               (define-syntax method
-                 (lambda (stx)
-                   (syntax-case stx (unquote)
-                     [(_ (mn s r . a) b0 b (... ...))
-                      #'(method mn (lambda (s r . a) b0 b (... ...)))]
-                     [(_ (unquote mnk) expr) 
-                      #'(root-add-method! o 'no-resend mnk expr)]
-                     [(_ mn expr)
-                      (syntax-case #'mn (quote)
-                        [(quote x) (identifier? #'x)]
-                        [x (identifier? #'x)])
-                      (with-syntax* ([mnk (gen-temp)]
-                                     [(mnk-e add-mnk (... ...)) 
-                                      (if (identifier? #'mn) 
-                                        #'((make-key 'mn) (set! keys (cons mnk keys)))
-                                        #'(mn))])
-                        #'(let ([mnk mnk-e])
-                            (method ,mnk expr)
-                            add-mnk (... ...)))])))
-               (define-syntax value
-                 (lambda (stx)
-                   (syntax-case stx (unquote)
-                     [(_ vn v) #'(value vn v #f)]
-                     [(_ (unquote vnk) v m)
-                      #'(root-add-value! o 'no-resend vnk v m)]
-                     [(_ vn v m)
-                      (syntax-case #'vn (quote)
-                        [(quote x) (identifier? #'x)]
-                        [x (identifier? #'x)])
-                      (with-syntax* ([vnk (gen-temp)]
-                                     [(vnk-e add-vnk (... ...)) 
-                                      (if (identifier? #'vn)
-                                        #'((make-key 'vn) (set! keys (cons vnk keys)))
-                                        #'(vn))])
-                        #'(let ([vnk vnk-e])
-                            (value ,vnk v m)
-                            add-vnk (... ...)))])))
-               (define-syntax parent
-                 (lambda (stx)
-                   (syntax-case stx (unquote)
-                     [(_ p) 
-                      #'(let ([pnk (make-key 'parent)]) 
-                          (parent ,pnk p))]
-                     [(_ (unquote pnk) p)
-                      #'(begin (root-add-parent! o 'no-resend pnk p)
-                               (set! has-parent #t))]
-                     [(_ pn p)
-                      (syntax-case #'pn (quote)
-                        [(quote x) (identifier? #'x)]
-                        [x (identifier? #'x)])
-                      (with-syntax* ([pnk (gen-temp)]
-                                     [(pnk-e add-pnk (... ...)) 
-                                      (if (identifier? #'pn)
-                                        #'((make-key 'pn) (set! keys (cons pnk keys)))
-                                        #'(pn))])
-                        #'(let ([pnk pnk-e]) 
-                            (parent ,pnk p)
-                            add-pnk (... ...)))])))
-               body ...
+               (let-syntax ([m (syntax-rules () [(_ . r) (M o keys . r)])]
+                            [v (syntax-rules () [(_ . r) (V o keys . r)])]
+                            [p (syntax-rules () [(_ . r) (P o keys has-parent . r)])])
+                 body ...)
                (unless has-parent
-                 (root-add-parent! o 'no-resend (make-key 'cloned-parent) root-object))
+                 (root-add-parent! o #f (make-key 'cloned-parent) root-object))
                (apply values o (reverse keys))))])))
+  
+  (define-syntax M
+    (lambda (stx)
+      (syntax-case stx (unquote)
+        [(_ o keys (mn s r . a) b0 b ...)
+         #'(M o keys mn (lambda (s r . a) b0 b ...))]
+        [(_ o keys (unquote mnk) expr) 
+         #'(root-add-method! o #f mnk expr)]
+        [(_ o keys mn expr)
+         (syntax-case #'mn (quote)
+           [(quote x) (identifier? #'x)]
+           [x (identifier? #'x)])
+         (with-syntax* ([mnk (gen-temp)]
+                        [(mnk-e add-mnk ...) 
+                         (if (identifier? #'mn) 
+                           #'((make-key 'mn) (set! keys (cons mnk keys)))
+                           #'(mn))])
+           #'(let ([mnk mnk-e])
+               (M o keys ,mnk expr)
+               add-mnk ...))])))
+  
+  (define-syntax V
+    (lambda (stx)
+      (syntax-case stx (unquote)
+        [(_ o keys vn v) 
+         #'(V o keys vn v #f)]
+        [(_ o keys (unquote vnk) v m)
+         #'(root-add-value! o #f vnk v m)]
+        [(_ o keys vn v m)
+         (syntax-case #'vn (quote)
+           [(quote x) (identifier? #'x)]
+           [x (identifier? #'x)])
+         (with-syntax* ([vnk (gen-temp)]
+                        [(vnk-e add-vnk ...) 
+                         (if (identifier? #'vn)
+                           #'((make-key 'vn) (set! keys (cons vnk keys)))
+                           #'(vn))])
+           #'(let ([vnk vnk-e])
+               (V o keys ,vnk v m)
+               add-vnk ...))])))
+  
+  (define-syntax P
+    (lambda (stx)
+      (syntax-case stx (unquote)
+        [(_ o keys has-parent p) 
+         #'(let ([pnk (make-key 'parent)]) 
+             (P o keys has-parent ,pnk p))]
+        [(_ o keys has-parent (unquote pnk) p)
+         #'(begin (root-add-parent! o #f pnk p)
+                  (set! has-parent #t))]
+        [(_ o keys has-parent pn p)
+         (syntax-case #'pn (quote)
+           [(quote x) (identifier? #'x)]
+           [x (identifier? #'x)])
+         (with-syntax* ([pnk (gen-temp)]
+                        [(pnk-e add-pnk ...) 
+                         (if (identifier? #'pn)
+                           #'((make-key 'pn) (set! keys (cons pnk keys)))
+                           #'(pn))])
+           #'(let ([pnk pnk-e]) 
+               (P o keys has-parent ,pnk p)
+               add-pnk ...))])))
 
 )

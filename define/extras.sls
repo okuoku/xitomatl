@@ -17,6 +17,7 @@
     (xitomatl define define-values)
     (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
     (only (xitomatl common-unstandard) format)
+    (only (xitomatl exceptions) assertion-violation/conditions)
     (xitomatl conditions))
   
   (define-syntax my:define
@@ -58,13 +59,14 @@
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt [frmls body0 body* ...] ...)
-         #'(case-lambda/AV--meta ctxt "some <case-lambda/AV>" [frmls body0 body* ...] ...)])))
+         #'(case-lambda/AV--meta ctxt "a case-lambda/AV procedure" 
+             [frmls body0 body* ...] ...)])))
   
   (define-syntax lambda/AV
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt frmls body0 body* ...)
-         #'(case-lambda/AV--meta ctxt "some <lambda/AV>" [frmls body0 body* ...])])))
+         #'(case-lambda/AV--meta ctxt "a lambda/AV procedure" [frmls body0 body* ...])])))
   
   (define-syntax define/AV
     (lambda (stx)
@@ -116,12 +118,12 @@
   (define-syntax case-lambda/?
     (syntax-rules ()
       [(_ [frmls body0 body* ...] ...)
-       (case-lambda/?--meta "some <case-lambda/?>" [frmls body0 body* ...] ...)]))
+       (case-lambda/?--meta "a case-lambda/? procedure" [frmls body0 body* ...] ...)]))
   
   (define-syntax lambda/?
     (syntax-rules ()
       [(_ frmls body0 body* ...)
-       (case-lambda/?--meta "some <lambda/?>" [frmls body0 body* ...])]))
+       (case-lambda/?--meta "a lambda/? procedure" [frmls body0 body* ...])]))
   
   (define-syntax define/?
     (lambda (stx)
@@ -135,23 +137,17 @@
          (with-syntax ([CL/? (datum->syntax #'name 'case-lambda/?)]
                        [L/? (datum->syntax #'name 'lambda/?)])
            #'(define name
-               (let ()
-                 (define-syntax CL/? 
-                   (syntax-rules ()
-                     [(_ [frmls b0 b* (... ...)] (... ...))
-                      (case-lambda/?--meta name [frmls b0 b* (... ...)] (... ...))]))
-                 (define-syntax L/?
-                   (syntax-rules ()
-                     [(_ frmls b0 b* (... ...))
-                      (case-lambda/?--meta name [frmls b0 b* (... ...)])]))
-                 #f  ;; prevent internal defines in expr
+               (let-syntax ([CL/? (syntax-rules ()
+                                    [(_ . r) (case-lambda/?--meta name . r)])]
+                            [L/? (syntax-rules ()
+                                   [(_ . r) (case-lambda/?--meta name r)])])
                  expr)))])))
   
   (define-syntax case-lambda/?/AV
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt [frmls body0 body* ...] ...)
-         (with-syntax ([name "some <case-lambda/?/AV>"])
+         (with-syntax ([name "a case-lambda/?/AV procedure"])
            #'(AV-wrap ctxt name
                (case-lambda/?--meta name [frmls body0 body* ...] ...)))])))
   
@@ -159,7 +155,7 @@
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt frmls body0 body* ...)
-         (with-syntax ([name "some <lambda/?/AV>"])
+         (with-syntax ([name "a lambda/?/AV procedure"])
            #'(AV-wrap ctxt name
                (case-lambda/?--meta name [frmls body0 body* ...])))])))
   

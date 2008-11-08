@@ -141,5 +141,9 @@
          (lambda ()
            (warning 'someone "oops" 1 2)))
        => 'R)
+;; test implementation's base exception handler returns for non-&serious
+(check (begin (warning 'someone "oops" 1 2) 'R)
+       => 'R)
+
 
 (check-report)

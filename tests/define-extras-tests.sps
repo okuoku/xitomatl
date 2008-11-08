@@ -17,7 +17,7 @@
               '(succeeded: expr))
             => #t)]))
 
-(rnrs:define-syntax check-assertion-error
+(rnrs:define-syntax check-AV
   (syntax-rules ()
     [(_ expr)
      (check (guard (ex [(assertion-violation? ex) #t]
@@ -25,7 +25,7 @@
               (let () expr '(succeeded: expr)))
             => #t)]))
 
-(rnrs:define-syntax check-assertion-error/msg
+(rnrs:define-syntax check-AV/msg
   (lambda (stx)
     (syntax-case stx ()
       [(_ msg expr)
@@ -37,7 +37,7 @@
                   (let () expr '(succeeded: expr)))
                 => msg)])))
 
-(rnrs:define-syntax check-assertion-error/who
+(rnrs:define-syntax check-AV/who
   (lambda (stx)
     (syntax-case stx ()
       [(_ who expr)
@@ -49,7 +49,7 @@
                   (let () expr '(succeeded: expr)))
                 => 'who)])))
 
-(rnrs:define-syntax check-assertion-error/msg/AN
+(rnrs:define-syntax check-AV/msg/AN
   (lambda (stx)
     (syntax-case stx ()
       [(_ msg an expr)
@@ -101,15 +101,15 @@
          (define d 4)
          (+ a b c d))
        => 10)
-(check-assertion-error
+(check-AV
   (define-values (a) (values 1 2)))
-(check-assertion-error
+(check-AV
   (define-values (a b c) (values 1 2)))
-(check-assertion-error
+(check-AV
   (define-values (a b c d e f g) (values 1 2 3)))
-(check-assertion-error
+(check-AV
   (define-values () (values 1 2)))
-(check-assertion-error
+(check-AV
   (define-values () (values 1)))
 (check-syntax-error
  (define-values (a b a) (values 1 2 3)))
@@ -137,22 +137,22 @@
 
 (check ((case-lambda/AV [() (AV "oops")] [r r]) 1 2 3)
        => '(1 2 3))
-(check-assertion-error/msg "oops1" 
+(check-AV/msg "oops1" 
  ((case-lambda/AV [() (AV "oops1" 'ign)] [ign #f])))
 (check ((λ/AV (a) (list->string (reverse (string->list a)))) "asdf")
        => "fdsa")
-(check-assertion-error/msg "oops2"
+(check-AV/msg "oops2"
  ((λ/AV () (AV "oops2"))))
 (let ()
   (define/AV (f x y . zs) 
     (when (null? zs) (AV "zs null" zs))
     (apply * x y zs))
   (check (f 1 2 3 4 5) => 120))
-(check-assertion-error/msg "oops3"
+(check-AV/msg "oops3"
  (let ()
    (define/AV (f) (AV "oops3" 'ign 'ign 'ign))
    (f)))
-(check-assertion-error/who f
+(check-AV/who f
   (let ()
     (define/AV f (lambda () (AV "oops")))
     (f)))
@@ -195,13 +195,13 @@
                   (cons* x y z r)] 
                  [(x) 'b])
   'x "yy" #\z 1 -56.3 67/902))
-(check-assertion-error/msg/AN "argument check failed" x
+(check-AV/msg/AN "argument check failed" x
  ((case-lambda/? [() 'a] [([x string?]) 'b]) 1))
-(check-assertion-error/msg/AN "argument check failed" y
+(check-AV/msg/AN "argument check failed" y
  ((case-lambda/? [() 'a] [([x string?] [y char?]) (values x y)]) "" 'oops))
-(check-assertion-error/msg/AN "argument check failed" rest
+(check-AV/msg/AN "argument check failed" rest
  ((case-lambda/? [#(rest char?) (reverse rest)] [() 'b]) 1 2 3))
-(check-assertion-error/msg/AN "argument check failed" r
+(check-AV/msg/AN "argument check failed" r
  ((case-lambda/? [(x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
                   (cons* x y z r)] 
                  [(x) 'b])
@@ -239,13 +239,13 @@
  ((λ/? (x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
     (cons* x y z r))
   'x "yy" #\z 1 -56.3 67/902))
-(check-assertion-error/msg/AN "argument check failed" x
+(check-AV/msg/AN "argument check failed" x
  ((λ/? ([x string?]) 'b) 1))
-(check-assertion-error/msg/AN "argument check failed" y
+(check-AV/msg/AN "argument check failed" y
  ((λ/? ([x string?] [y char?]) (values x y)) "" 'oops))
-(check-assertion-error/msg/AN "argument check failed" rest
+(check-AV/msg/AN "argument check failed" rest
  ((λ/? #(rest char?) (reverse rest)) 1 2 3))
-(check-assertion-error/msg/AN "argument check failed" r
+(check-AV/msg/AN "argument check failed" r
  ((λ/? (x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
     (cons* x y z r))
   'x "yy" #\z 1 -56.3 67/902))
@@ -280,11 +280,11 @@
            (cons* x y z r))
          (f 'x "yy" #\z 1 -56.3 67/902))
        => '(x "yy" #\z 1 -56.3 67/902))
-(check-assertion-error/who foo
+(check-AV/who foo
   (let ()
     (define/? foo (lambda/? ([x char?]) x))
     (foo 1)))
-(check-assertion-error/who bar
+(check-AV/who bar
   (let ()
     (define/? bar (case-lambda/? [([x char?]) x]))
     (bar 1)))
@@ -313,19 +313,19 @@
    (define/? (f x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
-(check-assertion-error/msg/AN "argument check failed" x
+(check-AV/msg/AN "argument check failed" x
  (let ()
    (define/? (f [x string?]) 'b)
    (f 1)))
-(check-assertion-error/msg/AN "argument check failed" y
+(check-AV/msg/AN "argument check failed" y
  (let ()
    (define/? (f [x string?] [y char?]) (values x y))
    (f "" 'oops)))
-(check-assertion-error/msg/AN "argument check failed" rest
+(check-AV/msg/AN "argument check failed" rest
  (let ()
    (define/? (f . #(rest char?)) (reverse rest))
    (f 1 2 3)))
-(check-assertion-error/msg/AN "argument check failed" r
+(check-AV/msg/AN "argument check failed" r
  (let ()
    (define/? (f x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
      (cons* x y z r))
@@ -346,14 +346,14 @@
                   (cons* x y z r)] 
                  [(x) 'b])
   'x "yy" #\z 1 -56.3 67/902))
-(check-assertion-error/msg/AN "argument check failed" r
+(check-AV/msg/AN "argument check failed" r
  ((case-lambda/?/AV [(x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
                   (cons* x y z r)] 
                  [(x) 'b])
   'x "yy" #\z 1 -56.3 67/902))
 (check ((case-lambda/?/AV [() (AV "oops")] [#(r (lambda (x) (for-all integer? x))) r]) 1 2 3)
        => '(1 2 3))
-(check-assertion-error/msg "oops1" 
+(check-AV/msg "oops1" 
  ((case-lambda/?/AV [([s symbol?]) (AV "oops1" 'ign)] [ign #f]) 'blah))
 
 (check ((λ/?/AV () 'a))
@@ -367,13 +367,13 @@
  ((λ/?/AV (x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
     (cons* x y z r))
   'x "yy" #\z 1 -56.3 67/902))
-(check-assertion-error/msg/AN "argument check failed" r
+(check-AV/msg/AN "argument check failed" r
  ((λ/?/AV (x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
     (cons* x y z r))
   'x "yy" #\z 1 -56.3 67/902))
 (check ((λ/?/AV ([a string?]) (list->string (reverse (string->list a)))) "asdf")
        => "fdsa")
-(check-assertion-error/msg "oops2"
+(check-AV/msg "oops2"
  ((λ/?/AV #(r null?) (AV "oops2"))))
 
 (check (let ()
@@ -392,22 +392,22 @@
  => 'b)
 (let ()
   (define/?/AV asdf (lambda/? ([x char?]) (AV "oops")))
-  (check-assertion-error/who asdf
+  (check-AV/who asdf
     (asdf 1))
-  (check-assertion-error/who asdf
+  (check-AV/who asdf
     (asdf #\c)))
 (let ()
   (define/?/AV asdf (case-lambda/? [([x char?]) x] [() (AV "oops")]))
-  (check-assertion-error/who asdf
+  (check-AV/who asdf
     (asdf 1))
-  (check-assertion-error/who asdf
+  (check-AV/who asdf
     (asdf)))
 (check-syntax-error
  (let ()
    (define/?/AV (f x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
-(check-assertion-error/msg/AN "argument check failed" r
+(check-AV/msg/AN "argument check failed" r
  (let ()
    (define/?/AV (f x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
      (cons* x y z r))
@@ -417,7 +417,7 @@
     (when (null? zs) (AV "zs null" zs))
     (apply * x y zs))
   (check (f 1 2 3 4 5) => 120))
-(check-assertion-error/msg "oops3"
+(check-AV/msg "oops3"
  (let ()
    (define/?/AV (f) (AV "oops3" 'ign 'ign 'ign))
    (f)))
