@@ -69,7 +69,7 @@
 #!r6rs
 (library (xitomatl match (1))
   (export
-    match
+    match matches?
     match-lambda match-lambda*
     match-let match-let*)
   (import
@@ -506,6 +506,13 @@
                                          (- y 1)))))))))))
   
   ;;------------------------------------------------------------------------
+  
+  (define-syntax matches?
+    (syntax-rules ()
+      [(_ pattern)
+       (match-lambda
+         [pattern #t]
+         [_ #f])]))
   
   (define-syntax match-lambda
     (syntax-rules ()

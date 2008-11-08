@@ -5,7 +5,7 @@
     textual-input-port? textual-output-port?
     port-closed?  ;; from (xitomatl ports compat)
     read-all get-lines-all
-    port-for-each port-map
+    port-for-each port-map port-enumerator
     open-binary-compound-input-port open-textual-compound-input-port
     #|open-binary-pipe-ports open-textual-pipe-ports|#)
   (import
@@ -65,6 +65,17 @@
          (reverse a))]
       [(proc reader) 
        (port-map proc reader (current-input-port))]))
+  
+  (define (port-enumerator reader)
+    (lambda (port proc seeds)
+      (let loop ([seeds seeds])
+        (let ([x (reader port)])
+          (if (eof-object? x)
+            (apply values seeds)
+            (let-values ([(continue . next-seeds) (apply proc x seeds)])
+              (if continue
+                (loop next-seeds)
+                (apply values next-seeds))))))))
   
   (define/AV (open-compound-input-port list-or-proc maybe-transcoder)
     ;;; A compound input port is a custom port which represents the logical

@@ -14,6 +14,7 @@
   (only (xitomatl control))
   (only (xitomatl coroutines))
   (only (xitomatl curry))
+  (only (xitomatl datum-find))
   (only (xitomatl debug))
   (only (xitomatl define define-values))
   (only (xitomatl define extras))

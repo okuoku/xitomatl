@@ -427,8 +427,13 @@
          vs)
        => '(one b #\c "oo⁐⁐b"))
 
-;;; match-lambda, match-let, and friends
+;;; matches?, match-lambda, match-let, and friends
 
+(check ((matches? 1) 1) => #t)
+(check ((matches? (x . y)) '(1 2 3)) => #t)
+(check ((matches? (x ... . r)) 'any) => #t)
+(check ((matches? (:or 1 (:regex "\\s+"))) "foo") => #f)
+(check ((matches? (:and _ (:predicate string?))) 1) => #f)
 (check ((match-lambda [123 #f] [_ #t]) 234) => #t)
 (check ((match-lambda* [(x y . z) (reverse z)] [_ #f]) 1 2 3 4 5) => '(5 4 3))
 
