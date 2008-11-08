@@ -8,7 +8,7 @@
   (import
     (rnrs)
     (xitomatl srfi parameters)
-    (only (xitomatl common-unstandard) format printf fprintf pretty-print)
+    (only (xitomatl common) format printf fprintf pretty-print)
     (only (xitomatl exceptions) print-exception)
     (only (xitomatl conditions) print-condition))
   

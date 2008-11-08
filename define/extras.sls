@@ -16,7 +16,7 @@
     (rnrs)
     (xitomatl define define-values)
     (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
-    (only (xitomatl common-unstandard) format)
+    (only (xitomatl common) format)
     (only (xitomatl exceptions) assertion-violation/conditions)
     (xitomatl conditions))
   

@@ -8,7 +8,7 @@
   (xitomatl tests sxml-tools xtest-lib)
   (xitomatl tests sxml-tools define-macro)
   (xitomatl ssax private-5-1 output)
-  (rename (only (xitomatl common-unstandard) pretty-print)
+  (rename (only (xitomatl common) pretty-print)
           (pretty-print pp)))
 
 (define (myenv:error . args)

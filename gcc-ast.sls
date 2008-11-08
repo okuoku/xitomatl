@@ -14,7 +14,7 @@
   (import
     (rnrs)
     (rnrs mutable-pairs)
-    (only (xitomatl common-unstandard) format)
+    (only (xitomatl common) format)
     (xitomatl pregexp)
     (xitomatl IU-match))
   

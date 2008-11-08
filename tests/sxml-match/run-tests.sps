@@ -4,7 +4,7 @@
   (xitomatl sxml-match)
   (xitomatl include)
   (xitomatl srfi lightweight-testing)
-  (only (xitomatl common-unstandard) printf))
+  (only (xitomatl common) printf))
 
   (define-syntax module
     (syntax-rules ()

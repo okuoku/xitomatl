@@ -5,7 +5,7 @@
   (import
     (rnrs)
     (for (only (xitomatl macro-utils) formals-ok?) expand)
-    (only (xitomatl common-unstandard) format))
+    (only (xitomatl common) format))
   
   (define (define-values-error expected received-vals)
     (apply assertion-violation 'define-values

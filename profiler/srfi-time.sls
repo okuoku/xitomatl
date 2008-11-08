@@ -9,7 +9,7 @@
     (xitomatl srfi time)
     (xitomatl profiler meta)
     (only (xitomatl box) box-value)
-    (only (xitomatl common-unstandard) fprintf pretty-print format))
+    (only (xitomatl common) fprintf pretty-print format))
   
   (def--case-lambda/profiled case-lambda/profiled 
     current-time add-duration time-difference)

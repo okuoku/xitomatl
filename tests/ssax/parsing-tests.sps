@@ -4,7 +4,7 @@
   (xitomatl ssax parsing)
   (xitomatl ssax raise)
   (xitomatl srfi lightweight-testing)
-  (only (xitomatl common-unstandard) printf pretty-print)
+  (only (xitomatl common) printf pretty-print)
   (only (xitomatl srfi strings) 
         string-concatenate/shared string-concatenate-reverse/shared string-null?)
   (only (xitomatl ssax private-5-1 misc) 

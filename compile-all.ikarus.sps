@@ -8,7 +8,7 @@
   (only (xitomatl alists))
   (only (xitomatl box))
   (only (xitomatl bytevectors))
-  (only (xitomatl common-unstandard))
+  (only (xitomatl common))
   (only (xitomatl conditions))
   (only (xitomatl conditions print-condition))
   (only (xitomatl control))

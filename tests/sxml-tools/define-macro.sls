@@ -5,7 +5,7 @@
     gensym)
   (import
     (rnrs)
-    (only (xitomatl common-unstandard) gensym))
+    (only (xitomatl common) gensym))
   
   (define-syntax define-macro
     (syntax-rules ()

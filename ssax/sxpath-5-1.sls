@@ -26,7 +26,7 @@
     (xitomatl ssax private-5-1 error)
     (xitomatl ssax private-5-1 output)
     (xitomatl ssax private-5-1 misc)
-    (only (xitomatl common-unstandard) pretty-print))
+    (only (xitomatl common) pretty-print))
   
   (define error (make-errorer "(xitomatl ssax sxpath)"))
   

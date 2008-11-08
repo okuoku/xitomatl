@@ -2,7 +2,7 @@
 (import
   (rnrs)
   (rnrs r5rs)
-  (only (xitomatl common-unstandard) current-milliseconds printf)
+  (only (xitomatl common) current-milliseconds printf)
   (xitomatl AS-match))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

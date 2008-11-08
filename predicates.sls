@@ -10,7 +10,8 @@
     name=?
     non-empty-string?
     char-line-ending?
-    list-of?)
+    list-of?
+    #;datum?)
   (import
     (rnrs))
   
@@ -60,5 +61,8 @@
                       [(null? x) #t]
                       [else #f]))])
       list-of?-pred))
+  
+  #;(define (datum? x)
+    XXX)
   
 )

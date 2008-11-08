@@ -2,7 +2,7 @@
 (import
   (except (rnrs) filter)
   (rename (xitomatl ssax sxpath) (node-filter filter))
-  (only (xitomatl common-unstandard) printf)
+  (only (xitomatl common) printf)
   (xitomatl ssax private-5-1 output))
 
 (define run-test-counter 1)

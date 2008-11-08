@@ -7,7 +7,7 @@
   (only (xitomatl match) match)
   (only (xitomatl predicates) symbol<?)
   (only (xitomatl lists) remove-dups)
-  (only (xitomatl common-unstandard) fprintf))
+  (only (xitomatl common) fprintf))
 
 (define libraries-names '())
 

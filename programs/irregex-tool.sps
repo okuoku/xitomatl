@@ -7,7 +7,7 @@
   (xitomatl enumerators)
   (xitomatl file-system base)
   (xitomatl file-system paths)
-  (xitomatl common-unstandard)
+  (xitomatl common)
   (xitomatl define define-values)
   (xitomatl srfi parameters))
 
@@ -157,8 +157,8 @@
   (d " If no command is supplied, interactive is used.\n")
   (exit #f))
 
-(define main
-  (match-lambda
+(define (main cmdln)
+  (match cmdln
     [(_) 
      (main '(#f "interactive"))]
     [(_ (:or "interactive" "i") args (... 0 1))

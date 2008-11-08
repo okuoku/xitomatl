@@ -8,7 +8,7 @@
     (rnrs)
     (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand)
     (only (xitomatl conditions) print-condition)
-    (only (xitomatl common-unstandard) pretty-print))
+    (only (xitomatl common) pretty-print))
   
   (define-syntax catch
     (lambda (stx)

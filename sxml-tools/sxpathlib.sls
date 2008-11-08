@@ -39,7 +39,7 @@
             (string-index-right string-rindex))
     (xitomatl ssax private-5-1 misc)
     (xitomatl ssax private-5-1 output)
-    (rename (only (xitomatl common-unstandard) pretty-print)
+    (rename (only (xitomatl common) pretty-print)
             (pretty-print pp)))
 
   (include/resolve ("xitomatl" "sxml-tools") "sxpathlib.scm")

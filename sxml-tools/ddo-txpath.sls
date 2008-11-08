@@ -73,7 +73,7 @@
     (rnrs)
     (rnrs r5rs)
     (xitomatl include)
-    (only (xitomatl common-unstandard) gensym)
+    (only (xitomatl common) gensym)
     (xitomatl srfi and-let*)
     (xitomatl sxml-tools sxpath-ext)
     (xitomatl sxml-tools sxpathlib)

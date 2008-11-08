@@ -32,7 +32,7 @@
     (only (xitomatl include) include/resolve)
     (only (xitomatl define extras) define/? define/AV)
     (only (xitomatl strings) string-intersperse)
-    (only (xitomatl common-unstandard) with-output-to-string)
+    (only (xitomatl common) with-output-to-string)
     (only (xitomatl predicates) exact-positive-integer?)
     (only (xitomatl ports) textual-input-port?)
     (only (xitomatl enumerators) fold/enumerator))

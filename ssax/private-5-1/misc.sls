@@ -8,7 +8,7 @@
     with-output-to-string)
   (import
     (rnrs)
-    (only (xitomatl common-unstandard) with-output-to-string))
+    (only (xitomatl common) with-output-to-string))
   
   (define (inc n) (+ n 1))  
   (define (dec n) (- n 1))

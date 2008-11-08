@@ -170,7 +170,7 @@
   (import
     (except (rnrs) define define-syntax cond)
     (xitomatl define extras)
-    (xitomatl common-unstandard)
+    (xitomatl common)
     (xitomatl ports)
     (xitomatl macro-utils)
     (xitomatl keywords)

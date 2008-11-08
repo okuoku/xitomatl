@@ -7,7 +7,7 @@
 (import 
   (rnrs)
   (xitomatl r6rs-bindings check)
-  (only (xitomatl common-unstandard) printf))
+  (only (xitomatl common) printf))
 
 ;;; NOTE: This will need to change if/when Ypsilon changes what exception(s)
 ;;;       and/or condition(s) are used.

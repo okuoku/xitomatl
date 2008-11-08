@@ -5,7 +5,7 @@
   (xitomatl irregex)
   (xitomatl match)
   (only (xitomatl strings) string-split string-intersperse)
-  (only (xitomatl common-unstandard) format)
+  (only (xitomatl common) format)
   (only (xitomatl ports) port-for-each)
   (xitomatl tests irregex test)
   (xitomatl include))

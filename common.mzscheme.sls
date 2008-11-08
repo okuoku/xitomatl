@@ -1,5 +1,5 @@
 #!r6rs
-(library (xitomatl common-unstandard)
+(library (xitomatl common)
   (export
     add1 sub1
     format printf fprintf pretty-print

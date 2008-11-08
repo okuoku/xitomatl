@@ -4,7 +4,7 @@
     print-condition)
   (import
     (rnrs)
-    (only (xitomatl common-unstandard) pretty-print))
+    (only (xitomatl common) pretty-print))
 
   (define print-condition
     (case-lambda

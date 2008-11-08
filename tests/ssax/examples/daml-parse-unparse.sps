@@ -8,7 +8,7 @@
   (xitomatl ssax private-5-1 misc)
   (xitomatl ssax private-5-1 util)
   (xitomatl ssax raise)
-  (rename (only (xitomatl common-unstandard) pretty-print gensym) (pretty-print pp))
+  (rename (only (xitomatl common) pretty-print gensym) (pretty-print pp))
   (rename (only (xitomatl srfi strings) string-null? string-index-right)
           (string-index-right string-rindex)))
 

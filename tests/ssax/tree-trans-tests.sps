@@ -5,7 +5,7 @@
   (xitomatl include)
   (xitomatl srfi lightweight-testing)
   (xitomatl ssax private-5-1 output)
-  (only (xitomatl common-unstandard) pretty-print))
+  (only (xitomatl common) pretty-print))
 
 (define-syntax assert
   (syntax-rules ()
