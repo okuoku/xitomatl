@@ -199,7 +199,7 @@
                        (= 2 (length (condition-irritants ex)))
                        (list (condition-who ex)
                              (condition-message ex)
-                             (car (condition-irritants ex))))])
+                             (cadr (condition-irritants ex))))])
    (fold/enumerator
     (directory-walk-enumerator)
     "."

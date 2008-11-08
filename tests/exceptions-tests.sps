@@ -17,71 +17,61 @@
 ;;; catch
 
 ;; basic
-(check-ex (catch ex () (lambda () (raise 1)))
+(check-ex (catch ex () (raise 1))
           ? (lambda (ex) (eqv? ex 1)))
 (check (with-exception-handler
          (lambda (ex) 'R)
          (lambda ()
-           (catch ex () (lambda () (raise-continuable 1)))))
+           (catch ex () (raise-continuable 1))))
        => 'R)
-(check (catch ex ([else 'A 'B 'C]) (lambda () (raise 1)))
+(check (catch ex ([else 'A 'B 'C]) (raise 1))
        => 'C)
-(check (catch ex ([else 'A 'B 'C]) (lambda () (raise-continuable 1)))
+(check (catch ex ([else 'A 'B 'C]) (raise-continuable 1))
        => 'C)
 (check (catch ex ([(eqv? ex 1) 'bad]
                   [(and (warning? ex) 'ok) => (lambda (x) x)]
                   [else 'bad]) 
-         (lambda () 
-           (raise (make-warning))))
+         (raise (make-warning)))
        => 'ok)
 (check-ex (catch ex ([(error? ex) 'bad]
                      [(eqv? 1 ex) 'bad])
-            (lambda ()
-              (raise (make-warning)))) 
+            (raise (make-warning))) 
           ? warning?)
 (check (with-exception-handler
          (lambda (ex) 'R)
          (lambda ()
            (catch ex ([(error? ex) 'bad]
                       [(eqv? 1 ex) 'bad])
-             (lambda ()
-               (raise-continuable (make-warning))))))
+             (raise-continuable (make-warning)))))
        => 'R)
 (check (catch ex ([(and (number? ex) (+ 1 ex))])
-         (lambda () (raise 1)))
+         (raise 1))
        => 2)
 ;; nested
 (check (catch ex2 ([(null? ex2) 'bad]
                    [(eqv? ex2 1) 'foo 'bar 'ok])
-         (lambda ()
-           (catch ex1 ([(char? ex1) 'bad]
-                       [(list? ex1) 'bad])
-             (lambda ()
-               (catch ex0 ([(string? ex0) 'bad])
-                 (lambda ()
-                   (raise 1)))))))
+         (catch ex1 ([(char? ex1) 'bad]
+                     [(list? ex1) 'bad])
+           (catch ex0 ([(string? ex0) 'bad])
+             (raise 1))))
        => 'ok)
 (check (with-exception-handler
          (lambda (ex) 'R)
          (lambda ()
            (catch ex2 ([(null? ex2) 'bad]
                        [(eqv? ex2 1) 'bad])
-             (lambda ()
-               (catch ex1 ([(char? ex1) 'bad]
-                           [(list? ex1) 'bad])
-                 (lambda ()
-                   (catch ex0 ([(string? ex0) 'bad])
-                     (lambda ()
-                       (raise-continuable 2)))))))))
+             (catch ex1 ([(char? ex1) 'bad]
+                         [(list? ex1) 'bad])
+               (catch ex0 ([(string? ex0) 'bad])
+                 (raise-continuable 2))))))
        => 'R)
 ;; dynamic extent not exited and re-entered when re-raising
 (let ([enters 0] [exits 0])
   (check-ex (catch ex ([(string? ex) 'bad])
-               (lambda ()
-                 (dynamic-wind
-                   (lambda () (set! enters (+ 1 enters)))
-                   (lambda () (raise 1))
-                   (lambda () (set! exits (+ 1 exits)))))) 
+              (dynamic-wind
+                (lambda () (set! enters (+ 1 enters)))
+                (lambda () (raise 1))
+                (lambda () (set! exits (+ 1 exits))))) 
             ? (lambda (ex) (eqv? 1 ex)))
   (check enters => 1)
   (check exits => 1))
@@ -91,16 +81,13 @@
            (lambda ()
              (catch ex2 ([(null? ex2) 'bad]
                          [(eqv? ex2 1) 'bad])
-               (lambda ()
-                 (catch ex1 ([(char? ex1) 'bad]
-                             [(list? ex1) 'bad])
-                   (lambda ()
-                     (catch ex0 ([(string? ex0) 'bad])
-                       (lambda ()
-                         (dynamic-wind
-                           (lambda () (set! enters (+ 1 enters)))
-                           (lambda () (raise-continuable 2))
-                           (lambda () (set! exits (+ 1 exits)))))))))))) 
+               (catch ex1 ([(char? ex1) 'bad]
+                           [(list? ex1) 'bad])
+                 (catch ex0 ([(string? ex0) 'bad])
+                   (dynamic-wind
+                     (lambda () (set! enters (+ 1 enters)))
+                     (lambda () (raise-continuable 2))
+                     (lambda () (set! exits (+ 1 exits))))))))) 
          => 'R)
   (check enters => 1)
   (check exits => 1))
@@ -110,16 +97,13 @@
            (lambda ()
              (catch ex2 ([(null? ex2) 'bad]
                          [(eqv? ex2 1) 'bad])
-               (lambda ()
-                 (catch ex1 ([(char? ex1) 'ok]
-                             [(list? ex1) 'bad])
-                   (lambda ()
-                     (catch ex0 ([(string? ex0) 'bad])
-                       (lambda ()
-                         (dynamic-wind
-                           (lambda () (set! enters (+ 1 enters)))
-                           (lambda () (raise #\C))
-                           (lambda () (set! exits (+ 1 exits)))))))))))) 
+               (catch ex1 ([(char? ex1) 'ok]
+                           [(list? ex1) 'bad])
+                 (catch ex0 ([(string? ex0) 'bad])
+                   (dynamic-wind
+                     (lambda () (set! enters (+ 1 enters)))
+                     (lambda () (raise #\C))
+                     (lambda () (set! exits (+ 1 exits))))))))) 
          => 'ok)
   (check enters => 1)
   (check exits => 1))
@@ -133,8 +117,7 @@
 (check (catch ex ([(warning? ex) (list (condition-who ex) 
                                        (condition-message ex)
                                        (condition-irritants ex))])
-         (lambda ()
-           (warning 'someone "oops" 1 2)))
+         (warning 'someone "oops" 1 2))
        => '(someone "oops" (1 2)))
 (check (with-exception-handler
          (lambda (ex) 'R)

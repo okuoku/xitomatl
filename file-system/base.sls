@@ -13,7 +13,7 @@
     (xitomatl file-system base compat)
     (only (xitomatl define extras) define/?)
     (only (xitomatl enumerators) fold/enumerator)
-    (only (xitomatl exceptions) warning))
+    (only (xitomatl exceptions) catch warning))
   
   ;; TODO? directory-enumerator which uses FFI to get directory entries as they're
   ;;       needed; contrasted with directory-list which gets them all at once.
@@ -31,39 +31,36 @@
       [()
        (directory-walk-enumerator 'top-down)]
       [([way top-down/bottom-up?])
+       (define who 'directory-walk-enumerator)
        (lambda/? ([start-path path?] proc seeds)
          (define (dir-contents path)
-           (call/cc
-            (lambda (k)
-              (let loop ([l (with-exception-handler
-                              (lambda (ex)
-                                (unless (i/o-filename-error? ex)
-                                  (raise ex))
-                                (warning  ;; does raise-continuable
-                                 'directory-walk-enumerator
-                                 "Exception raised from directory walking"
-                                 path
-                                 (if (condition? ex) (simple-conditions ex) ex))
-                                ;; Continuing not currently working with PLT's
-                                ;; broken R6RS exceptions implementation.
-                                (k #f #f #f #f))
-                              (lambda () (directory-list (path-join abs path))))]
-                         [d '()] [f '()] [s '()])
-                (if (null? l)
-                  (values d f s #t)
-                  (let* ([n (car l)]
-                         [abs-n (path-join abs path n)])
-                    (case (guard (ex [else 'other])
-                            (cond [(file-regular? abs-n #f) 'file]
-                                  [(file-directory? abs-n #f) 'directory]
-                                  [(file-symbolic-link? abs-n) 'symbolic-link]
-                                  [else 'other]))
-                      [(file other)
-                       (loop (cdr l) d (cons n f) s)]
-                      [(directory)
-                       (loop (cdr l) (cons n d) f s)]
-                      [(symbolic-link)
-                       (loop (cdr l) d f (cons n s))])))))))
+           (let loop ([l (catch ex ([(i/o-filename-error? ex)
+                                     (warning who ;; does raise-continuable
+                                      "Exception raised from directory walking"
+                                      (if (condition? ex) (simple-conditions ex) ex)
+                                      path)
+                                     ;; Continuing not currently working with PLT's
+                                     ;; broken R6RS exceptions implementation.
+                                     #f])
+                           (directory-list (path-join abs path)))]
+                      [d '()] [f '()] [s '()])
+             (cond
+               [(pair? l)
+                (let* ([n (car l)]
+                       [abs-n (path-join abs path n)])
+                  (case (catch ex ([else 'other])
+                          (cond [(file-regular? abs-n #f) 'file]
+                                [(file-directory? abs-n #f) 'directory]
+                                [(file-symbolic-link? abs-n) 'symbolic-link]
+                                [else 'other]))
+                    [(file other)
+                     (loop (cdr l) d (cons n f) s)]
+                    [(directory)
+                     (loop (cdr l) (cons n d) f s)]
+                    [(symbolic-link)
+                     (loop (cdr l) d f (cons n s))]))]
+               [(null? l) (values d f s #t)]
+               [else (values #f #f #f #f)])))
          ;; Designed to be tail-recursive for both top-down and bottom-up.
          (define (walk paths revisit seeds)
            (cond 
@@ -117,6 +114,8 @@
            (if (absolute-path? start-path)
              (root-dir-str)
              (current-directory)))
+         (unless (file-directory? start-path)
+           (assertion-violation who "not a directory" start-path))
          (walk (list (list start-path)) '() seeds))]))
   
   (define (top-down/bottom-up? x)
@@ -149,7 +148,7 @@
       [(path)
        (delete-any path #f)]
       [(path want-error)
-       (guard (ex [(and (i/o-filename-error? ex) (not want-error))
+       (catch ex ([(and (i/o-filename-error? ex) (not want-error))
                    #f])
          (cond 
            [(file-directory? path #f)

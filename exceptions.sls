@@ -13,7 +13,7 @@
   (define-syntax catch
     (lambda (stx)
       (syntax-case stx ()
-        [(_ var (in-clause ...) thunk-expr)
+        [(_ var (in-clause ...) expr0 expr ...)
          (with-syntax* 
              ([catch-k (gen-temp)]
               [(out-clause ...) 
@@ -37,7 +37,8 @@
                         ;; this will change to use a `reraise' which will discern and
                         ;; use raise or raise-continuable depending.
                         (raise-continuable var))
-                      thunk-expr))))))])))
+                      (lambda ()
+                        expr0 expr ...)))))))])))
   
   (define (warning who msg . irrts)
     (raise-continuable
