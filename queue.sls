@@ -13,7 +13,7 @@
   (import
     (rnrs)
     (rnrs mutable-pairs)
-    (only (xitomatl define extras) define/AV))
+    (only (xitomatl define) define/AV))
   
   (define-record-type queue 
     (fields (mutable head) (mutable end)))

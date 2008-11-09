@@ -4,7 +4,7 @@
     make-list last-pair)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/AV define/?)
+    (only (xitomatl define) define/AV define/?)
     (only (xitomatl predicates) exact-non-negative-integer?)
     (only (scheme base) void))
   

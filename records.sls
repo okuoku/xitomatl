@@ -5,7 +5,7 @@
     record-type-mutators)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/?)
+    (only (xitomatl define) define/?)
     (only (xitomatl srfi vectors) vector-concatenate))
   
   (define (record-type-field-procs rtd field-proc pred)

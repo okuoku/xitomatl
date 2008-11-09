@@ -5,7 +5,7 @@
   (import
     (rnrs)
     (rnrs mutable-strings)
-    (only (xitomatl define extras) define/AV))
+    (only (xitomatl define) define/AV))
 
   (define/AV (string-copy! src src-start dst dst-start k)
     ;; Taken from Ikarus's implementation of string-copy!

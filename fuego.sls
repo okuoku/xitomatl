@@ -23,7 +23,7 @@
     fuego-condition? condition-fuego-object)  
   (import
     (rnrs)
-    (only (xitomatl define extras) define/? define-values)
+    (only (xitomatl define) define/? define-values)
     (only (xitomatl exceptions) assertion-violation/conditions)
     (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand))
   

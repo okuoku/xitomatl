@@ -7,7 +7,7 @@
     intersperse)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/? define/AV define/?/AV)
+    (only (xitomatl define) define/? define/AV define/?/AV)
     (xitomatl lists compat))
   
   ; Deterministic, left-to-right map

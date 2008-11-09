@@ -6,7 +6,7 @@
   (import
     (rnrs)
     (for (only (xitomatl macro-utils) identifier-append) expand)
-    (only (xitomatl define extras) define-values define/?))
+    (only (xitomatl define) define-values define/?))
 
   ;;; TODO: update comment
   ;;; Generics are procedures which delegate to some underlying procedure 

@@ -17,7 +17,7 @@
     input-port-enumerator hashtable-enumerator)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/? define/AV)
+    (only (xitomatl define) define/? define/AV)
     (only (xitomatl generics) define-generic/temporal))
   
   (define/? (fold/enumerator [enum procedure?] coll [proc procedure?] . seeds)

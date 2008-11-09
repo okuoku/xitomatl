@@ -10,7 +10,7 @@
     #|open-binary-pipe-ports open-textual-pipe-ports|#)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/AV case-lambda/AV)
+    (only (xitomatl define) define/AV)
     (only (xitomatl control) begin0)
     #|(only (xitomatl bytevectors) subbytevector)
     (only (xitomatl strings) string-copy!)
@@ -186,7 +186,7 @@
     (open-compound-input-port list-or-proc #f))
   
   (define/AV open-textual-compound-input-port
-    (case-lambda/AV
+    (case-lambda
       [(list-or-proc)
        (open-compound-input-port list-or-proc (native-transcoder))]
       [(list-or-proc transcoder)

@@ -141,11 +141,8 @@
     (rename (lambda λ))
     ;;; xitomatl bindings
     ;; define extras
-    define define-syntax define-values 
-    case-lambda/AV lambda/AV λ/AV define/AV 
-    case-lambda/? lambda/? λ/? define/?
-    case-lambda/?/AV lambda/?/AV λ/?/AV define/?/AV
-    ;; common-unstandard
+    define define-syntax define-values define/AV define/? define/?/AV
+    ;; common
     add1 sub1 format printf fprintf gensym
     ;; ports
     read-all get-lines-all port-for-each port-map
@@ -163,12 +160,13 @@
     ;; strings
     string-intersperse string-split
     ;; match
-    match match-lambda match-lambda* match-let match-let*
+    match matches? match-lambda match-lambda* match-let match-let*
     ;; SRFI-61: more general cond
     cond
     )
   (import
     (except (rnrs) define define-syntax cond)
+    (xitomatl define)
     (xitomatl define extras)
     (xitomatl common)
     (xitomatl ports)

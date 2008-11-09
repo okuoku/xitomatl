@@ -11,7 +11,7 @@
     (except (rnrs) file-exists?)
     (xitomatl file-system paths)
     (xitomatl file-system base compat)
-    (only (xitomatl define extras) define/?)
+    (only (xitomatl define) define/?)
     (only (xitomatl enumerators) fold/enumerator)
     (only (xitomatl exceptions) catch warning))
   

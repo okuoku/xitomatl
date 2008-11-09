@@ -3,7 +3,7 @@
     make-list last-pair)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/?)
+    (only (xitomatl define) define/?)
     (only (core) make-list))
   
   (define/? (last-pair [x pair?])

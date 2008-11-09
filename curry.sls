@@ -5,7 +5,7 @@
     curry)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/?)
+    (only (xitomatl define) define/?)
     (only (xitomatl predicates) positive-integer?))
   
   (define-syntax define/curry

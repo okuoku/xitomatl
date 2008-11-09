@@ -12,7 +12,7 @@
   (import 
     (rnrs)
     (only (xitomatl delimited-control) shift reset)
-    (only (xitomatl define extras) define/? lambda/?)
+    (only (xitomatl define) define/?)
     (only (xitomatl predicates) exact-non-negative-integer?))
   
   

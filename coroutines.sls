@@ -9,7 +9,7 @@
     condition-finished-coroutine)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/?/AV))
+    (only (xitomatl define) define/?/AV))
   
   ;;; Inspired by Will Farr's generators example:
   ;;; http://wmfarr.blogspot.com/2006/08/one-more-example-of-python-generators.html

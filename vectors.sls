@@ -4,7 +4,7 @@
     subvector)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/?/AV)
+    (only (xitomatl define) define/?/AV)
     (only (xitomatl predicates) exact-integer?))
   
   (define/?/AV (subvector [v vector?] [start exact-integer?] [end exact-integer?]) 

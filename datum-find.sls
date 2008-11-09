@@ -6,7 +6,7 @@
     datum-find->list)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/?/AV define/?)
+    (only (xitomatl define) define/?/AV define/?)
     (only (xitomatl file-system base) directory-walk-enumerator)
     (only (xitomatl file-system paths) path? path-join path=?)
     (only (xitomatl ports) textual-input-port? port-enumerator)

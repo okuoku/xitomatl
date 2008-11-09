@@ -4,7 +4,7 @@
   (rnrs eval)
   (xitomatl generics)
   (xitomatl srfi lightweight-testing)
-  (only (xitomatl define extras) define-values))
+  (only (xitomatl define) define-values))
 
 (define-syntax check-AV-who-msg
   (syntax-rules ()

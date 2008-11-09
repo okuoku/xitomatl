@@ -12,7 +12,7 @@
     alist-contains? alist-size alist-equivalence-function alist-mutable?)
   (import
     (rnrs)
-    (only (xitomatl define extras) define/? define/AV))
+    (only (xitomatl define) define/? define/AV))
   
   ;;; This library API is designed to be compatible with (rnrs hashtables)
   ;;; so that alists can be swapped for hashtables and vice versa.

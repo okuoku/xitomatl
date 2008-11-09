@@ -8,7 +8,7 @@
   (xitomatl file-system base)
   (xitomatl file-system paths)
   (xitomatl common)
-  (xitomatl define define-values)
+  (xitomatl define)
   (xitomatl srfi parameters))
 
 (define format-mode (make-parameter 's-expr))

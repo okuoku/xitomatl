@@ -7,7 +7,7 @@
     #;value-directory-ref value-directory-list value-directory-set! delete-value-directory)
   (import
     (except (rnrs) file-exists?)
-    (only (xitomatl define extras) define/AV)
+    (only (xitomatl define) define/AV)
     (xitomatl file-system paths)
     (xitomatl file-system base))
   

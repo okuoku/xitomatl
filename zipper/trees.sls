@@ -12,7 +12,7 @@
     (rnrs)
     (xitomatl zipper base)
     (only (xitomatl lists) map/left-right/preserving)
-    (only (xitomatl define extras) define/?)
+    (only (xitomatl define) define/?)
     (only (xitomatl predicates) exact-non-negative-integer?))
   
   
