@@ -13,7 +13,7 @@
   ;; we can cond-expand or something this library to work.
   
   (define dir-sep-char #\/)
-  (define dir-sep-str (string dir-sep-char))
+  (define dir-sep-str (string dir-sep-char)) ;; must be length of 1
   (define (root-dir-str) dir-sep-str)  ;; for Windows, could be parameter, to change drives
   
   (define (starts-with-root? p)

@@ -158,7 +158,7 @@
     make-list last-pair map/left-right/preserving map/filter
     intersperse remove-dups remv-dups remq-dups
     ;; strings
-    string-intersperse string-split
+    string-intersperse string-split string-end=?
     ;; match
     match matches? match-lambda match-lambda* match-let match-let*
     ;; SRFI-61: more general cond

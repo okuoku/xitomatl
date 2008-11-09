@@ -1,7 +1,7 @@
 #!r6rs
-;; By Derick Eddington.
 ;; Taken from Oleg's http://okmij.org/ftp/Scheme/delim-control-n.scm
 ;; NOTE: Not currently designed for multi-threaded use.
+;;       Won't work across phases on a multiple-instantiation system.
 
 (library (xitomatl delimited-control)
   (export 

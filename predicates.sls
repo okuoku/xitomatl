@@ -49,7 +49,7 @@
     (and (string? x) (positive? (string-length x))))
   
   (define (char-line-ending? c)
-    (and (memv c '(#\xa #\xd #\x85 #\x2028))
+    (and (memv c '(#\xa #\xd #\x85 #\x2028))  ;; correct? everything it should be?
          #t))
 
   ;;--------------------------------------------------------------------------

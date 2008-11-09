@@ -2,7 +2,7 @@
 (library (xitomatl exceptions)
   (export
     catch
-    warning assertion-violation/conditions error/conditions
+    warning warning/conditions assertion-violation/conditions error/conditions
     print-exception)
   (import
     (rnrs)
@@ -40,35 +40,29 @@
                       (lambda ()
                         expr0 expr ...)))))))])))
   
+  (define (make-raiser/conditions raise-it make-main-condition)
+    (lambda (who msg irrts . cndts)
+      (raise-it 
+       (apply condition
+              (make-main-condition)
+              (if who 
+                (make-who-condition who)
+                (condition))
+              (make-message-condition msg)
+              (make-irritants-condition irrts)
+              cndts))))
+  
+  (define assertion-violation/conditions
+    (make-raiser/conditions raise make-assertion-violation))
+  
+  (define error/conditions
+    (make-raiser/conditions raise make-error))
+  
+  (define warning/conditions
+    (make-raiser/conditions raise-continuable make-warning))
+  
   (define (warning who msg . irrts)
-    (raise-continuable
-      (condition
-        (make-warning)
-        (if who 
-          (make-who-condition who)
-          (condition))
-        (make-message-condition msg)
-        (if (positive? (length irrts))
-          (make-irritants-condition irrts)
-          (condition)))))    
-  
-  (define (assertion-violation/conditions who msg irrts . cndts)
-    (raise 
-     (apply condition
-            (make-assertion-violation)
-            (make-who-condition who)
-            (make-message-condition msg)
-            (make-irritants-condition irrts)
-            cndts)))
-  
-  (define (error/conditions who msg irrts . cndts)
-    (raise 
-     (apply condition
-            (make-error)
-            (make-who-condition who)
-            (make-message-condition msg)
-            (make-irritants-condition irrts)
-            cndts)))
+    (warning/conditions who msg irrts))
   
   (define print-exception 
     (case-lambda

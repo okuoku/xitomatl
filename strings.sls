@@ -2,52 +2,53 @@
 (library (xitomatl strings)
   (export
     string-intersperse
-    string-split
+    string-split whitespace
     string-end=?
     ;; from (xitomatl strings compat)
     string-copy!)
   (import
     (rnrs)
-    (rnrs mutable-pairs)
     (only (xitomatl lists) intersperse)
     (xitomatl strings compat))
   
   (define (string-intersperse sl ssep)
     (apply string-append (intersperse sl ssep)))
   
+  (define whitespace 
+    (apply string
+           '(#\space #\linefeed #\return #\tab #\vtab #\page #\x85 #\xA0 
+             #\x1680 #\x180E #\x2000 #\x2001 #\x2002 #\x2003 #\x2004 #\x2005
+             #\x2006 #\x2007 #\x2008 #\x2009 #\x200A #\x2028 #\x2029 #\x202F
+             #\x205F #\x3000)))
+  
   (define string-split
-    ;; Taken from Chicken Scheme
     (case-lambda
-      [(str) (string-split str "\t\n\r " #f)]
-      [(str delim-strs) (string-split str delim-strs #f)]
-      [(str delim-strs keep-empty?)
-       (unless (string? str)
-         (assertion-violation 'string-split "not a string" str))
-       (unless (string? delim-strs)
-         (assertion-violation 'string-split "not a string" delim-strs))
+      [(str) 
+       (string-split str whitespace #f)]
+      [(str delim-strs)
+       (string-split str delim-strs #f)]
+      [(str delim-strs keep-empty)
+       (unless (and (string? str) (string? delim-strs))
+         (assertion-violation 'string-split "not a string" 
+                              (if (string? delim-strs) str delim-strs)))
        (let ([strlen (string-length str)]
-             [dellen (string-length delim-strs)] 
-             [first #f])
-         (define (add from to last)
-           (let ([node (cons (substring str from to) '())])
-             (if first
-               (set-cdr! last node)
-               (set! first node) ) 
-             node))
-         (let loop ([i 0] [last #f] [from 0])
-           (cond [(fx>=? i strlen)
-                  (when (or (fx>? i from) keep-empty?) (add from i last))
-                  (or first '()) ]
-                 [else
-                  (let ([c (string-ref str i)])
-                    (let scan ([j 0])
-                      (cond [(fx>=? j dellen) (loop (fx+ i 1) last from)]
-                            [(eq? c (string-ref delim-strs j))
-                             (let ([i2 (fx+ i 1)])
-                               (if (or (fx>? i from) keep-empty?)
-                                 (loop i2 (add from i last) i2)
-                                 (loop i2 last i2)))]
-                            [else (scan (fx+ j 1))])))])))]))
+             [dellen (string-length delim-strs)])
+         (let loop ([i (- strlen 1)]
+                    [to strlen]
+                    [accum '()])
+           (if (< i 0)
+             (if (or (< 0 to) keep-empty)
+               (cons (substring str 0 to) accum)
+               accum)
+             (let ([c (string-ref str i)])
+               (let check ([j 0])
+                 (cond [(= j dellen) (loop (- i 1) to accum)]
+                       [(char=? c (string-ref delim-strs j))
+                        (loop (- i 1) i (let ([i+1 (+ i 1)])
+                                          (if (or (< i+1 to) keep-empty)
+                                            (cons (substring str i+1 to) accum)
+                                            accum)))]
+                       [else (check (+ j 1))]))))))]))
   
   (define (string-end=? str end)
     (let ([sl (string-length str)]
