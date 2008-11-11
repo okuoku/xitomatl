@@ -200,7 +200,7 @@
                      ;; allow outside chunk(s) to be GC'ed when they're no longer
                      ;; needed during the search, which is necessary for efficient
                      ;; memory usage.  lose-refs must return chunks that will work
-                     ;; with chunker's other procedures.  lose-refs must not
+                     ;; with chunker's procedures.  lose-refs must not
                      ;; mutate the chunks given to it.  The only thing mutated is
                      ;; the new match object which was made just for us.
                      (let ([replacements
@@ -222,9 +222,6 @@
                            (loop (cddr r) (+ 1 n))))))
                    (let-values ([(continue . next-seeds) (apply proc m seeds)])
                      (if continue
-                       ;; TODO? Use a better chunk representation which includes start
-                       ;; and end indexes, to allow below get-subchunk to be more
-                       ;; effecient? Will need converting of lists of strings...
                        (loop (get-subchunk end-chunk end-index 
                                            end-chunk (get-end end-chunk))
                              next-seeds)
@@ -303,7 +300,10 @@
                   (loop (cdr new-chain) (cdr chain) (cons (cons chain new-chain) 
                                                           alist))))])
         (map (lambda (c)
-               (cdr (assq c correlated)))
+               (and c
+                    (cdr (let ([x (assq c correlated)]) 
+                           (assert x)
+                           x))))
              submatch-chunks))))
   
   (define list-chunker

@@ -71,21 +71,28 @@
        [submatch-chunks (list chunk (cddddr chunk)
                               (cdr chunk) (cdddr chunk)
                               (cddr chunk) (cddddr chunk)
+                              #f #f
                               (cddddr chunk) (cddddr chunk))]
        [replacements (pair-chain-chunking-lose-refs submatch-chunks)])      
   (check chunk => '("This" "is" "a" "test" "of" "losing" "refs"))
   (check (for-all eq? chunk saved) => #t)
   (check (length replacements) => (length submatch-chunks))
-  (check (for-all eq? (map car replacements) (map car submatch-chunks)) => #t)
-  (check (exists eq? replacements submatch-chunks) => #f)
+  (check (for-all eq? (map (lambda (x) (and x (car x))) replacements) 
+                      (map (lambda (x) (and x (car x))) submatch-chunks)) 
+         => #t)
+  (check (exists (lambda (x y) (and x (eq? x y))) 
+                 replacements submatch-chunks)
+         => #f)
   (check (list-ref replacements 0) => '("This" "is" "a" "test" "of"))
   (check (list-ref replacements 1) => '("of"))
   (check (list-ref replacements 2) => '("is" "a" "test" "of"))
   (check (list-ref replacements 3) => '("test" "of"))
   (check (list-ref replacements 4) => '("a" "test" "of"))
   (check (list-ref replacements 5) => '("of"))
-  (check (list-ref replacements 6) => '("of"))
-  (check (list-ref replacements 7) => '("of")))
+  (check (list-ref replacements 6) => #f)
+  (check (list-ref replacements 7) => #f)
+  (check (list-ref replacements 8) => '("of"))
+  (check (list-ref replacements 9) => '("of")))
 
 ;;----------------------------------------------------------------------------
 
@@ -149,6 +156,14 @@
             (irregex-search/chunked/all "^.+$" list-chunker chunked-text0
                                         list-chunking-lose-refs))
        => '("Once upon a time...  There was a string used for testing chunks!"))
+(check (irregex-search/chunked/all "(?:(foo)|(bar))\\s*zab" list-chunker 
+                                   '("bar " " zab" "fo" "oza" "b")
+                                   list-chunking-lose-refs
+                                   (lambda (m)
+                                     (list (irregex-match-substring m 0)
+                                           (irregex-match-substring m 1)
+                                           (irregex-match-substring m 2))))
+       => '(("bar  zab" #f "bar") ("foozab" "foo" #f)))
 (check-ex/not-advancing 
  (irregex-search/chunked/all "^.*$" list-chunker chunked-text0))
 (check-ex/not-advancing 
