@@ -3,12 +3,14 @@
   (export
     ;; From compat
     current-directory directory-list delete-directory delete-file
-    make-directory make-symbolic-link change-mode
+    make-directory make-symbolic-link change-mode file-mtime file-ctime
     file-exists? file-regular? file-directory? file-symbolic-link?
+    file-readable? file-writable? file-executable? file-size rename-file
     ;; This library's things
     directory-walk-enumerator directory-walk directory-walk/choice delete-any)
   (import
     (except (rnrs) file-exists?)
+    (xitomatl srfi cond-expand)
     (xitomatl file-system paths)
     (xitomatl file-system base compat)
     (only (xitomatl define) define/?)
@@ -167,4 +169,8 @@
             (delete-file path)])
          (if want-error (values) #t))]))
   
+  (cond-expand 
+    [posix]  ;; okay
+    [else (error "(library (xitomatl file-system base))"
+                 "Only POSIX currently supported.")])
 )

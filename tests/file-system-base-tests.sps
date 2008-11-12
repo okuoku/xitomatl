@@ -5,7 +5,8 @@
   (xitomatl file-system base)
   (xitomatl file-system paths)
   (only (xitomatl enumerators) fold/enumerator)
-  (only (xitomatl srfi lists) list-index))
+  (only (xitomatl srfi lists) list-index)
+  (only (xitomatl predicates) exact-non-negative-integer?))
 
 (define-syntax check-io-f-error
   (syntax-rules ()
@@ -89,14 +90,39 @@
 (check-io-f-error call-with-output-file "a/ab/abb/nope"
   (call-with-output-file "a/ab/abb/nope"
     (lambda (fop) (display "nope" fop))))
+;; file-mtime file-ctime
+(check (exact-non-negative-integer? (file-mtime "a/ab")) => #T)
+(check (exact-non-negative-integer? (file-ctime "a/ab/abb")) => #T)
+(check (>= (file-mtime "a/ab") #e1e9) => #T)
+(check (>= (file-ctime "a/ab/abb") #e1e9) => #T)
+(check-io-f-error file-mtime "doesnt-exist"
+  (file-mtime "doesnt-exist"))
+(check-io-f-error file-ctime "doesnt-exist"
+  (file-ctime "doesnt-exist"))
 ;; make-directory
 (make-directory "new" #o200)  ;; returns unspecified value(s)
 (check (file-exists? "new") => #t)
 (check-io-f-error directory-list "new"
   (directory-list "new"))
+;; file-readable? file-writable? file-executable?
+(check (file-readable? "a/ab/abb") => #T)
+(check (file-writable? "a/ab/abb") => #F)
+(check (file-executable? "a/ab/abb") => #T)
+(check (file-readable? "new") => #F)
+(check (file-writable? "new") => #T)
+(check (file-executable? "new") => #F)
+(check-io-f-error file-readable? "doesnt-exist"
+  (file-readable? "doesnt-exist"))
+(check-io-f-error file-writable? "doesnt-exist"
+  (file-writable? "doesnt-exist"))
+(check-io-f-error file-executable? "doesnt-exist"
+  (file-executable? "doesnt-exist"))
 ;; undo chmods for the rest of the test program
 (change-mode "a/ab/abb" #o755)
+(check (file-writable? "a/ab/abb") => #T)
 (change-mode "new" #o755)
+(check (file-readable? "new") => #T)
+(check (file-executable? "new") => #T)
 ;; make-symbolic-link and file-exists? "follow" arg
 (make-symbolic-link "../a/ab/aba" "b/sym")
 (check (file-exists? "b/sym") => #t)
@@ -137,6 +163,45 @@
 (check (file-symbolic-link? "d/da/sym") => #f)
 (check (file-exists? "d/da/sym") => #f)
 (check (file-exists? "d/da/sym" #f) => #f)
+;; rename-file
+(rename-file "d/da/y" "d/da/yayaya")
+(check (file-exists? "d/da/y") => #F)
+(check (file-regular? "d/da/yayaya") => #T)
+(rename-file "d/da/yayaya" "d/da/y")
+(check (file-exists? "d/da/yayaya") => #F)
+(check (file-regular? "d/da/y") => #T)
+(rename-file "d/da" "d/dadada")
+(check (file-exists? "d/da") => #F)
+(check (file-directory? "d/dadada") => #T)
+(rename-file "d/dadada" "d/da")
+(check (file-exists? "d/dadada") => #F)
+(check (file-directory? "d/da") => #T)
+(rename-file "b/sym" "b/symsym")
+(check (file-exists? "b/sym") => #F)
+(check (file-symbolic-link? "b/symsym") => #T)
+(rename-file "b/symsym" "b/sym")
+(check (file-exists? "b/symsym") => #F)
+(check (file-symbolic-link? "b/sym") => #T)
+(check-io-f-error rename-file "doesnt-exist"
+  (rename-file "doesnt-exist" "bad"))
+(check-io-f-error rename-file "a/ab/x"
+  (rename-file "a/ab/x" "d/da" #T))
+(check-io-f-error rename-file "a/ab"
+  (rename-file "a/ab" "d/da/y" #T))
+(call-with-output-file "temp"
+  (lambda (fop) (put-string fop (call-with-input-file "a/ab/x" get-string-all))))
+(check-io-f-error rename-file "temp"
+  (rename-file "temp" "a/ab/x"))  ;; "a/ab/x" already exists
+(rename-file "temp" "a/ab/x" #T)
+(check (file-exists? "temp") => #F)
+(check (file-exists? "a/ab/x") => #T)
+;; file-size
+(call-with-port (open-file-output-port "fsz")
+  (lambda (fop) (put-bytevector fop #vu8(1 2 3 4 5 6 7))))
+(check (file-size "fsz") => 7)
+(delete-file "fsz")
+(check-io-f-error file-size "fsz"
+  (file-size "fsz"))
 ;; directory-walk-enumerator 
 (check (fold/enumerator
         (directory-walk-enumerator)
