@@ -5,7 +5,8 @@
   (xitomatl datum-find)
   (xitomatl enumerators)
   (xitomatl match)
-  (xitomatl file-system base))
+  (xitomatl file-system base)
+  (only (xitomatl exceptions) reraise))
 
 (define-syntax check-values
   (syntax-rules (=>)
@@ -76,7 +77,7 @@
          (check (with-exception-handler
                   (lambda (ex) 
                     (set! raised (+ 1 raised))
-                    (raise-continuable ex))
+                    (reraise ex))
                   (lambda ()
                     (fold/enumerator
                      (datum-find-enumerator (lambda (_) #t) #t)
@@ -108,7 +109,7 @@
                      (when (and (who-condition? ex)
                                 (eq? (condition-who ex) 'datum-find-enumerator))
                        (set! raised (+ 1 raised)))
-                     (raise-continuable ex))
+                     (reraise ex))
                    (lambda ()
                      (fold/enumerator
                       (datum-find-enumerator (lambda (_) #t) #t)

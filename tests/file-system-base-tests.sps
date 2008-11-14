@@ -6,7 +6,8 @@
   (xitomatl file-system paths)
   (only (xitomatl enumerators) fold/enumerator)
   (only (xitomatl srfi lists) list-index)
-  (only (xitomatl predicates) exact-non-negative-integer?))
+  (only (xitomatl predicates) exact-non-negative-integer?)
+  (only (xitomatl exceptions) reraise))
 
 (define-syntax check-io-f-error
   (syntax-rules ()
@@ -277,7 +278,7 @@
          (with-exception-handler
            (lambda (ex)
              (set! raised #t)
-             (raise-continuable ex))
+             (reraise ex))
            (lambda ()
              (fold/enumerator
               (directory-walk-enumerator)

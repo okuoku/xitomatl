@@ -1,7 +1,7 @@
 #!r6rs
 (library (xitomatl exceptions)
   (export
-    catch
+    catch reraise
     warning warning/conditions assertion-violation/conditions error/conditions
     print-exception)
   (import
@@ -33,12 +33,14 @@
                       (lambda (var)
                         #,(and (positive? (length #'(out-clause ...)))
                                #'(cond out-clause ...))
-                        ;; If R7RS makes exceptions discernable as continuable or not,
-                        ;; this will change to use a `reraise' which will discern and
-                        ;; use raise or raise-continuable depending.
-                        (raise-continuable var))
+                        (reraise var))
                       (lambda ()
                         expr0 expr ...)))))))])))
+  
+  (define (reraise obj)
+    ;; If R7RS makes exceptions discernable as continuable or not,
+    ;; this will change to use raise or raise-continuable depending.
+    (raise-continuable obj))
   
   (define (make-raiser/conditions raise-it make-main-condition)
     (lambda (who msg irrts . cndts)

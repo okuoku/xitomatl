@@ -9,7 +9,7 @@
     (rnrs)
     (xitomatl srfi parameters)
     (only (xitomatl common) format printf fprintf pretty-print)
-    (only (xitomatl exceptions) print-exception)
+    (only (xitomatl exceptions) print-exception reraise)
     (only (xitomatl conditions) print-condition))
   
   (define dprint-mark (make-parameter "***"))
@@ -39,7 +39,7 @@
       (fprintf cep "~a\n" mark)
       (print-exception exn cep)
       (fprintf cep "~a\n" mark)
-      (raise-continuable exn)))
+      (reraise exn)))
   
   (define-syntax eprint
     (lambda (stx)

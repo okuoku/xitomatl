@@ -9,7 +9,8 @@
     condition-finished-coroutine)
   (import
     (rnrs)
-    (only (xitomatl define) define/?/AV))
+    (only (xitomatl define) define/?/AV)
+    (only (xitomatl exceptions) reraise))
   
   ;;; Inspired by Will Farr's generators example:
   ;;; http://wmfarr.blogspot.com/2006/08/one-more-example-of-python-generators.html
@@ -57,12 +58,16 @@
                   ;; from inside `proc' be that of the current invocation of
                   ;; the coroutine.  Otherwise, it would always be that
                   ;; of the first invocation.
+                  ;; If R7RS makes exceptions discernable as continuable or
+                  ;; not, this will change to inspect the exception to see if
+                  ;; we need to be able to continue back into proc or not; 
+                  ;; instead of always capturing this continuation and using reraise.
                   (call/cc
                    (lambda (k)
                      (return (lambda ()
                                (let ([saved return])
                                  (set! return #f)
-                                 (let-values ([vals (raise-continuable ex)])
+                                 (let-values ([vals (reraise ex)])
                                    (set! return saved)
                                    (apply k vals))))))))
                 (lambda () (apply proc args)))

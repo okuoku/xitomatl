@@ -65,7 +65,7 @@
       (lambda (ex)
         (if (syntax-violation? ex) 
           (assertion-violation 'unwrap "invalid argument" stx)
-          (raise-continuable ex)))
+          (reraise ex)))
       (lambda ()
         (let uw ([stx stx])
           (syntax-case stx ()
