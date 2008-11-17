@@ -2,18 +2,102 @@
 (import
   (rnrs)
   (xitomatl alists)
-  (xitomatl srfi lightweight-testing))
+  (xitomatl srfi lightweight-testing)
+  (only (xitomatl exceptions) catch))
 
 (define-syntax check-AV
   (syntax-rules ()
     [(_ expr)
-     (check (guard (ex [else (assertion-violation? ex)])
+     (check (catch ex ([else (assertion-violation? ex)])
               expr
               'unexpected-return)
             => #t)]))
 
+(define-syntax check-improper
+  (syntax-rules ()
+    [(_ who expr)
+     (check (catch ex ([else (and (assertion-violation? ex)
+                                  (who-condition? ex)
+                                  (message-condition? ex)
+                                  (list (condition-who ex)
+                                        (condition-message ex)))])
+              expr
+              'unexpected-return)
+            => '(who "not a proper alist"))]))
+
+(define-syntax check-not-found
+  (syntax-rules ()
+    [(_ who key expr)
+     (check (catch ex ([else (and (assertion-violation? ex)
+                                  (who-condition? ex)
+                                  (message-condition? ex)
+                                  (irritants-condition? ex)
+                                  (positive? (length (condition-irritants ex)))
+                                  (list (condition-who ex)
+                                        (car (condition-irritants ex))
+                                        (condition-message ex)))])
+              expr
+              'unexpected-return)
+            => `(who ,key "key not found"))]))
+
+(define-syntax check-immutable
+  (syntax-rules ()
+    [(_ who expr)
+     (check (catch ex ([else (and (assertion-violation? ex)
+                                  (who-condition? ex)
+                                  (message-condition? ex)
+                                  (list (condition-who ex)
+                                        (condition-message ex)))])
+              expr
+              'unexpected-return)
+            => '(who "alist is immutable"))]))
+
+
+(check-improper assp-ref
+  (assp-ref 'oops 'z))
+(check-improper assoc-ref
+  (assoc-ref '((x . 1) (y . 2) oops) 'z))
+(check-improper assq-remove
+  (assq-remove "oops" 2))
+(check-improper assv-remove
+  (assv-remove '((1 . y) oops (3 . z)) 2))
+(check-improper assq-update
+  (assq-update '((1 . y) oops (3 . z)) 2 (lambda (_) 'bad) 'bad))
+(check-improper ass-copy
+  (ass-copy '((1 . y) oops (3 . z))))
+(check-improper ass-keys
+  (ass-keys '((1 . y) oops (3 . z))))
+(check-improper ass-entries
+  (ass-entries '((1 . y) oops (3 . z))))
+
+;;; order preserving tests
+
+(check (assoc-replace '((a . 1) (b . 2) (c . 3) (d . 4)) 'b "new") 
+       => '((a . 1) (b . "new") (c . 3) (d . 4)))
+(check (assv-replace '((a . 1) (b . 2) (c . 3) (d . 4)) 'e "new") 
+       => '((a . 1) (b . 2) (c . 3) (d . 4) (e . "new")))
+(check (assp-remove '((a . 1) (b . 2) (c . 3) (d . 4)) (lambda (k) (eq? k 'c))) 
+       => '((a . 1) (b . 2) (d . 4)))
+(check (assq-remove '((a . 1) (b . 2) (c . 3) (d . 4)) 'a) 
+       => '((b . 2) (c . 3) (d . 4)))
+(check (assoc-update '((a . 1) (b . 2) (c . 3) (d . 4)) 'd number->string 'bad) 
+       => '((a . 1) (b . 2) (c . 3) (d . "4")))
+(check (assv-update '((a . 1) (b . 2) (c . 3) (d . 4)) 'e string->symbol "new") 
+       => '((a . 1) (b . 2) (c . 3) (d . 4) (e . new)))
+(check (ass-copy '((a . 1) (b . 2) (c . 3) (d . 4))) 
+       => '((a . 1) (b . 2) (c . 3) (d . 4)))
+(check (ass-keys '((a . 1) (b . 2) (c . 3) (d . 4))) 
+       => '(a b c d))
+(check (let-values ([(keys vals)
+                     (ass-entries '((a . 1) (b . 2) (c . 3) (d . 4)))])
+         (list keys vals)) 
+       => '((a b c d) (1 2 3 4)))
+
 ;;; eq-alist tests
 
+(check-AV (make-eq-alist "oops"))
+(check-AV (make-eq-alist '(oops)))
+(check-AV (make-eq-alist '((k . v)) 'oops))
 (define a0 (make-eq-alist))
 (check (alist? a0) => #t)
 (check (eq-alist? a0) => #t)
@@ -21,7 +105,8 @@
 (check (alist-equivalence-function a0) => eq?)
 (check (alist-size a0) => 0)
 (check (alist-ref a0 'x 'default) => 'default)
-(check-AV (alist-ref a0 'x))
+(check-not-found assq-ref 'x
+  (alist-ref a0 'x))
 (alist-set! a0 'x 1)
 (check (alist-ref a0 'x) => 1)
 (check (alist-size a0) => 1)
@@ -35,19 +120,23 @@
 (check (alist-ref a0 'z) => 3)
 (check (alist-size a0) => 3)
 (alist-delete! a0 'x)
-(check-AV (alist-ref a0 'x))
+(check-not-found assq-ref 'x
+  (alist-ref a0 'x))
 (check (alist-ref a0 'x 'D) => 'D)
 (check (alist-contains? a0 'x) => #f)
 (check (alist-contains? a0 'y) => #t)
 (check (alist-contains? a0 'z) => #t)
 (check (alist-size a0) => 2)
 (alist-delete! a0 'y)
-(check-AV (alist-ref a0 'y))
+(check-not-found assq-ref 'y
+  (alist-ref a0 'y))
 (check (alist-ref a0 'y 'D) => 'D)
 (check (alist-contains? a0 'x) => #f)
 (check (alist-contains? a0 'y) => #f)
 (check (alist-contains? a0 'z) => #t)
 (check (alist-size a0) => 1)
+(check-not-found assq-update 'x
+  (alist-update! a0 'x (lambda (_) 'bad)))
 (alist-update! a0 'x (lambda (x) (symbol->string x)) 'default)
 (check (alist-ref a0 'x) => "default")
 (check (alist-size a0) => 2)
@@ -57,18 +146,22 @@
 (define a1 (alist-copy a0))
 (check (alist-mutable? a1) => #f)
 (check (alist-equivalence-function a1) => eq?)
-(check-AV (alist-set! a1 'x 42))
-(check-AV (alist-delete! a1 'x))
-(check-AV (alist-update! a1 'x values 'D))
-(check-AV (alist-clear! a1))
+(check-immutable alist-set! 
+  (alist-set! a1 'x 42))
+(check-immutable alist-delete! 
+  (alist-delete! a1 'x))
+(check-immutable alist-update! 
+  (alist-update! a1 'x values 'D))
+(check-immutable alist-clear! 
+  (alist-clear! a1))
 (let ([k0 (alist-keys a0)]
       [k1 (alist-keys a1)])
-  (check k0 => '#(x z))
+  (check k0 => '#(z x))
   (check k1 => k0))
 (let-values ([(k0 v0) (alist-entries a0)]
              [(k1 v1) (alist-entries a1)])
-  (check k0 => '#(x z))
-  (check v0 => '#("default" -3))
+  (check k0 => '#(z x))
+  (check v0 => '#(-3 "default"))
   (check k1 => k0)
   (check v1 => v0))
 (alist-clear! a0)
@@ -79,20 +172,39 @@
 (check (alist-ref a0 'x 'D) => 'D)
 (check (alist-ref a0 'y 'D) => 'D)
 (check (alist-ref a0 'z 'D) => 'D)
-(check-AV (alist-ref a0 'x))
-(check-AV (alist-ref a0 'y))
-(check-AV (alist-ref a0 'z))
+(check-not-found assq-ref 'x
+  (alist-ref a0 'x))
+(check-not-found assq-ref 'y
+  (alist-ref a0 'y))
+(check-not-found assq-ref 'z
+  (alist-ref a0 'z))
 (check (alist-keys a0) => '#())
 (check (let-values ([(k v) (alist-entries a0)]) (cons k v)) => '(#() . #()))
 (define a2 (make-eq-alist '((a . #\A) (b . "B") (c . C))))
 (check (alist-size a2) => 3)
 (check (alist-mutable? a2) => #t)
+(let ([k (list 1 2)])
+  (alist-set! a2 k 'foo)
+  (check (alist-contains? a2 (list 1 2)) => #F)
+  (check (alist-ref a2 k) => 'foo)
+  (check (alist-ref a2 (list 1 2) 'nope) => 'nope)
+  (check-not-found assq-ref (list 1 2)
+    (alist-ref a2 (list 1 2)))
+  (alist-update! a2 (list 1 2) values 'dflt)
+  (check (alist-ref a2 k) => 'foo)
+  (alist-delete! a2 (list 1 2))
+  (check (alist-contains? a2 k) => #T)
+  (alist-delete! a2 k)
+  (check (alist-contains? a2 k) => #F))
 (define a3 (make-eq-alist '((z . z)) #f))
 (check (alist-size a3) => 1)
 (check (alist-mutable? a3) => #f)
 
 ;;; eqv-alist tests
 
+(check-AV (make-eqv-alist "oops"))
+(check-AV (make-eqv-alist '(oops)))
+(check-AV (make-eqv-alist '((k . v)) 'oops))
 (define a4 (make-eqv-alist))
 (check (alist? a4) => #t)
 (check (eqv-alist? a4) => #t)
@@ -127,6 +239,7 @@
 (check (alist-contains? a4 #\2) => #f)
 (check (alist-contains? a4 3) => #t)
 (check (alist-size a4) => 1)
+(check-AV (alist-update! a4 1 (lambda (_) 'bad)))
 (alist-update! a4 1 (lambda (x) (symbol->string x)) 'default)
 (check (alist-ref a4 1) => "default")
 (check (alist-size a4) => 2)
@@ -142,12 +255,12 @@
 (check-AV (alist-clear! a5))
 (let ([k0 (alist-keys a4)]
       [k1 (alist-keys a5)])
-  (check k0 => '#(1 3))
+  (check k0 => '#(3 1))
   (check k1 => k0))
 (let-values ([(k0 v0) (alist-entries a4)]
              [(k1 v1) (alist-entries a5)])
-  (check k0 => '#(1 3))
-  (check v0 => '#("default" "z"))
+  (check k0 => '#(3 1))
+  (check v0 => '#("z" "default"))
   (check k1 => k0)
   (check v1 => v0))
 (alist-clear! a4)
@@ -166,12 +279,27 @@
 (define a6 (make-eqv-alist '((1.1 . #\A) (2.2 . "B") (3.3 . C))))
 (check (alist-size a6) => 3)
 (check (alist-mutable? a6) => #t)
+(let ([k (list 1 2)])
+  (alist-set! a6 k 'foo)
+  (check (alist-contains? a6 (list 1 2)) => #F)
+  (check (alist-ref a6 k) => 'foo)
+  (check (alist-ref a6 (list 1 2) 'nope) => 'nope)
+  (check-AV (alist-ref a6 (list 1 2)))
+  (alist-update! a6 (list 1 2) values 'dflt)
+  (check (alist-ref a6 k) => 'foo)
+  (alist-delete! a6 (list 1 2))
+  (check (alist-contains? a6 k) => #T)
+  (alist-delete! a6 k)
+  (check (alist-contains? a6 k) => #F))
 (define a7 (make-eq-alist '((4.4 . z)) #f))
 (check (alist-size a7) => 1)
 (check (alist-mutable? a7) => #f)
 
 ;;; equal-alist tests
 
+(check-AV (make-equal-alist "oops"))
+(check-AV (make-equal-alist '(oops)))
+(check-AV (make-equal-alist '((k . v)) 'oops))
 (define a8 (make-equal-alist))
 (define z (let () (define-record-type Z) (make-Z)))
 (check (alist? a8) => #t)
@@ -207,6 +335,7 @@
 (check (alist-contains? a8 (string #\y)) => #f)
 (check (alist-contains? a8 z) => #t)
 (check (alist-size a8) => 1)
+(check-AV (alist-update! a8 (list 'x) (lambda (_) 'bad)))
 (alist-update! a8 (list 'x) (lambda (x) (symbol->string x)) 'default)
 (check (alist-ref a8 (list 'x)) => "default")
 (check (alist-size a8) => 2)
@@ -222,12 +351,12 @@
 (check-AV (alist-clear! a9))
 (let ([k0 (alist-keys a8)]
       [k1 (alist-keys a9)])
-  (check k0 => `#((x) ,z))
+  (check k0 => `#(,z (x)))
   (check k1 => k0))
 (let-values ([(k0 v0) (alist-entries a8)]
              [(k1 v1) (alist-entries a9)])
-  (check k0 => `#((x) ,z))
-  (check v0 => '#("default" -3))
+  (check k0 => `#(,z (x)))
+  (check v0 => '#(-3 "default"))
   (check k1 => k0)
   (check v1 => v0))
 (alist-clear! a8)
@@ -252,6 +381,9 @@
 
 ;;; pred-alist tests
 
+(check-AV (make-pred-alist "oops"))
+(check-AV (make-pred-alist '(oops)))
+(check-AV (make-pred-alist '((k . v)) 'oops))
 (define ap0 (make-pred-alist '((a . #f) (2 . #f) (#\c . #f) ("d" . d))))
 (check (alist? ap0) => #t)
 (check (pred-alist? ap0) => #t)
@@ -260,6 +392,7 @@
 (check (alist-size ap0) => 4)
 (check (alist-ref ap0 pair? 'default) => 'default)
 (check-AV (alist-ref ap0 pair?))
+(check-AV (alist-set! ap0 vector? 'bad))
 (alist-set! ap0 symbol? 1)
 (check (alist-ref ap0 symbol?) => 1)
 (check (alist-size ap0) => 4)
@@ -297,6 +430,7 @@
 (check (alist-equivalence-function ap1) => 'pred)
 (check-AV (alist-set! ap1 symbol? 42))
 (check-AV (alist-delete! ap1 symbol?))
+(check-AV (alist-update! ap1 symbol? values))
 (check-AV (alist-update! ap1 symbol? values 'D))
 (check-AV (alist-clear! ap1))
 (let ([k0 (alist-keys ap0)]

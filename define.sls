@@ -2,6 +2,7 @@
 (library (xitomatl define)
   (export 
     define-values
+    define/who
     define/AV
     define/?
     define/?/AV)
@@ -12,6 +13,29 @@
     (only (xitomatl common) format)
     (only (xitomatl exceptions) assertion-violation/conditions)
     (xitomatl conditions))
+  
+  (define-syntax who-wrap
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ ctxt name expr)
+         (with-syntax ([who (datum->syntax #'ctxt 'who)])
+           #'(let ([who 'name])
+               #f  ;; prevent internal defines in expr 
+               expr))])))
+  
+  (define-syntax define/who
+    (lambda (stx)
+      (syntax-case stx ()
+        [(kw (fname . frmls) b0 b ...)
+         (identifier? #'fname)
+         #'(kw fname
+             (lambda frmls b0 b ...))]
+        [(ctxt name expr)
+         (identifier? #'name)
+         #'(define name
+             (who-wrap ctxt name 
+               expr))])))
+  
   
   (define (make-AV who)
     (lambda (msg . irrts) 
@@ -26,19 +50,13 @@
                #f  ;; prevent internal defines in expr 
                expr))])))
   
-  (define-syntax case-lambda/AV--meta
-    (lambda (stx)
-      (syntax-case stx ()
-        [(_ ctxt name [frmls . body] ...)
-         #'(AV-wrap ctxt name (case-lambda [frmls . body] ...))])))
-  
   (define-syntax define/AV
     (lambda (stx)
       (syntax-case stx ()
-        [(ctxt (fname . frmls) body0 body* ...)
+        [(kw (fname . frmls) b0 b ...)
          (identifier? #'fname)
-         #'(define fname
-             (case-lambda/AV--meta ctxt fname [frmls body0 body* ...]))]
+         #'(kw fname
+             (lambda frmls b0 b ...))]
         [(ctxt name expr)
          (identifier? #'name)
          #'(define name
