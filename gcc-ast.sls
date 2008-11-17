@@ -3,6 +3,8 @@
 ;; This option outputs an abstract syntax tree of gcc's input.
 ;; This library was made for include-gtk.c.t00.tu output by GCC 4.1.2
 ;; I'm not sure if this would work for different GCC versions.
+  
+;; NOTE: This might still need to be updated to work with IrRegex.  
 
 (library (xitomatl gcc-ast)
   (export
@@ -15,9 +17,8 @@
     (rnrs)
     (rnrs mutable-pairs)
     (only (xitomatl common) format)
-    (xitomatl pregexp)
+    (xitomatl irregex)
     (xitomatl IU-match))
-  
   
   (define-syntax dpf
     (syntax-rules ()
@@ -60,14 +61,14 @@
     (do ([i 1 (+ 1 i)]  ;; Ignore 0, start at 1, because gcc-tu's output indexing starts at 1
          [nls node-lines (cdr nls)])
       [(= i (vector-length graph))]
-      (let* ([nm (pregexp-match "@(\\d+)\\s+(\\w+)\\s+(.*)" (car nls))]
-             [id-num (string->number (cadr nm))]
-             [type (string->symbol (caddr nm))]
+      (let* ([nm (irregex-search "@(\\d+)\\s+(\\w+)\\s+(.*)" (car nls))]
+             [id-num (string->number (irregex-match-substring nm 1))]
+             [type (string->symbol (irregex-match-substring nm 2))]
              [attrs (map (lambda (am) 
-                           (cons (string->symbol (cadr am)) (caddr am))) 
-                         (pregexp-match* 
-                           "(\\w+|op\\s+\\d+)\\s*:\\s*(\\S+(?:\\s+\\S+)*?)(?=(?:\\s+\\w+\\s*:)|(?:\\s+bitfield)|(?:\\s+op\\s+\\d+)|(?:\\s*$))"
-                           (cadddr nm)))])
+                           (cons (string->symbol (irregex-match-substring am 1))
+                                 (irregex-match-substring am 2))) 
+                         (irregex-search/all "(\\w+|op\\s+\\d+)\\s*:\\s*(\\S+(?:\\s+\\S+)*?)(?=(?:\\s+\\w+\\s*:)|(?:\\s+bitfield)|(?:\\s+op\\s+\\d+)|(?:\\s*$))"
+                           (irregex-match-substring nm 3)))])
         ;; Construct node data-structures a-list of shape:
         ;;   ((<node-number-id> . <type>) (<attribute> . <value>) ...)
         (vector-set! graph i (cons (cons id-num type) attrs))))
