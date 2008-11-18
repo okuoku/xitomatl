@@ -1,0 +1,35 @@
+Derick Eddington's personal collection of various R6RS source-code
+------------------------------------------------------------------
+
+Source-code I have created; others' source-code I use and want organized in my
+own way; and a whole namespace to do whatever I want with.
+
+I've claimed `(xitomatl ---)' as my personal top-level namespace.  "Xitomatl",
+pronounced something like "zye-toe-ma-tul", is the Aztec Nahuatl language word
+for tomato.  I chose an obscure word I like and which I doubt anyone will ever
+have a conflict with me over :-)
+
+See the test programs in the tests/ folder for examples of how to use my
+libraries.
+
+For the latest development version, go to:
+
+  https://code.launchpad.net/~derick-eddington/ikarus-libraries/xitomatl
+
+To use everything in the Xitomatl collection, you'll also need the 
+`(xitomatl srfi ---)' SRFIs ports which can be found at:
+
+  https://code.launchpad.net/~ikarus-libraries-team/ikarus-libraries/srfi
+
+My libraries typically require the latest development versions of R6RS
+implementations.  Currently supported are: Ikarus, PLT Scheme, and Ypsilon.
+They support the *.IMPL.sls convention for implementation-specific libraries.
+Larceny might be supported once it supports this convention.
+
+Disclaimer:  
+-----------
+My libraries are a moving target.  I'm continually changing things.  Other
+people's libraries I've assimilated should be stable and should need to be
+changed only for bug fixes and updates to new versions.  If in the future some
+of my libraries stabilize, I'll advertise that and make documentation.
+

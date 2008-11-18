@@ -1,3 +1,25 @@
+;;; @Package     HtmlPrag
+;;; @Subtitle    Pragmatic Parsing and Emitting of HTML using SXML and SHTML
+;;; @HomePage    http://www.neilvandyke.org/htmlprag/
+;;; @Author      Neil W. Van Dyke
+;;; @AuthorEmail neil@@neilvandyke.org
+;;; @Version     0.16
+;;; @Date        2005-12-18
+
+;; $Id: htmlprag.scm,v 1.385 2005/12/19 03:28:28 neil Exp $
+
+;;; @legal
+;;; Copyright @copyright{} 2003 - 2005 Neil W. Van Dyke.  This program is Free
+;;; Software; you can redistribute it and/or modify it under the terms of the
+;;; GNU Lesser General Public License as published by the Free Software
+;;; Foundation; either version 2.1 of the License, or (at your option) any
+;;; later version.  This program is distributed in the hope that it will be
+;;; useful, but without any warranty; without even the implied warranty of
+;;; merchantability or fitness for a particular purpose.  See
+;;; @indicateurl{http://www.gnu.org/copyleft/lesser.html} for details.  For
+;;; other license options and consulting, contact the author.
+;;; @end legal
+
 #!r6rs
 (import
   (rnrs)
