@@ -1,14 +1,12 @@
 #!r6rs
-; Fuego -- A prototype-based object system supporting capability-based security.
-;          By Derick Eddington.
+; Fuego -- A prototype object system supporting capability-based security.
 ;          Inspired by Prometheus by Jorgen Schaefer.
 
-; TODO: learn about struct inspectors and think through the implications for security of information encapsulation
-;       w/r/t struct inspecting and struct printing
-
-; TODO: no possible exceptions should reveal info about underlying implementation.  I.e. arity errors on standard
-;       methods should not cause an exception which reveals the name of the underlying.
-;       For _real_ capability-security, this needs to be thouroughly analyzed and tamed
+; TODO: Determine the implications for security of information encapsulation
+;       w.r.t. record inspecting and record printing.
+; TODO: Determine the implications for security w.r.t. exceptions.  
+;       I.e. arity errors on methods should not cause an exception which reveals info.
+; For _real_ capability-security, these need to be thoroughly analyzed and tamed.
 
 (library (xitomatl fuego)
   (export
@@ -165,6 +163,7 @@
      '()))
   
   (define-syntax object
+    ;;; NOTE: Do not re-enter continuations of an object evaluation
     (lambda (stx)
       (syntax-case stx ()
         [(kw body ...)

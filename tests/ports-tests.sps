@@ -8,7 +8,7 @@
   (xitomatl coroutines)
   (xitomatl bytevectors)
   (xitomatl control)
-  (xitomatl enumerators))
+  (only (xitomatl file-system base) current-directory))
 
 (define-syntax check-AV-msg
   (syntax-rules ()
@@ -58,29 +58,6 @@ a n d ((()))")
 (check (call-with-port (open-string-input-port text)
          read-all)
        => '(Blah 123 () "another" #\l #(i n) #\e a n d ((()))))
-(check (fold/enumerator
-        (port-enumerator get-datum)
-        (open-string-input-port text)
-        (lambda (d a)
-          (values #t (cons d a)))
-        '())
-       => '(((())) d n a #\e #(i n) #\l "another" () 123 Blah))
-(check (fold/enumerator
-        (port-enumerator get-char)
-        (open-string-input-port text)
-        (lambda (c i)
-          (if (< i 10)
-            (values #t (+ 1 i))
-            (values #f c)))
-        0)
-       => #\))
-(check (let-values ([v (fold/enumerator
-                        (port-enumerator get-char)
-                        (open-string-input-port text)
-                        (lambda (c)
-                          (values #f 1 2 3 4)))])
-         v)
-       => '(1 2 3 4))
 
 ;;; Compound input ports
 
@@ -545,6 +522,8 @@ a n d ((()))")
   (check-ex (get-char pc))
   (check-ex (get-char pd)))
 
-
+;; clean-up
+(current-directory "/tmp")
+(for-each delete-file '("b0" "b1" "b2" "b3" "b4" "b5" "t0" "t1" "t2" "t3" "t4" "t5"))
 
 (check-report)

@@ -66,12 +66,13 @@
           (when found
             (print-end filename))
           (let ([m (irregex-search irx line)])
-            (when m
-              (unless found
-                (print-start filename)
-                (set! found #t))
-              (print-match line count m))
-            (loop (+ 1 count) found))))))
+            (cond [m
+                   (unless found
+                     (print-start filename))
+                   (print-match line count m)
+                   (loop (+ 1 count) #T)]
+                  [else
+                   (loop (+ 1 count) found)]))))))
   (define (search-file fn)
     (call-with-input-file fn (lambda (fip) (search fip fn))))
   ;;--------------------------------------------------------------------------
@@ -146,26 +147,26 @@
   (define d display)
   (printf "Usage: ~a [command [options ...]]\n" (car (command-line)))
   (d " Commands:\n")
-  (d "  (i) interactive [regex]       Prompt for lines to match against regex.\n")
-  (d "                                 Prompt for regex if not supplied.\n")
-  (d "  (l) lines regex [paths ...]   Search files, recursively descending into\n")
-  (d "                                 directories, or (current-input-port),\n")
-  (d "                                 for lines containing a match for regex.\n")
-  (d "  (s) single regex [paths ...]  Search files, recursively descending into\n")
-  (d "                                 directories, or (current-input-port),\n")
-  (d "                                 across lines, with . matching newline.\n")
+  (d "  (-i) --interactive [regex]       Prompt for lines to match against regex.\n")
+  (d "                                    Prompt for regex if not supplied.\n")
+  (d "  (-l) --lines regex [paths ...]   Search files, recursively descending into\n")
+  (d "                                    directories, or (current-input-port),\n")
+  (d "                                    for lines containing a match for regex.\n")
+  (d "  (-s) --single regex [paths ...]  Search files, recursively descending into\n")
+  (d "                                    directories, or (current-input-port),\n")
+  (d "                                    across lines, with . matching newline.\n")
   (d " If no command is supplied, interactive is used.\n")
   (exit #f))
 
 (define (main cmdln)
   (match cmdln
     [(_) 
-     (main '(#f "interactive"))]
-    [(_ (:or "interactive" "i") args (... 0 1))
+     (main '(#f "--interactive"))]
+    [(_ (:or "--interactive" "-i") args (... 0 1))
      (apply interactive args)]
-    [(_ (:or "lines" "l") regex . args)
+    [(_ (:or "--lines" "-l") regex . args)
      (apply lines regex args)]
-    [(_ (:or "single" "s") regex . args)
+    [(_ (:or "--single" "-s") regex . args)
      (apply single regex args)]
     #;[(_ (:or "replace" "r") regex replacement . args)
      (apply replace args)]

@@ -10,7 +10,9 @@
     name=?
     non-empty-string?
     char-line-ending?
+    library-name?
     list-of?
+    #;improper-list?
     #;datum?)
   (import
     (rnrs))
@@ -51,6 +53,19 @@
   (define (char-line-ending? c)
     (and (memv c '(#\xa #\xd #\x85 #\x2028))  ;; correct? everything it should be?
          #t))
+  
+  (define (library-name? x)
+    (and (list? x)
+         (let loop ([l x] [is #F])
+           (cond [(null? l) is]
+                 [(and (symbol? (car l))
+                       (positive? (string-length (symbol->string (car l))))) 
+                  (loop (cdr l) #T)]
+                 [(and (null? (cdr l))
+                       (list? (car l))
+                       (for-all exact-non-negative-integer? (car l)))
+                  is]
+                 [else #F]))))
 
   ;;--------------------------------------------------------------------------
   
@@ -62,7 +77,12 @@
                       [else #f]))])
       list-of?-pred))
   
+  #;(define (improper-list? x)
+    )
+  
   #;(define (datum? x)
-    XXX)
+    ;; The naive implementation cannot handle cyclic structures.
+    ;; How to do this..?
+    )
   
 )

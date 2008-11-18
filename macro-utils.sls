@@ -1,14 +1,9 @@
 #!r6rs
 (library (xitomatl macro-utils)
   (export
-    gen-temp #;gensym
-    duplicate-id unique-ids? unique-ids?/raise
-    formals-ok?
-    identifier-append
-    name=?
-    identifier?/name=?
-    #;unwrap syntax->list #;syntax-map
-    with-syntax*)
+    gen-temp syntax->list with-syntax*
+    duplicate-id unique-ids? unique-ids?/raise formals-ok?
+    identifier-append name=? identifier?/name=?)
   (import
     (rnrs)
     (only (xitomatl predicates) name=?))
@@ -16,33 +11,42 @@
   (define (gen-temp)
     (with-syntax ([(t) (generate-temporaries '(1))])
       #'t))
+     
+  (define (syntax->list ls)
+    (syntax-case ls ()
+      [(ls ...) #'(ls ...)]
+      [_ (assertion-violation 'syntax->list "not a syntax list" ls)]))
   
-  #;(define (gensym) (syntax->datum (gen-temp)))
+  (define-syntax with-syntax*
+    (syntax-rules ()
+      [(_ (pc0 pc1 pc* ...) b b* ...)
+       (with-syntax (pc0)
+         (with-syntax* (pc1 pc* ...) b b* ...))]
+      [(_ pc b b* ...)
+       (with-syntax pc b b* ...)]))
   
-  (define (duplicate-id ls)
-    (if (null? ls)
-      #f
-      (or
-        (let loop ([x (car ls)] [rest (cdr ls)])
-          (if (null? rest)
-            #f
-            (if (bound-identifier=? x (car rest))
-              x
-              (loop x (cdr rest)))))
-        (duplicate-id (cdr ls)))))
+  (define (duplicate-id ids)
+    (unless (and (list? ids) (for-all identifier? ids))
+      (assertion-violation 'duplicate-id "not a list of identifiers" ids))
+    (let recur ([ls ids])
+      (and (pair? ls)
+           (let ([id (car ls)] [rest (cdr ls)])
+             (if (memp (lambda (x) (bound-identifier=? x id)) rest)
+               id
+               (recur (cdr ls)))))))
   
   (define (unique-ids? ls)
     (not (duplicate-id ls)))
   
   (define unique-ids?/raise
     (case-lambda
-      [(ids stx msg)
+      [(ids orig-stx msg)
        (let ([dup (duplicate-id ids)])
          (if dup
-           (syntax-violation #f msg stx dup)
+           (syntax-violation #f msg orig-stx dup)
            #t))]
-      [(ids stx)
-       (unique-ids?/raise ids stx "duplicate identifier")]))
+      [(ids orig-stx)
+       (unique-ids?/raise ids orig-stx "duplicate identifier")]))
   
   (define (formals-ok? frmls-stx orig-stx)
     (syntax-case frmls-stx ()
@@ -60,20 +64,6 @@
                 (if (identifier? #'rest) (list #'rest) '())) 
               orig-stx))]))
   
-  #;(define (unwrap stx)
-    (with-exception-handler
-      (lambda (ex)
-        (if (syntax-violation? ex) 
-          (assertion-violation 'unwrap "invalid argument" stx)
-          (reraise ex)))
-      (lambda ()
-        (let uw ([stx stx])
-          (syntax-case stx ()
-            [(x . r) (cons (uw #'x) (uw #'r))]
-            [#(x ...) (apply vector (uw #'(x ...)))]
-            [x (identifier? #'x) #'x]
-            [x (syntax->datum #'x)])))))
-  
   (define (identifier-append ctxt . ids)
     (define who 'identifier-append)
     (unless (identifier? ctxt) (assertion-violation who "not an identifier" ctxt))    
@@ -84,8 +74,8 @@
                  (cond [(identifier? id) (symbol->string (syntax->datum id))]
                        [(symbol? id) (symbol->string id)]
                        [(string? id) id]
-                       [else
-                        (assertion-violation who "not an identifier, symbol, or string" id)]))
+                       [else (assertion-violation who 
+                               "not an identifier, symbol, or string" id)]))
                ids))])
       (unless (positive? (string-length rs))
         (assertion-violation who "result length zero" rs))
@@ -94,30 +84,5 @@
   (define (identifier?/name=? id name)
     (and (identifier? id)
          (name=? id name)))
-  
-  #;(define-syntax define-syntax-iterate
-    (lambda (stx)
-      (syntax-case stx ()
-        [(_ name iter) 
-         (for-all identifier? (list #'name #'iter)) 
-         #'(define (name f ls)
-             (syntax-case ls ()
-               [(ls (... ...)) (iter f #'(ls (... ...)))]
-               [_ (assertion-violation 'name "not a syntax list" ls)]))])))
-  
-  #;(define-syntax-iterate syntax-map map)
-     
-  (define (syntax->list ls)
-    (syntax-case ls ()
-      [(ls ...) #'(ls ...)]
-      [_ (assertion-violation 'syntax->list "not a syntax list" ls)]))
-  
-  (define-syntax with-syntax*
-    (syntax-rules ()
-      [(_ (pc0 pc1 pc* ...) b b* ...)
-       (with-syntax (pc0)
-         (with-syntax* (pc1 pc* ...) b b* ...))]
-      [(_ pc b b* ...)
-       (with-syntax pc b b* ...)]))
   
 )

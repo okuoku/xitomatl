@@ -8,7 +8,6 @@
     (for (only (xitomatl macro-utils) identifier-append) expand)
     (only (xitomatl define) define-values define/?))
 
-  ;;; TODO: update comment
   ;;; Generics are procedures which delegate to some underlying procedure 
   ;;; determined by the arguments to the generic.  A per-generic association
   ;;; of predicates to underlying-procedures is used to determine and find 
@@ -27,7 +26,7 @@
   
   ;;; For reconfigure/temporal and reconfigure/reverse-temporal,
   ;;; `preds' must be of the type <argument-predicates> described in the
-  ;;; above comment in about `specializations'.  That is,
+  ;;; below comment about `specializations'.  That is,
   ;;; `preds' must be: a possibly empty list of one-argument predicates which
   ;;; return true or #f, or an improper list of predicates of the type just
   ;;; described but with the final cdr being an any-number-of-arguments
@@ -53,7 +52,7 @@
   #;(define/? (reconfigure/reverse-temporal specializations
                                           [preds valid-predicates-specification?]
                                           [proc procedure?])
-    (cons (cons preds proc) specializations))
+    (cons (list preds proc) specializations))
   
   #|(define (reconfigure/type-domain ---)
     ---)|#
@@ -65,7 +64,7 @@
           [(procedure? x)]
           [else #f]))
   
-  #;(define (valid-specializations? x)
+  (define (valid-specializations? x)
     (cond [(pair? x) (and (valid-predicates-specification? (caar x))
                           (procedure? (cadar x))
                           (valid-specializations? (cdr x)))]
@@ -74,8 +73,9 @@
   
   (define/? make-generic
     (case-lambda/?
-      [(reconfigure) (make-generic reconfigure 'generic)]
-      [([reconfigure procedure?] [gwho symbol?])
+      [(reconfigure) 
+       (make-generic reconfigure 'generic 'generic-specialize!)]
+      [([reconfigure procedure?] [gwho symbol?] [swho symbol?])
        ;; specializations ::= (<specialization> ...)
        ;; <specialization> ::= (<argument-predicates> <specialized-procedure>
        ;;                       <supplemental> ...)
@@ -107,19 +107,22 @@
                               (if (null? test-args)
                                 (cadar specs)  ;; found the right specialized procedure
                                 (next-spec (cdr specs)))]
-                             [else  ;; predicate for rest args
+                             [(procedure? preds)  ;; predicate for rest args
                               (if (apply preds test-args)
                                 (cadar specs)  ;; found the right specialized procedure
-                                (next-spec (cdr specs)))]))]
+                                (next-spec (cdr specs)))]
+                             [else (assert #F)]))]
                         [(null? specs) 
                          (apply assertion-violation gwho "no specialization" args)]
-                        [else
-                         (assertion-violation gwho 
-                           "invalid specializations value" specs)]))])
+                        [else (assert #F)]))])
                (apply proc args)))
            ;; Its specializer
            (lambda args
-             (set! specializations (apply reconfigure specializations args)))))]))
+             (set! specializations 
+                   (let ([specs (apply reconfigure specializations args)])
+                     (unless (valid-specializations? specs)
+                       (assertion-violation swho "invalid specializations value" specs))
+                     specs)))))]))
   
   (define-syntax define-generic--meta
     (lambda (stx)
@@ -128,18 +131,15 @@
          (identifier? #'name)
          (with-syntax ([specialize! (identifier-append #'name #'name "-specialize!")])
            #'(define-values (name specialize!)
-               (let-values ([(g sg) (make-generic reconfig 'name)])
+               (let-values ([(g sg) (make-generic reconfig 'name 'specialize!)])
                  (sg sargs ...)
                  ...
                  (values g sg))))])))
   
   (define-syntax define-generic/temporal
-    ;;; The syntax of `define-generic/temporal' is similar to that of `case-lambda'.
-    ;;; Each clause specifies a specialization for the generic.
+    ;;; (define-generic/temporal <identifier> <specialization-clause> ...)
     ;;;
-    ;;; (define-generic <identifier> <spec-clause> ...)    syntax
-    ;;;
-    ;;; <spec-clause> ::= (<predicate-formals> . <body>)
+    ;;; <specialization-clause> ::= (<predicate-formals> . <body>)
     ;;; <predicate-formals> ::= ((<identifier> <predicate>) ...)
     ;;;                       | ((<identifier> <predicate>)
     ;;;                          (<identifier> <predicate>) ...

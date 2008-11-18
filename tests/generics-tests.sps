@@ -75,7 +75,7 @@
 (check (g0 '(x)) => '((x)))
 (check (g0 's 3 's #\c) => '(#\c s 3 s))
 ;; misuse errors
-(check-AV-who-msg make-generic "argument check failed" (make-generic values "oops"))
+(check-AV-who-msg make-generic "argument check failed" (make-generic values "oops" "oops"))
 (define-values (g1 g1-specialize!) 
   (make-generic (lambda args 
                   (apply reconfigure/temporal args) 
@@ -88,9 +88,17 @@
   (g1-specialize! (cons* char? number? 'oops) values))
 (check-AV-who-msg reconfigure/temporal "argument check failed"
   (g1-specialize! (list number?) 'oops))
-(g1-specialize! '() values)
-(check-AV-who-msg generic "invalid specializations value"
-  (g1))
+(check-AV-who-msg generic-specialize! "invalid specializations value"
+  (g1-specialize! '() values))
+(let ()
+  (define-values (foo foo-s!) 
+    (make-generic (lambda args 
+                    (apply reconfigure/temporal args) 
+                    'oops)
+                  'foo 'foo-s!))
+  (check-no-spec foo (foo))
+  (check-AV-who-msg foo-s! "invalid specializations value"
+    (foo-s! '() values)))
 ;; define-generic/temporal syntax
 (define-generic/temporal g2
   [() 1]
@@ -176,5 +184,6 @@
          (define x 'okay)
          (g x))
        => 'okay)
+
 
 (check-report)

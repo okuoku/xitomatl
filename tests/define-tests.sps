@@ -135,6 +135,15 @@
   (syntax-case stx () [(_ x) #'(list x)]))
 (check (M2 'zzz) => '(zzz))
 
+;;; define/who
+
+(define/who (w0 x y . a) (list x y a who))
+(check (w0 1 2 3 4) => '(1 2 (3 4) w0))
+(define/who w1 (case-lambda [() 'bad] [(a) (list a who)]))
+(check (w1 1) => '(1 w1))
+(define/who w2 (list who who))
+(check w2 => '(w2 w2))
+
 ;;; define/AV
 
 (define/AV f0 (case-lambda [() (AV "oops")] [r r]))

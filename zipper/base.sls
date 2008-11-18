@@ -1,7 +1,7 @@
-#!r6rs
 ; Taken from Oleg's
 ; http://okmij.org/ftp/Scheme/zipper-in-scheme.txt
 
+#!r6rs
 (library (xitomatl zipper base)
   (export
     zipper? zipper-thing zipper-cont
@@ -12,16 +12,13 @@
   (import 
     (rnrs)
     (only (xitomatl delimited-control) shift reset)
-    (only (xitomatl define) define/?)
+    (only (xitomatl define) define/? define/?/AV)
     (only (xitomatl predicates) exact-non-negative-integer?))
   
   
   (define-record-type zipper (fields thing cont))
   
-  (define :zip-keep-val:
-    (let ()
-      (define-record-type :zip-keep-val:)
-      (make-:zip-keep-val:)))
+  (define :zip-keep-val: (list #T)) ;; unique object
   
   (define/? (make-zip-iterator [iterate procedure?])
     (lambda (x)
@@ -33,10 +30,10 @@
       (let ([x ((zipper-cont z) (zipper-thing z))])
         (if (zipper? x) (loop x) x))))
   
-  (define/? (zip-n [z zipper?] [n exact-non-negative-integer?])
+  (define/?/AV (zip-n [z zipper?] [n exact-non-negative-integer?])
     (do ([i 0 (+ 1 i)]
          [z z ((zipper-cont z) :zip-keep-val:)])
       [(and (= i n)
-            (if (zipper? z) #t (error 'zip-n "not enough elements")))
+            (if (zipper? z) #t (AV "not enough elements")))
        z]))
 )

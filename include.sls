@@ -23,19 +23,22 @@
          (and (identifier? #'ctxt)
               (or (path? (syntax->datum #'filename))
                   (syntax-violation #f "not a path" stx #'filename)))
-         (let ([fn (syntax->datum #'filename)])
-           (with-exception-handler
-             (lambda (ex)
-               (error/conditions 'include/lexical-context
-                 "error while trying to include" (list fn)
-                 (if (condition? ex) ex (make-irritants-condition (list ex)))))
-             (lambda ()
-               (call-with-input-file fn
-                 (lambda (fip)
-                   (let loop ([x (read fip)] [a '()])
-                     (if (eof-object? x)
-                       (datum->syntax #'ctxt `(begin . ,(reverse a)))
-                       (loop (read fip) (cons x a)))))))))])))
+         (let* ([fn (syntax->datum #'filename)]
+                [datums 
+                 (with-exception-handler
+                   (lambda (ex)
+                     (error/conditions 'include/lexical-context
+                      "error while trying to include" (list fn)
+                      (if (condition? ex) ex (make-irritants-condition (list ex)))))
+                   (lambda ()
+                     (call-with-input-file fn
+                       (lambda (fip)
+                         (let loop ([a '()])
+                           (let ([x (read fip)])
+                             (if (eof-object? x)
+                               (reverse a)
+                               (loop (cons x a)))))))))])
+           (datum->syntax #'ctxt `(begin . ,datums)))])))
   
   (define-syntax include/resolve
     (lambda (stx)
@@ -43,14 +46,13 @@
         [(ctxt (lib-path* ...) file-path)
          (for-all (lambda (s) (and (string? s) (positive? (string-length s)))) 
                   (syntax->datum #'(file-path lib-path* ...)))
-         (let ([lp* (map syntax->datum #'(lib-path* ...))]
-               [fp (syntax->datum #'file-path)])
-           (let loop ([search (search-paths)])
+         (let ([p (apply path-join (append (map syntax->datum #'(lib-path* ...))
+                                           (list (syntax->datum #'file-path))))]
+               [sp (search-paths)])
+           (let loop ([search sp])
              (if (null? search)
-               (error 'include/resolve "cannot find file in search paths"
-                      (apply path-join (append lp* (list fp)))
-                      (search-paths))
-               (let ([full (apply path-join (car search) (append lp* (list fp)))])
+               (error 'include/resolve "cannot find file in search paths" p sp)
+               (let ([full (path-join (car search) p)])
                  (if (file-exists? full)
                    #`(include/lexical-context ctxt #,full)
                    (loop (cdr search)))))))])))

@@ -10,6 +10,8 @@
     (only (xitomatl define) define/? define/AV define/?/AV)
     (xitomatl lists compat))
   
+  ;;; TODO! These must be cyclic structure / circular list safe!
+  
   ; Deterministic, left-to-right map
   ; It preserves sharing as much as possible: that is, if given the pair
   ; (h . t), (and (eq? h (f h)) 
@@ -17,6 +19,7 @@
   ;; holds, then
   ; (eq? (map/left-right/preserving f l) l) holds as well.
   (define/?/AV (map/left-right/preserving [f procedure?] l)
+    ;; TODO: could this be made tail-recursive / constant space?
     (let loop ([f f] [l l] [orig l])
       (cond [(pair? l) (let ([h (car l)] [t (cdr l)])
                          (let ([h1 (f h)] [t1 (loop f t orig)])

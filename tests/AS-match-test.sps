@@ -2,7 +2,7 @@
 (import
   (rnrs)
   (rnrs r5rs)
-  (only (xitomatl common) current-milliseconds printf)
+  (only (xitomatl common) printf)
   (xitomatl AS-match))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -10,7 +10,7 @@
 
 (define *pass* 0)
 (define *fail* 0)
-(define *start* 0)
+#;(define *start* 0)
 
 (define (run-test name thunk expect eq pass-msg fail-msg)
   (let ((result (thunk)))
@@ -34,7 +34,7 @@
 (define (test-begin . o)
   (set! *pass* 0)
   (set! *fail* 0)
-  (set! *start* (current-milliseconds)))
+  #;(set! *start* (current-milliseconds)))
 
 (define (format-float n prec)
   (let* ((str (number->string n))
@@ -60,9 +60,9 @@
     (format-float (* 100 x) 2)))
 
 (define (test-end . o)
-  (let ((end (current-milliseconds))
+  (let (#;(end (current-milliseconds))
         (total (+ *pass* *fail*)))
-    (printf "  ~a tests completed in ~a seconds\n"
+    #;(printf "  ~a tests completed in ~a seconds\n"
             total (format-float (exact->inexact (/ (- end *start*) 1000)) 3))
     (printf "  ~a (~a%) tests passed\n"
             *pass* (format-percent *pass* total))

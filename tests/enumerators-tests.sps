@@ -210,6 +210,48 @@
    '())
   => '(#\" #\r #\a #\b #\" #\space #\o #\o #\f #\space #\3 #\2 #\1))
 (check (port-closed? sip1) => #f)
+(define text
+"Blah 123 ()\n\
+\"another\" #\\l #(i n) #\\e\n\
+a n d ((()))")
+(check (fold/enumerator
+        (input-port-enumerator get-datum)
+        (open-string-input-port text)
+        (lambda (d a)
+          (values #t (cons d a)))
+        '())
+       => '(((())) d n a #\e #(i n) #\l "another" () 123 Blah))
+(check (fold/enumerator
+        (input-port-enumerator get-char)
+        (open-string-input-port text)
+        (lambda (c i)
+          (if (< i 10)
+            (values #t (+ 1 i))
+            (values #f c)))
+        0)
+       => #\))
+(check-values (fold/enumerator
+               (input-port-enumerator get-char)
+               (open-string-input-port text)
+               (lambda (c)
+                 (values #f 1 2 3 4)))
+              => 1 2 3 4)
+
+;;----------------------------------------------------------------------------
+;; sequence
+;;----------------------------------------------------------------------------
+(define u8-e
+  (sequence-enumerator bytevector-length bytevector-u8-ref))
+;; basic
+(check-values (fold/enumerator u8-e #vu8() (lambda _ (assert #f)))
+              => )
+(check-values (fold/enumerator u8-e #vu8() (lambda _ (assert #f)) 1 2 3)
+              => 1 2 3)
+(check-values (fold/enumerator u8-e #vu8(1) (lambda (x . s) (values #t (cons x s))))
+              => '(1))
+(check-values (fold/enumerator u8-e #vu8(1 2 3 4 5) 
+                               (lambda (x . s) (apply values #t x s))) 
+              => 5 4 3 2 1)
 
 ;;----------------------------------------------------------------------------
 ;; hashtables

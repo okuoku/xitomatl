@@ -13,6 +13,7 @@
      (profiled:>= >=)
      (profiled:abs abs)
      (profiled:acos acos)
+     (profiled:angle angle)
      (profiled:append append)
      (profiled:apply apply)
      (profiled:asin asin)
@@ -170,6 +171,7 @@
      (profiled:condition-who condition-who)
      (profiled:condition? condition?)
      (profiled:cons cons)
+     (profiled:cons* cons*)
      (profiled:cos cos)
      (profiled:current-error-port current-error-port)
      (profiled:current-input-port current-input-port)
@@ -517,6 +519,7 @@
      (profiled:sin sin)
      (profiled:sint-list->bytevector sint-list->bytevector)
      (profiled:sqrt sqrt)
+     (profiled:standard-error-port standard-error-port)
      (profiled:standard-input-port standard-input-port)
      (profiled:standard-output-port standard-output-port)
      (profiled:string string)
@@ -598,7 +601,7 @@
      (profiled:with-output-to-file with-output-to-file)
      (profiled:write write)
      (profiled:write-char write-char)
-     (profiled:zero? zero?) )
+     (profiled:zero? zero?))
     ;; everything else from (rnrs)
     &assertion &condition &error &i/o &i/o-decoding
     &i/o-encoding &i/o-file-already-exists
@@ -610,19 +613,19 @@
     &warning &who ... => _ and assert begin buffer-mode case
     case-lambda cond define define-condition-type
     define-enumeration define-record-type define-syntax do
-    else endianness eol-style error-handling-mode fields file-options
-    guard identifier-syntax if lambda let let* let*-values
-    let-syntax let-values letrec letrec* letrec-syntax mutable or opaque
-    quasiquote quasisyntax quote record-constructor-descriptor
-    record-type-descriptor set! sealed syntax syntax-case
-    syntax-rules unless unquote unquote-splicing unsyntax
-    unsyntax-splicing when with-syntax)
+    else endianness eol-style error-handling-mode fields
+    file-options guard identifier-syntax if immutable lambda
+    let let* let*-values let-syntax let-values letrec letrec*
+    letrec-syntax mutable nongenerative opaque or parent
+    parent-rtd protocol quasiquote quasisyntax quote
+    record-constructor-descriptor record-type-descriptor
+    sealed set! syntax syntax-case syntax-rules unless unquote
+    unquote-splicing unsyntax unsyntax-splicing when with-syntax)
   (import
     (rnrs)
-    (for (rnrs eval) expand)
-    (xitomatl profiler srfi-time)  ;; change as desired
+    (only (xitomatl profiler srfi-time) define/profiled)  ;; change as desired
     (for (only (xitomatl macro-utils) identifier-append) expand)
-    (for (only (xitomatl r6rs-bindings utils) variables-of) expand))
+    (for (only (xitomatl r6rs-bindings utils) names-of) expand))
   
   (define-syntax define-all
     (lambda (stx)
@@ -632,10 +635,7 @@
                         (map (lambda (id)
                                (list (identifier-append #'kw 'profiled: id)
                                      (datum->syntax #'kw id)))
-                             (filter (lambda (id)
-                                       (guard (ex [#t #f])
-                                         (eval `(procedure? ,id) (environment '(rnrs)))))
-                                     (variables-of '(rnrs))))])
+                             (names-of '(rnrs) 'procedures))])
            #'(begin
                (define/profiled (profiled:n . a) (apply r:n a))
                ...))])))

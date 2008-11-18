@@ -5,7 +5,8 @@
     textual-input-port? textual-output-port?
     port-closed?  ;; from (xitomatl ports compat)
     read-all get-lines-all
-    port-for-each port-map port-enumerator
+    port-for-each port-map 
+    input-port-enumerator  ;; from (xitomatl enumerators)
     open-binary-compound-input-port open-textual-compound-input-port
     #|open-binary-pipe-ports open-textual-pipe-ports|#)
   (import
@@ -15,6 +16,7 @@
     #|(only (xitomatl bytevectors) subbytevector)
     (only (xitomatl strings) string-copy!)
     (xitomatl queue)|#
+    (only (xitomatl enumerators) fold/enumerator input-port-enumerator)
     (xitomatl ports compat))
   
   (define (binary-input-port? x)
@@ -47,35 +49,24 @@
   (define port-for-each
     (case-lambda
       [(proc reader port)
-       (let ([x (reader port)])
-         (unless (eof-object? x)
-           (proc x)
-           (port-for-each proc reader port)))]
+       (fold/enumerator
+        (input-port-enumerator reader)
+        port
+        (lambda (x) (proc x) #T))]
       [(proc reader) 
        (port-for-each proc reader (current-input-port))]))
   
   (define port-map
     (case-lambda
       [(proc reader port)
-       (let ([a '()])
-         (port-for-each 
-           (lambda (x)
-             (set! a (cons (proc x) a))) 
-           reader port)
-         (reverse a))]
+       (reverse
+        (fold/enumerator
+         (input-port-enumerator reader)
+         port
+         (lambda (x a) (values #T (cons (proc x) a)))
+         '()))]
       [(proc reader) 
        (port-map proc reader (current-input-port))]))
-  
-  (define (port-enumerator reader)
-    (lambda (port proc seeds)
-      (let loop ([seeds seeds])
-        (let ([x (reader port)])
-          (if (eof-object? x)
-            (apply values seeds)
-            (let-values ([(continue . next-seeds) (apply proc x seeds)])
-              (if continue
-                (loop next-seeds)
-                (apply values next-seeds))))))))
   
   (define/AV (open-compound-input-port list-or-proc maybe-transcoder)
     ;;; A compound input port is a custom port which represents the logical
@@ -277,7 +268,7 @@
      substring
      string-copy!
      string-length))
-|#  
+|# 
   ;; TODO: Pushback ports
   
   ;; TODO?: Filter ports

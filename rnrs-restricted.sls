@@ -24,7 +24,7 @@
     &irritants &lexical &message &no-infinities &no-nans
     &non-continuable &serious &syntax &undefined &violation
     &warning &who * + - ... / < <= = => > >= _ abs acos and
-    append apply asin assert assertion-violation
+    angle append apply asin assert assertion-violation
     assertion-violation? assoc assp assq assv atan begin
     binary-port? bitwise-and bitwise-arithmetic-shift
     bitwise-arithmetic-shift-left
@@ -74,7 +74,7 @@
     char>=? char>? char? close-input-port close-output-port
     close-port command-line complex? cond condition
     condition-accessor condition-irritants condition-message
-    condition-predicate condition-who condition? cons cos
+    condition-predicate condition-who condition? cons cons* cos
     #;current-error-port #;current-input-port #;current-output-port
     datum->syntax define define-condition-type
     define-enumeration define-record-type define-syntax
@@ -86,7 +86,7 @@
     enum-set-union enum-set-universe enum-set=? eof-object
     eof-object? eol-style eq? equal-hash equal? eqv? error
     error-handling-mode error? even? exact exact-integer-sqrt
-    exact? exists exit exp expt #;file-exists? #;file-options
+    exact? exists exit exp expt fields #;file-exists? #;file-options
     filter find finite? fixnum->flonum fixnum-width fixnum?
     fl* fl+ fl- fl/ fl<=? fl<? fl=? fl>=? fl>? flabs flacos
     flasin flatan flceiling flcos fldenominator fldiv
@@ -121,7 +121,7 @@
     #;i/o-filename-error? i/o-invalid-position-error?
     i/o-port-error? i/o-read-error? i/o-write-error?
     identifier-syntax identifier? if imag-part
-    implementation-restriction-violation? inexact inexact?
+    implementation-restriction-violation? immutable inexact inexact?
     infinite? input-port? integer->char integer-valued?
     integer? irritants-condition? lambda latin-1-codec lcm
     least-fixnum length let let* let*-values let-syntax
@@ -154,19 +154,19 @@
     make-transcoder make-undefined-violation
     make-variable-transformer make-vector make-violation
     make-warning make-who-condition map max member memp memq
-    memv message-condition? min mod mod0 nan?
+    memv message-condition? min mod mod0 mutable nan?
     native-endianness native-eol-style native-transcoder
     negative? #;newline no-infinities-violation?
-    no-nans-violation? non-continuable-violation? not null?
-    number->string number? numerator odd?
+    no-nans-violation? non-continuable-violation? nongenerative not null?
+    number->string number? numerator odd? opaque
     open-bytevector-input-port open-bytevector-output-port
     #;open-file-input-port #;open-file-input/output-port
     #;open-file-output-port #;open-input-file #;open-output-file
     open-string-input-port open-string-output-port or
-    output-port-buffer-mode output-port? pair? partition
+    output-port-buffer-mode output-port? pair? parent parent-rtd partition
     #;peek-char port-eof? port-has-port-position?
     port-has-set-port-position!? port-position port-transcoder
-    port? positive? procedure? put-bytevector put-char
+    port? positive? procedure? protocol put-bytevector put-char
     put-datum put-string put-u8 quasiquote quasisyntax quote
     raise raise-continuable rational-valued? rational?
     rationalize #;read #;read-char real->flonum real-part
@@ -177,9 +177,9 @@
     record-type-field-names record-type-generative?
     record-type-name record-type-opaque? record-type-parent
     record-type-sealed? record-type-uid record? remove remp
-    remq remv reverse round serious-condition? set!
+    remq remv reverse round serious-condition? sealed set!
     set-port-position! simple-conditions sin
-    sint-list->bytevector sqrt #;standard-input-port
+    sint-list->bytevector sqrt #;standard-error-port #;standard-input-port
     #;standard-output-port string string->bytevector
     string->list string->number string->symbol string->utf16
     string->utf32 string->utf8 string-append string-ci-hash

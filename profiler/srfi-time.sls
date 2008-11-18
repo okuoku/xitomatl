@@ -2,87 +2,96 @@
 (library (xitomatl profiler srfi-time)
   (export
     case-lambda/profiled lambda/profiled define/profiled
-    generate-report print-report
-    reset-recorded-uses)
+    generate-report print-report)
   (import
     (rnrs)
     (xitomatl srfi time)
     (xitomatl profiler meta)
-    (only (xitomatl box) box-value)
+    (only (xitomatl enumerators) fold)
     (only (xitomatl common) fprintf pretty-print format))
   
-  (def--case-lambda/profiled case-lambda/profiled 
-    current-time add-duration time-difference)
+  (define make-profiled-proxy 
+    (make-make-profiled-proxy current-time add-duration 
+                              (lambda (x y)
+                                (if (eq? 'time-duration (time-type y))
+                                  (subtract-duration x y)
+                                  (time-difference x y)))))
   
-  (def--lambda/profiled lambda/profiled
-    current-time add-duration time-difference)
+  (def--case-lambda/profiled case-lambda/profiled make-profiled-proxy)
   
-  (def--define/profiled define/profiled 
-    current-time add-duration time-difference)
+  (def--lambda/profiled lambda/profiled make-profiled-proxy)
+  
+  (def--define/profiled define/profiled make-profiled-proxy)
   
   (define (generate-report)
-    (let-values ([(keys vals) (hashtable-entries profiled-procedures-HT)])
+    (let-values ([(keys vals) (hashtable-entries (profiled-procedures-HT))])
       (vector->list vals)))
   
   (define print-report
     (case-lambda
       [()
        (print-report #f)]
-      [(print-unused?) 
-       (print-report print-unused? (generate-report))]
-      [(print-unused? report) 
-       (print-report print-unused? report (current-output-port))]
-      [(print-unused? report port)
+      [(print-unused) 
+       (print-report print-unused (generate-report))]
+      [(print-unused report) 
+       (print-report print-unused report (current-output-port))]
+      [(print-unused report port)
        (define (fpf str . args) (apply fprintf port str args))
        (define (fpp x) (pretty-print x port))
+       (define (fmt-num-set ns)
+         (apply string-append (map (lambda (n) (format " ~a" n)) (list-sort < ns))))
        (for-each
-         (lambda (pp)
-           (fpf "\n=================================================================\n")
-           (fpf "Profile for:\n")
-           (fpp (profiled-procedure-source-code pp))
-           (fpf "Statistics:\n")
-           (fpf " calls: ~s   returns: ~s   entries/exits: ~s\n"
-                (box-value (profiled-procedure-calls-num pp)) 
-                (box-value (profiled-procedure-returns-num pp))
-                (box-value (profiled-procedure-entries/exits-num pp)))
-           (let ([uses (profiled-procedure-uses pp)])
-             (define (count get pred)
-               (let ([nl '()])
-                 (for-each (lambda (u)
-                             (let ([n (get u)])
-                               (unless (or (not (pred u)) (member n nl))
-                                 (set! nl (cons n nl))))) 
-                           uses)
-                 (apply string-append (map (lambda (n) (format " ~s" n)) (list-sort < nl)))))
-             (let ([cs (count procedure-use-args-num procedure-use-called?)])
-               (when (positive? (string-length cs))
-                 (fpf " numbers of arguments to calls:~a\n" cs)))
-             (let ([cs (count procedure-use-retvals-num procedure-use-returned?)])
-               (when (positive? (string-length cs))
-                 (fpf " numbers of values returned:~a\n" cs)))
-             (let ([ts (map (lambda (u)
-                              (let* ([d (time-difference (procedure-use-stop u) 
-                                                         (procedure-use-start u))]
-                                     [t (+ (time-second d) (/ (time-nanosecond d) 1e9))])
-                                (max t 0)))
-                            uses)])
-               (when (positive? (length ts))
-                 (fpf " average time: ~s sec\n" 
-                      (let loop ([ts^ ts] [a 0])
-                        (if (null? ts^) 
-                          (/ a (length ts))
-                          (loop (cdr ts^) (+ a (car ts^))))))
-                 (fpf " minimum time: ~s sec\n" 
-                      (let loop ([ts (cdr ts)] [m (car ts)])
-                        (if (null? ts) m (loop (cdr ts) (min m (car ts))))))
-                 (fpf " maximum time: ~s sec\n" 
-                      (let loop ([ts (cdr ts)] [m (car ts)])
-                        (if (null? ts) m (loop (cdr ts) (max m (car ts)))))))))
-           (fpf "=================================================================\n"))
-         (if print-unused?
-           report
-           (filter 
-             (lambda (pp) (positive? (length (profiled-procedure-uses pp))))
-             report)))]))
+        (lambda (pp)           
+          (let-values 
+              ([(calls-num returns-num entries/exits-num args-nums vals-nums times)
+                (fold 
+                 (profiled-procedure-uses pp)
+                 (lambda (u c r e a v t)
+                   (let ([start (procedure-use-start u)]
+                         [stop (procedure-use-stop u)]
+                         [called (procedure-use-called u)]
+                         [returned (procedure-use-returned u)])
+                     (values #T 
+                             (if called (+ 1 c) c)
+                             (if returned (+ 1 r) r)
+                             (+ 1 e)
+                             (if (and called (not (memv called a)))
+                               (cons called a)
+                               a)
+                             (if (and returned (not (memv returned v)))
+                               (cons returned v)
+                               v)
+                             (let* ([d (time-difference stop start)]
+                                    [s (let ([s (time-second d)]
+                                             [ns (/ (time-nanosecond d) #e1e9)])
+                                         ((if (negative? s) - +) s ns))])
+                               (cons (max s 0) t)))))
+                 0 0 0 '() '() '())])
+            (when (or (positive? entries/exits-num) print-unused)
+              (fpf "\n=================================================================\n")
+              (fpf "Profile for:\n")
+              (fpp (profiled-procedure-source-code pp))
+              (fpf "Statistics:\n")
+              (fpf " calls: ~s   returns: ~s   entries/exits: ~s\n" 
+                   calls-num returns-num entries/exits-num)
+              (unless (null? args-nums)
+                (fpf " numbers of arguments to calls:~a\n" (fmt-num-set args-nums)))
+              (unless (null? vals-nums)
+                (fpf " numbers of values returned:~a\n" (fmt-num-set vals-nums)))
+              (unless (null? times)
+                (let-values ([(count total minimum maximum)
+                              (fold times
+                                    (lambda (ti c to mi ma)
+                                      (values #T 
+                                              (+ 1 c)
+                                              (+ ti to)
+                                              (if mi (min ti mi) ti)
+                                              (max ti ma)))
+                                    0 0 #F 0)])
+                  (fpf " average time: ~s sec\n" (inexact (/ total count)))
+                  (fpf " minimum time: ~s sec\n" (inexact minimum))
+                  (fpf " maximum time: ~s sec\n" (inexact maximum))))
+              (fpf "=================================================================\n"))))
+        report)]))
 
 )

@@ -9,8 +9,10 @@
     (only (xitomatl define) define/?/AV define/?)
     (only (xitomatl file-system base) directory-walk-enumerator)
     (only (xitomatl file-system paths) path? path-join path=?)
-    (only (xitomatl ports) textual-input-port? port-enumerator)
-    (only (xitomatl exceptions) catch warning))
+    (only (xitomatl ports) textual-input-port?)
+    (only (xitomatl enumerators) input-port-enumerator)
+    (only (xitomatl exceptions) catch warning)
+    (only (xitomatl alists) assoc-update))
   
   (define/?/AV datum-find-enumerator 
     (case-lambda/?
@@ -27,11 +29,11 @@
             (AV "invalid start argument" start)]))]))
 
   (define (find/port pred want-warn port proc seeds)
-    ((port-enumerator (lambda (p)
-                        (catch ex ([(lexical-violation? ex)
-                                    (when want-warn (warn ex port))
-                                    (eof-object)])
-                          (get-datum p))))
+    ((input-port-enumerator (lambda (p)
+                              (catch ex ([(lexical-violation? ex)
+                                          (when want-warn (warn ex port))
+                                          (eof-object)])
+                                (get-datum p))))
      port
      (lambda (datum . seeds)
        (let recur ([ds (list datum)] [seeds seeds])
@@ -108,9 +110,9 @@
        (lambda/? ([proc procedure?] start)
          ((datum-find-enumerator pred want-warn) 
           start
-          (lambda (d . r)
-            (apply proc d r)
-            #t)
+          (case-lambda
+            [(d f) (proc d f) #T]
+            [(d) (proc d) #T])
           '()))]))
   
   (define datum-find->list
@@ -119,28 +121,17 @@
        (datum-find->list pred #f)]
       [(pred want-warn)
        (lambda (start)
-         (let ([r (reverse
-                   ((datum-find-enumerator pred want-warn) 
-                    start
-                    (if (path? start)
-                      (lambda (d f a)
-                        (values #t (let* ([found #f]
-                                          [a (map (lambda (x) 
-                                                    (if (path=? f (car x))
-                                                      (begin (set! found #t)
-                                                             (cons* f d (cdr x)))
-                                                      x))
-                                                  a)])
-                                     (if found
-                                       a
-                                       (cons (list f d) a)))))
-                      (lambda (d a)
-                        (values #t (cons d a))))
-                    '(())))])
+         (let ([r ((datum-find-enumerator pred want-warn) 
+                   start
+                   (if (path? start)
+                     (lambda (d f a)
+                       (values #t (assoc-update a f (lambda (x) (cons d x)) '())))
+                     (lambda (d a)
+                       (values #t (cons d a))))
+                   '(()))])
            (if (path? start)
-             (map (lambda (x)
-                    (cons (car x) (reverse (cdr x))))
-                  r)
-             r)))]))
+             (map (lambda (x) (cons (car x) (reverse (cdr x))))
+                  (list-sort (lambda (x y) (string<? (car x) (car y))) r))
+             (reverse r))))])) 
 
 )

@@ -11,6 +11,7 @@
     (only (ikarus system $interrupts) $swap-engine-counter!))    
   
   ;;; Based off of The Scheme Programming Language engines.
+  ;;; NOTE: This probably still has issues that need to be determined.
   ;;; NOTE: not currently thread safe
   
   (define (start-timer ticks)
@@ -50,10 +51,9 @@
   (define (timer-handler)
     ;;; The pcb->engine_counter just passed 0, so there's definitely
     ;;; enough fuel for do-expire to reset-state.
-    ;; add1 to the ticks supplied by resume to account for the 1 tick consumed
-    ;; by Ikarus's $do-event.  This gives a consistent logic to processes
-    ;; which calculated they should only need X more ticks to complete.
-    ;; NOTE: this will probably need to be adjusted as Ikarus changes.
+    ;; NOTE: In order to give a consistent logic to processes which calculated
+    ;; they should only need X more ticks to complete, the ticks supplied by
+    ;; resume may need to be adjusted, and this may need to be updated as Ikarus changes.
     (start-timer (call/cc do-expire)))
   
   (define (new-engine resume)

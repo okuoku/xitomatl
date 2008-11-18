@@ -141,9 +141,7 @@
 (check ((datum-find->list (matches? (:or #vu8(123 3 2 1) 'x)))
         (open-string-input-port "x #(#vu8(2 1) (#vu8(123 3 2 1))) ()"))
        => '(x #vu8(123 3 2 1)))
-(check (list-sort (lambda (x y) (string<? (car x) (car y)))
-                  ((datum-find->list (lambda (x) (or (list? x) (vector? x)))) 
-                   "."))
+(check ((datum-find->list (lambda (x) (or (list? x) (vector? x)))) ".")
        => '(("./d0/f2" #((#\c "this") #("this")) (#\c "this") #("this")) 
             ("./f0" ("s" foo #(3 "this" 2)) #(3 "this" 2))))
 

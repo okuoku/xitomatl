@@ -17,6 +17,8 @@
            r
            (loop (- n 1) (cons v r))))]))
   
+  ;;; TODO! This must be cyclic structure / circular list safe!
+  
   (define/? (last-pair [x pair?])
     (let loop ([y (cdr x)] [x x])
       (if (pair? y)

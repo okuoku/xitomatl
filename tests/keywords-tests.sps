@@ -47,7 +47,7 @@
                                         (condition-pred ex)))])
               expr
               'unexpected-return)
-            => '("keyword predicate failed" kw-name pred-form))]))
+            => '("keyword predicate false" kw-name pred-form))]))
 
 (define-syntax check-invalid-options
   (syntax-rules ()

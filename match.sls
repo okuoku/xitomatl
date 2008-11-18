@@ -1,21 +1,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Pattern matcher by Derick Eddington (derick.eddington@gmail.com)
+;;; Destructuring binding pattern matcher by Derick Eddington
 ;;; 
-;;; Somewhat similar to the common Wright matcher, but different.
 ;;; Distinguishing features:
-;;; - Regular expression matching against strings, with sub-group matching. 
+;;; - Regular expression matching against strings, with sub-group matching.
+;;;   (Utilizes Alex Shinn's IrRegex library).
 ;;; - Record matching, with field matching. 
 ;;; - Arbitrary predicate matching.
 ;;; - "and", "or", and "not" matching.
 ;;; - quasiquote patterns, with the unquote'd expressions evaluated as 
 ;;;   normal expressions in the environment of the match expression.
-;;; - "..." multiple elements matching, with specifiable minimum and maximum.
-;;; - Multiple "..." patterns in the same pattern.
+;;; - "..." sequence matching, with specifiable minimum and maximum.
+;;; - Multiple "..." in the same pattern.
+;;; - "..." works with, and the same for, every compound pattern type, i.e.,
+;;;   regular expression with sub-group patterns, record with field patterns,
+;;;   "and", "or", and "not", nested "..." patterns, and everything else.
 ;;; - "(x ... . r)" pattern matches a possibly empty chain of pairs,
 ;;;   like syntax-case.
-;;; - "..." pattern works with every compound pattern type.
-;;; - Abstracted design.  syntax-case procedural macros ease implementation.
-;;;   The executed expanded form uses procedural abstraction instead of
+;;; - Clean and tractable design. syntax-case eases implementation. 
+;;; - The executed expanded form uses procedural abstraction instead of
 ;;;   generating redundant code.
 ;;; - Efficient execution.
 ;;; - Functional, i.e., no mutation.

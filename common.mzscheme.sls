@@ -4,13 +4,13 @@
     add1 sub1
     format printf fprintf pretty-print
     gensym
-    time current-milliseconds
+    time
     with-output-to-string
     ;; TODO: add to as needed/appropriate
     )
   (import
     (except (rnrs) current-output-port)
-    (only (scheme) add1 sub1 format printf fprintf gensym time current-milliseconds
+    (only (scheme) add1 sub1 format printf fprintf gensym time
                    current-output-port parameterize)
     (only (scheme pretty) pretty-print))
   

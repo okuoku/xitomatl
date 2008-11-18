@@ -2,153 +2,140 @@
 (library (xitomatl profiler meta)
   (export
     def--case-lambda/profiled def--lambda/profiled def--define/profiled
-    case-lambda/profiled--meta
+    make-make-profiled-proxy case-lambda/profiled--meta
     profiled-procedure?
     profiled-procedure-proc-obj
     profiled-procedure-source-code
-    profiled-procedure-calls-num 
-    profiled-procedure-returns-num 
-    profiled-procedure-entries/exits-num 
     profiled-procedure-uses  ;; In reverse order: newest first
     procedure-use?
     procedure-use-start 
     procedure-use-stop 
-    procedure-use-called?
-    procedure-use-args-num 
-    procedure-use-returned?
-    procedure-use-retvals-num
+    procedure-use-called
+    procedure-use-returned
     profiled-procedures-HT
     reset-recorded-uses)
   (import
     (rnrs)
-    (xitomatl box))
-  ;; NOTE for future: not currently thread-safe
+    (only (xitomatl define) define/AV)
+    (only (xitomatl srfi parameters) make-parameter))
   
-  (define-syntax box-value+1
-    (syntax-rules ()
-      [(_ id) (box-value-set! id (+ 1 (box-value id)))]))
+  ;; NOTE: Not currently thread-safe
   
   (define-syntax def--case-lambda/profiled
     (syntax-rules ()
-      [(_ name current-info current-info-add current-info-sub)
+      [(_ name make-profiled-proxy)
        (define-syntax name
          (syntax-rules ()
            [(_ [formals . body] (... ...))
             (case-lambda/profiled--meta 
              '(case-lambda [formals . body] (... ...))
-             current-info current-info-add current-info-sub
+             make-profiled-proxy
              [formals . body] (... ...))]))]))
   
   (define-syntax def--lambda/profiled
     (syntax-rules ()
-      [(_ name current-info current-info-add current-info-sub)
+      [(_ name make-profiled-proxy)
        (define-syntax name
          (syntax-rules ()
            [(_ formals . body)
             (case-lambda/profiled--meta 
              '(lambda formals . body)
-             current-info current-info-add current-info-sub
+             make-profiled-proxy
              [formals . body])]))]))
   
   (define-syntax def--define/profiled
     (syntax-rules ()
-      [(_ name current-info current-info-add current-info-sub)
+      [(_ name make-profiled-proxy)
        (define-syntax name
-         (syntax-rules ()
-           [(_ (n . formals) . body)
-            (define n 
-              (case-lambda/profiled--meta 
-               '(define (n . formals) . body)
-               current-info current-info-add current-info-sub
-               [formals . body]))]
-           [(_ name expr)
-            (define name expr)]))]))
+         (lambda (stx)
+           (syntax-case stx ()
+             [(_ (n . formals) . body)
+              (identifier? #'n)
+              #'(define n 
+                  (case-lambda/profiled--meta 
+                   '(define (n . formals) . body)
+                   make-profiled-proxy
+                   [formals . body]))]
+             [(_ n expr)
+              (identifier? #'n)
+              #'(define n expr)])))]))
   
-  (define (make-profiled-proxy proc current-info current-info-add current-info-sub
-                               calls-num returns-num entries/exits-num)
-    (define (profiled-proxy . args)
-      (box-value+1 calls-num)
-      (let ([enter-info-adj #f] [enter-info #f] [exit-info #f]
-            [call-info-adj #f] [call-info #f] [return-info #f]
-            [called? #t] [returned? #f] [retvals-num #f])
-        (dynamic-wind
-          (lambda () 
-            (box-value+1 entries/exits-num)
-            (set! enter-info-adj (current-info))
-            (set! enter-info (current-info)))
-          (lambda ()
-            (call-with-values
+  (define (make-make-profiled-proxy current-info info-add info-sub)
+    (lambda (proc)
+      (define (profiled-proxy . args)
+        (let ([enter-info-adj #f] [enter-info #f] [exit-info #f]
+              [call-info-adj #f] [call-info #f] [return-info #f]
+              [called (length args)] [returned #f])
+          (dynamic-wind
+           (lambda () 
+             (set! enter-info-adj (current-info))
+             (set! enter-info (current-info)))
+           (lambda ()
+             (call-with-values
               (lambda ()
                 (set! call-info-adj (current-info))
                 (set! call-info (current-info))
                 (apply proc args))                         
               (lambda rv
                 (set! return-info (current-info))
-                (box-value+1 returns-num)
-                (set! returned? #t)
-                (set! retvals-num (length rv))
+                (set! returned (length rv))
                 (apply values rv))))
-          (lambda ()
-            (set! exit-info (current-info))
-            (let ([start (let-values ([(i ia) (if called? 
-                                                (values call-info call-info-adj)
-                                                (values enter-info enter-info-adj))])
-                           (current-info-add i (current-info-sub i ia)))]
-                  [stop (if returned? return-info exit-info)])
-              (record-procedure-use profiled-proxy start stop
-                                    called? (if called? (length args) #f) 
-                                    returned? (if returned? retvals-num #f)))
-            ;; reset incase a continuation from proc is re-entered
-            (set! called? #f)
-            (set! returned? #f)
-            (set! call-info-adj #f)
-            (set! call-info #f)
-            (set! return-info #f)))))
-    profiled-proxy)
+           (lambda ()
+             (set! exit-info (current-info))
+             (let-values ([(i adj) 
+                           (if called 
+                             (values call-info (info-sub call-info call-info-adj))
+                             (values enter-info (info-sub enter-info enter-info-adj)))])
+               (let ([start (info-add i adj)]
+                     [stop (info-sub (if returned return-info exit-info) adj)])
+                 (record-procedure-use profiled-proxy start stop called returned)))
+             ;; Clean-up in case a continuation in proc was captured.
+             (set! enter-info-adj #F)
+             (set! enter-info #F) 
+             (set! exit-info #F)
+             (set! call-info-adj #F) 
+             (set! call-info #F) 
+             (set! return-info #F)
+             (set! called #F)
+             (set! returned #F)))))
+      profiled-proxy))
   
   (define-syntax case-lambda/profiled--meta
-    (lambda (stx)
-      (syntax-case stx ()
-        [(_ source-code current-info current-info-add current-info-sub 
-            [formals . body] ...)
-         (for-all identifier? (list #'current-info #'current-info-add #'current-info-sub))
-         #'(let ([calls-num (make-box 0)] 
-                 [returns-num (make-box 0)]
-                 [entries/exits-num (make-box 0)])
-             (define the-proc
-               (case-lambda [formals . body] ...))
-             (define profiled-proxy
-               (make-profiled-proxy the-proc current-info current-info-add current-info-sub
-                                    calls-num returns-num entries/exits-num))
-             (register-procedure profiled-proxy source-code 
-                                 calls-num returns-num entries/exits-num)
-             profiled-proxy)])))
+    (syntax-rules ()
+      [(_ source-code make-profiled-proxy [formals . body] ...)
+       (let ([profiled-proxy
+              (make-profiled-proxy (case-lambda [formals . body] ...))])
+         (register-procedure profiled-proxy source-code)
+         profiled-proxy)]))
     
   (define-record-type profiled-procedure
-    (fields proc-obj source-code calls-num returns-num entries/exits-num (mutable uses)))
+    (fields proc-obj source-code (mutable uses)))
   
   (define-record-type procedure-use
-    (fields start stop called? args-num returned? retvals-num))
+    (fields start stop called returned))
   
-  (define profiled-procedures-HT (make-eq-hashtable))
+  (define/AV profiled-procedures-HT 
+    (make-parameter (make-eq-hashtable)
+                    (lambda (x) 
+                      (if (and (hashtable? x)
+                               (eq? eq? (hashtable-equivalence-function x)))
+                        x
+                        (AV "not an eq-hashtable" x)))))
   
-  (define (register-procedure proc source-code calls-num returns-num entries/exits-num)
-    (hashtable-set! profiled-procedures-HT proc 
-      (make-profiled-procedure proc source-code calls-num returns-num entries/exits-num '())))
+  (define (register-procedure proc source-code)
+    (hashtable-set! (profiled-procedures-HT) proc 
+      (make-profiled-procedure proc source-code '())))
   
-  (define (record-procedure-use proc start stop called? args-num returned? retvals-num)
-    (let ([pp (hashtable-ref profiled-procedures-HT proc #f)])
+  (define (record-procedure-use proc start stop called returned)
+    (let ([pp (hashtable-ref (profiled-procedures-HT) proc #f)])
       (profiled-procedure-uses-set! pp 
-        (cons (make-procedure-use start stop called? args-num returned? retvals-num) 
+        (cons (make-procedure-use start stop called returned) 
               (profiled-procedure-uses pp)))))  
   
   (define (reset-recorded-uses)
-    (let-values ([(keys vals) (hashtable-entries profiled-procedures-HT)])
+    (let-values ([(keys vals) (hashtable-entries (profiled-procedures-HT))])
       (vector-for-each 
         (lambda (pp)
-          (box-value-set! (profiled-procedure-calls-num pp) 0)
-          (box-value-set! (profiled-procedure-returns-num pp) 0)
-          (box-value-set! (profiled-procedure-entries/exits-num pp) 0)
           (profiled-procedure-uses-set! pp '())) 
         vals)))  
 )

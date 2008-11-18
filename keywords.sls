@@ -16,7 +16,7 @@
   (define-syntax keywords-parser--meta
     (lambda (stx)
       (define (gen-kw-stx et-who rt-who process-input-list 
-                          missing-keyword predicate-failed)
+                          missing-keyword predicate-false)
         (lambda (kw-spec kw-value)
           (define (invalid)
             (syntax-violation et-who "invalid options for keyword" stx kw-spec))
@@ -49,8 +49,8 @@
                                   #,default
                                   (if (#,predicate #,kw-value)
                                     #,kw-value
-                                    (#,predicate-failed '#,rt-who 'kw-id
-                                                        '#,predicate #,kw-value))))]
+                                    (#,predicate-false '#,rt-who 'kw-id
+                                                       '#,predicate #,kw-value))))]
                        [default
                         (list #`[('kw-id v . r)
                                  (begin (set! #,kw-value v)
@@ -66,8 +66,8 @@
                                   (#,missing-keyword '#,rt-who 'kw-id)
                                   (if (#,predicate #,kw-value)
                                     #,kw-value
-                                    (#,predicate-failed '#,rt-who 'kw-id
-                                                        '#,predicate #,kw-value))))]
+                                    (#,predicate-false '#,rt-who 'kw-id
+                                                       '#,predicate #,kw-value))))]
                        [boolean
                         (list #`[('kw-id . r)
                                  (begin (set! #,kw-value #t)
@@ -82,16 +82,16 @@
                                   #,kw-value))])]
                 [_ (invalid)])))))
       (syntax-case stx ()
-        [(_ et-who rt-who missing-value missing-keyword predicate-failed
+        [(_ et-who rt-who missing-value missing-keyword predicate-false
             [kw-id options ...] ...)
          (for-all identifier? 
-                  #'(missing-value missing-keyword predicate-failed kw-id ...))         
+                  #'(missing-value missing-keyword predicate-false kw-id ...))         
          (with-syntax* ([(kw-value ...) (generate-temporaries #'(kw-id ...))]
                         [process-input-list (gen-temp)]
                         [((match-clause value-expr) ...)
                          (map (gen-kw-stx 
                                (syntax->datum #'et-who) #'rt-who #'process-input-list
-                               #'missing-keyword #'predicate-failed) 
+                               #'missing-keyword #'predicate-false) 
                               #'([kw-id options ...] ...)
                               #'(kw-value ...))])
            #'(lambda (input-list)
@@ -121,7 +121,7 @@
     (syntax-rules ()
       [(_ et-who rt-who . r)
        (keywords-parser--meta et-who rt-who
-        missing-value--default missing-keyword--default predicate-failed--default
+        missing-value--default missing-keyword--default predicate-false--default
         . r)]))
   
   (define-syntax keywords-parser
@@ -148,16 +148,12 @@
   (define (missing-keyword--default who kw-id)
     (AV who "missing required keyword" kw-id))
 
-  (define (predicate-failed--default who kw-id pred-form value)
-    (AV who "keyword predicate failed" kw-id 
+  (define (predicate-false--default who kw-id pred-form value)
+    (AV who "keyword predicate false" kw-id 
         (make-predicate-condition pred-form)
         (make-irritants-condition (list value))))
 
-  (define not-given
-    (let ()
-      (define-record-type not-given)
-      (make-not-given)))
-
+  (define not-given (list #T)) ;; unique object
   (define (not-given? x) (eq? x not-given))
 
   ;;--------------------------------------------------------------------------
@@ -232,14 +228,10 @@
        (keywords-parser--meta et-who ignored
         missing-value/clause-failed 
         missing-keyword/clause-failed
-        predicate-failed/clause-failed
+        predicate-false/clause-failed
         . r)]))
 
-  (define clause-failed
-    (let ()
-      (define-record-type clause-failed)
-      (make-clause-failed)))
-
+  (define clause-failed (list #T))  ;; unique object
   (define (clause-failed? x) (eq? x clause-failed))
 
   (define (missing-value/clause-failed who kw-id)
@@ -248,7 +240,7 @@
   (define (missing-keyword/clause-failed who kw-id)
     (raise clause-failed))
 
-  (define (predicate-failed/clause-failed who kw-id pred-form value)
+  (define (predicate-false/clause-failed who kw-id pred-form value)
     (raise clause-failed))
   
   (define-syntax case-lambda/kw
@@ -290,7 +282,7 @@
                         [((match-clause value-expr) ...)
                          (map (gen-kw-stx 
                                'define/kw (syntax->datum #'name) process-input-list
-                               #'missing-keyword--default #'predicate-failed--default) 
+                               #'missing-keyword--default #'predicate-false--default) 
                               #'([kw-id . opts] ...)
                               #'(kw-value ...))])
            #'(begin
