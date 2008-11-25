@@ -52,6 +52,8 @@
   (only (xitomatl r6rs-bindings spec))
   (only (xitomatl r6rs-bindings utils))
   (only (xitomatl records))
+  (only (xitomatl repl))
+  (only (xitomatl repl compat))
   (only (xitomatl rnrs-profiled))
   (only (xitomatl rnrs-restricted))
   (only (xitomatl ssax html))
