@@ -28,7 +28,7 @@
     define-values)
   (import
     (rnrs)
-    (for (only (xitomatl macro-utils) formals-ok?) expand)
+    (for (only (xitomatl macro-utils) formals-ok?/raise) expand)
     (only (xitomatl common) format))
   
   (define (define-values-error expected received-vals)
@@ -40,7 +40,7 @@
     (lambda (stx)
       (syntax-case stx ()
         [(_ (id* ... . rid) expr)
-         (formals-ok? #'(id* ... . rid) stx)         
+         (formals-ok?/raise #'(id* ... . rid) stx)         
          #`(begin
              (define t 
                (call-with-values 

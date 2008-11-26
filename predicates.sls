@@ -62,11 +62,11 @@
     (apply string<? (map symbol->string (cons* x y r))))
   
   (define (name=? x y . r)
-    (apply symbol=? 
+    (apply string=? 
            (map (lambda (n) 
-                  (cond [(identifier? n) (syntax->datum n)]
-                        [(symbol? n) n]
-                        [(string? n) (string->symbol n)]
+                  (cond [(identifier? n) (symbol->string (syntax->datum n))]
+                        [(symbol? n) (symbol->string n)]
+                        [(string? n) n]
                         [else (assertion-violation 'name=? 
                                "not an identifier, symbol, or string" n)]))
                 (cons* x y r))))

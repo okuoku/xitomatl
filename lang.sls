@@ -171,9 +171,9 @@
     ;; ports
     read-all get-lines-all port-for-each port-map
     ;; macro-utils
-    gen-temp duplicate-id unique-ids? unique-ids?/raise
-    formals-ok? identifier-append #;unwrap syntax->list
-    with-syntax*
+    gen-temp syntax->list with-syntax*
+    duplicate-id unique-ids? unique-ids?/raise formals-ok?/raise
+    identifier-append identifier?/name=?
     ;; keywords
     case-lambda/kw lambda/kw define/kw
     ;; indexes
@@ -185,6 +185,10 @@
     string-intersperse string-split string-end=?
     ;; match
     match matches? match-lambda match-lambda* match-let match-let*
+    ;; predicates
+    non-negative-integer? exact-non-negative-integer? positive-integer?
+    exact-positive-integer? exact-integer? symbol<? name=? non-empty-string?
+    char-line-ending? library-name? list-of? #;improper-list? #;datum?
     ;; SRFI-61: more general cond
     cond
     )
@@ -200,5 +204,6 @@
     (xitomatl lists)
     (xitomatl strings)
     (xitomatl match)
+    (xitomatl predicates)
     (xitomatl srfi general-cond))
 )

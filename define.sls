@@ -33,7 +33,7 @@
   (import 
     (rnrs)
     (xitomatl define define-values)
-    (for (only (xitomatl macro-utils) formals-ok? syntax->list) expand)
+    (for (only (xitomatl macro-utils) syntax->list) expand)
     (only (xitomatl common) format)
     (only (xitomatl exceptions) assertion-violation/conditions)
     (xitomatl conditions))

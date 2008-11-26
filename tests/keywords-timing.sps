@@ -45,6 +45,27 @@
 (define (n2 a b) 1)
 (define (n3 a b c) 1)
 
+(define/kw (dekw1 [a]) 1)
+(display "\nOne argument, define/kw expand-time processing:\n")
+(display "===============================================\n")
+(time (bigloop N))
+(time (bigloop N (n1 1)))
+(time (bigloop N (dekw1 'a 1)))
+
+(define/kw (dekw2 [a] [b]) 1)
+(display "\nTwo arguments, define/kw expand-time processing:\n")
+(display "================================================\n")
+(time (bigloop N))
+(time (bigloop N (n2 1 2)))
+(time (bigloop N (dekw2 'b 2 'a 1)))
+
+(define/kw (dekw3 [a] [b] [c]) 1)
+(display "\nThree arguments, define/kw expand-time processing:\n")
+(display "==================================================\n")
+(time (bigloop N))
+(time (bigloop N (n3 1 2 3)))
+(time (bigloop N (dekw3 'b 2 'c 3 'a 1)))
+
 (define lekw1 (lambda/kw ([a]) 1))
 (display "\nOne argument, lambda/kw run-time processing:\n")
 (display "===============================================\n")

@@ -84,22 +84,22 @@
   (unique-ids?/raise (list #'a #'b #'c #'a #'d) #'orig))
 (check-AV (unique-ids?/raise "oops"))
 (check-AV (unique-ids?/raise (list #'a #'b 'oops #'d)))
-;; formals-ok?
-(check (formals-ok? #'() #'orig) => #T)
-(check (formals-ok? #'(a) #'orig) => #T)
-(check (formals-ok? #'(a b c) #'orig) => #T)
-(check (formals-ok? #'(a b c . r) #'orig) => #T)
-(check (formals-ok? #'r #'orig) => #T)
+;; formals-ok?/raise
+(check (formals-ok?/raise #'() #'orig) => #T)
+(check (formals-ok?/raise #'(a) #'orig) => #T)
+(check (formals-ok?/raise #'(a b c) #'orig) => #T)
+(check (formals-ok?/raise #'(a b c . r) #'orig) => #T)
+(check (formals-ok?/raise #'r #'orig) => #T)
 (check-SV "not an identifier" orig 1 
-  (formals-ok? #'(a b 1) #'orig))
+  (formals-ok?/raise #'(a b 1) #'orig))
 (check-SV "not an identifier" orig 2
-  (formals-ok? #'(a b . 2) #'orig))
+  (formals-ok?/raise #'(a b . 2) #'orig))
 (check-SV "not an identifier" orig "oops"
-  (formals-ok? "oops" #'orig))
+  (formals-ok?/raise "oops" #'orig))
 (check-SV "duplicate identifier" orig a
-  (formals-ok? #'(a b c a d) #'orig))
+  (formals-ok?/raise #'(a b c a d) #'orig))
 (check-SV "duplicate identifier" orig c
-  (formals-ok? #'(a b c . c) #'orig))
+  (formals-ok?/raise #'(a b c . c) #'orig))
 ;; identifier-append 
 (check (identifier-append #'here #'foo "-bar-" 'zab) (=> bound-identifier=?) #'foo-bar-zab)
 (check-AV (identifier-append 'oops #'foo "-bar-" 'zab))

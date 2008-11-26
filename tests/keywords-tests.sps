@@ -84,17 +84,6 @@
               'unexpected-return)
             => "invalid options for keyword")]))
 
-(define-syntax check-invalid-formals
-  (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else (and (syntax-violation? ex)
-                                  (message-condition? ex)
-                                  (condition-message ex))])
-              (eval 'expr
-                    (environment '(rnrs) '(xitomatl keywords)))
-              'unexpected-return)
-            => "invalid keyword formals")]))
-
 (define-syntax check-no-clause
   (syntax-rules ()
     [(_ expr)
@@ -104,6 +93,27 @@
               expr
               'unexpected-return)
             => "no clause matches arguments")]))
+
+(define-syntax check-dup
+  (syntax-rules ()
+    [(_ id expr)
+     (check (guard (ex [else (and (syntax-violation? ex)
+                                  (syntax->datum (syntax-violation-subform ex)))])
+              (eval 'expr
+                    (environment '(rnrs) '(xitomatl keywords)))
+              'unexpected-return)
+            => 'id)]))
+
+(define-syntax check-not-id
+  (syntax-rules ()
+    [(_ expr)
+     (check (guard (ex [else (and (syntax-violation? ex)
+                                  (message-condition? ex)
+                                  (condition-message ex))])
+              (eval 'expr
+                    (environment '(rnrs) '(xitomatl keywords)))
+              'unexpected-return)
+            => "not an identifier")]))
 
 ;; most basic
 
@@ -231,6 +241,7 @@
               => #t 'bar "bar" 4 '(z . z) '(x y x z y x z))
 (check-pred-failed d integer?
                    (parser6 '(x a b foo y x e (x y z) d 4.1 c "bar" z y x a e (z . z) b bar z)))
+(check-dup c (keywords-parser [a] [b] [c] [d] [e] [c] [f] [g]))
 
 ;; letrec* semantics for evaluation of :default and :predicate expressions
 
@@ -286,11 +297,16 @@
 (check ((lambda/kw ([a] [b] . r) (list a b r)) 1 'c 4 'b 3 'a 2) => '(2 3 (1 c 4)))
 (check ((lambda/kw (x [a]) (list x a)) 1 'a 2 'b 3) => '(1 2))
 (check ((lambda/kw (x y [a :default 5]) (list x y a)) 1 'a 2 'b 3) => '(1 a 5))
+(check ((lambda/kw (x y [a :default (+ x y)]) a) 1 2) => 3)
 (check-missing-keyword a ((lambda/kw (x y [a]) #f) 1 'a 2 'b 3))
 (check-missing-value b ((lambda/kw ([a] [b]) #f) 1 'a 2 'b))
 (check-pred-failed a string? ((lambda/kw ([a :predicate string?]) #f) 1 'a 2 'b))
-(check-invalid-formals (lambda/kw (["oops"]) 'ok))
-(check-invalid-options (lambda/kw ([x :predicate]) 'ok))
+(check-pred-failed a (lambda (_) (char? x)) 
+  ((lambda/kw (x [a :predicate (lambda (_) (char? x))]) #f)
+   1 'a 2 'b))
+(check-not-id (lambda/kw "oops" 'bad))
+(check-not-id (lambda/kw (x [a] ["oops"] [b]) 'bad))
+(check-invalid-options (lambda/kw ([x :predicate]) 'bad))
 (check ((lambda/kw (x y [a :boolean]
                         [b :default "foo"]
                         [c :default (lambda () d)]
@@ -298,10 +314,19 @@
           (list x y a b (c) d))
         1 2 'e 3 'd #\c 'f) 
        => '(1 2 #f "foo" #\c #\c))
+(check-dup b (lambda/kw ([a] [b] [c] [b]) #F))
+(check-dup x (lambda/kw (x y [b] [x] [c]) #F))
+(check-dup r (lambda/kw ([a] [r] [c] . r) #F))
+(check-dup x (lambda/kw (x [a] [b] . x) #F))
 
 (check-no-clause ((case-lambda/kw)))
 (check-no-clause ((case-lambda/kw [(x y) 'first] [(x) 'second])))
 (check ((case-lambda/kw [(x y) 'first] [(x) 'second]) 1 2 3) => 'first)
+(check ((case-lambda/kw 
+          [(x y [a :default (* (- x) y)]) a]
+          [(x) 'second])
+        3 2 1) 
+       => -6)
 (check (guard (ex [else ex])
          ((case-lambda/kw [a (raise 'oops)]) 1 2 3))
        => 'oops)
@@ -321,30 +346,109 @@
 (check-no-clause (f0 1 2))
 (check-no-clause (f0 'a 'foo))
 (check-no-clause (f0 'a "foo"))
+(check-no-clause 
+  ((case-lambda/kw
+     [(x [a :predicate (lambda (_) (char? x))]) #f] 
+     [(a b c d) 'bad])
+   "s" 'a 1))
 (check (f0 'a 'foo 'c "bar") => '("bar" #f (a foo)))
 (check (f0 1 'a "foo") => '(1 "foo" 3))
 (check (f0 1 'b 'bar 'a "foo") => '(1 "foo" bar))
 (check (f0 'a 'foo 'b 'bar) => '(a foo b (bar)))
 (check (f0 'd 1 'c 2) => '(2 #t (1)))
+(check-dup b (case-lambda/kw [() #F] [([a] [b] [c] [b]) #F]))
+(check-dup x (case-lambda/kw [() #F] [(x y [b] [x] [c]) #F]))
 
 ;; define/kw
+
+(define-syntax check-missing-keyword^
+  (syntax-rules ()
+    [(_ kw-name expr)
+     (check-missing-keyword kw-name
+       (eval 'expr (environment '(rnrs) '(xitomatl keywords))))]))
+
+(define-syntax check-missing-value^
+  (syntax-rules ()
+    [(_ kw-name expr)
+     (check-missing-value kw-name
+       (eval 'expr (environment '(rnrs) '(xitomatl keywords))))]))
 
 (define/kw (df0) #t)
 (check (df0) => #t)
 (check (df0 1 2 3) => #t)
+(check-missing-keyword^ c 
+  (let ()
+    (define/kw (df1 x y [a :boolean] [b :default (not a)] [c :predicate char?] . r)
+      (list x y a b c r))
+    (df1 1 2 'b 3)))
+(check-missing-value^ b 
+  (let ()
+    (define/kw (df1 x y [a :boolean] [b :default (not a)] [c :predicate char?] . r)
+      (list x y a b c r))
+    (df1 1 2 'c #\λ 'b)))
 (define/kw (df1 x y [a :boolean] [b :default (not a)] [c :predicate char?] . r)
   (list x y a b c r))
-(check-missing-keyword c (df1 1 2 'b 3))
-(check-missing-value b (df1 1 2 'c #\λ 'b))
 (check-pred-failed c char? (df1 1 2 'c 'λ))
-(check-invalid-formals (let () (define/kw (f x ["oops"]) #f) #f))
-(check-invalid-options (let () (define/kw (f x [y :boolean :default 1]) #f) #f))
 (check (df1 1 2 'd 3 'c #\λ 'e 'f) 
        => '(1 2 #f #t #\λ (d 3 e f)))
 (check (df1 1 2 'c #\λ 'b 2) 
        => '(1 2 #f 2 #\λ ()))
 (check (df1 1 2 'c #\λ 'a 2) 
        => '(1 2 #t #f #\λ (2)))
+(check-not-id (let () (define/kw (f x "oops") #f) #f))
+(check-invalid-options (let () (define/kw (f x [y :boolean :default 1]) #f) #f))
+(check-invalid-options (let () (define/kw (f [x] [y :predicate]) #f) #f))
+(check-dup b (let () (define/kw (f [a] [b] [c] [b] [d]) #F) #F))
+(check-dup y (let () (define/kw (f x y [a] [y] [c]) #F) #F))
+(check-dup r (let () (define/kw (f x [r] [c] . r) #F) #F))
+(define/kw (df2 x [a :default 123] 
+                  [b :default (- a)]
+                  [c :predicate (if (positive? b) string? char?)]
+                  [d :boolean]) 
+  (list x a b c d))
+(let ([e0 #F] [e1 #F] [e2 #F] [e3 #F] [e4 #F] [e5 #F] [e6 #F] [e7 #F] [e8 #F])
+  (check (df2 (begin (set! e0 #T) 1)
+              (begin (set! e1 #T) "foo")
+              'd
+              'c (begin (set! e2 #T) #\x)
+              (begin (set! e3 #T) 'bar)
+              (begin (set! e4 #T) 'zab)
+              'c (begin (set! e5 #T) "bar")
+              'a (begin (set! e6 #T) 321)
+              (begin (set! e7 #T) 'blah)
+              'a (begin (set! e8 #T) -42))
+         => '(1 -42 42 "bar" #T))
+  (check (list e0 e1 e2 e3 e4 e5 e6 e7 e8) => '(#T #F #F #F #F #T #F #F #T)))
+(let ([first-class (car (list df2))])
+  (check (procedure? first-class) => #T)
+  (let ([e0 #F] [e1 #F] [e2 #F] [e3 #F] [e4 #F] [e5 #F] [e6 #F] [e7 #F] [e8 #F])
+    (check (first-class (begin (set! e0 #T) 1)
+                        (begin (set! e1 #T) "foo")
+                        (string->symbol "d")
+                        (string->symbol "c") (begin (set! e2 #T) #\x)
+                        (begin (set! e3 #T) 'bar)
+                        (begin (set! e4 #T) 'zab)
+                        (string->symbol "c") (begin (set! e5 #T) "bar")
+                        (string->symbol "a") (begin (set! e6 #T) 321)
+                        (begin (set! e7 #T) 'blah)
+                        (string->symbol "a") (begin (set! e8 #T) -42))
+           => '(1 -42 42 "bar" #T))
+    (check (list e0 e1 e2 e3 e4 e5 e6 e7 e8) => '(#T #T #T #T #T #T #T #T #T))))
+(check ((let ()
+          (define a 1)
+          (define/kw (f x [a] [b :boolean])
+            (list x a b))
+          (define b 2)
+          f) 
+        "x" 'a #\c 'ignored) 
+       => '("x" #\c #F))
+(define/kw (df3 . a) a)
+(check (df3) => '())
+(check (df3 'a 1 'c 3 'b "blah") => '(a 1 c 3 b "blah"))
+(define/kw (df4 [a :default 1 :predicate char?] [b])
+  (list a b))
+(check (df4 'b 2) => '(1 2))
+(check (df4 'b 2 'a #\c) => '(#\c 2))
 
 
 (check-report)

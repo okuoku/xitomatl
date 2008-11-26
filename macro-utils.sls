@@ -26,7 +26,7 @@
 (library (xitomatl macro-utils)
   (export
     gen-temp syntax->list with-syntax*
-    duplicate-id unique-ids? unique-ids?/raise formals-ok?
+    duplicate-id unique-ids? unique-ids?/raise formals-ok?/raise
     identifier-append name=? identifier?/name=?)
   (import
     (rnrs)
@@ -72,7 +72,7 @@
       [(ids orig-stx)
        (unique-ids?/raise ids orig-stx "duplicate identifier")]))
   
-  (define (formals-ok? frmls-stx orig-stx)
+  (define (formals-ok?/raise frmls-stx orig-stx)
     (syntax-case frmls-stx ()
       [(arg* ... . rest)
        (and (or (null? (syntax->datum #'rest))

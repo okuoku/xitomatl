@@ -30,226 +30,72 @@
     keyword-condition? condition-keyword)
   (import
     (rnrs)
-    (xitomatl match)
-    (only (xitomatl conditions) make-predicate-condition)
     (only (xitomatl exceptions) reraise)
-    (for (only (xitomatl macro-utils) 
-               with-syntax* gen-temp identifier?/name=?)
-         expand))
-  
-  (define-syntax keywords-parser--meta
-    (lambda (stx)
-      (define (gen-kw-stx et-who rt-who process-input-list 
-                          missing-keyword predicate-false)
-        (lambda (kw-spec kw-value)
-          (define (invalid)
-            (syntax-violation et-who "invalid options for keyword" stx kw-spec))
-          (with-syntax ([(kw-id options ...) kw-spec])
-            (let process-options ([options #'(options ...)]
-                                  [default #f]
-                                  [predicate #f]
-                                  [boolean #f])
-              (syntax-case options ()
-                [(:default expr . rest)
-                 (and (identifier?/name=? #':default ':default)
-                      (not default))
-                 (process-options #'rest #'expr predicate boolean)]
-                [(:predicate expr . rest)
-                 (and (identifier?/name=? #':predicate ':predicate)
-                      (not predicate))
-                 (process-options #'rest default #'expr boolean)]
-                [(:boolean . rest)
-                 (and (identifier?/name=? #':boolean ':boolean)
-                      (not boolean))
-                 (process-options #'rest default predicate #t)]
-                [()
-                 (cond [(and boolean (or default predicate))
-                        (invalid)]
-                       [(and default predicate)
-                        (list #`[('kw-id v . r)
-                                 (begin (set! #,kw-value v)
-                                        (#,process-input-list r))]
-                              #`(if (not-given? #,kw-value)
-                                  #,default
-                                  (if (#,predicate #,kw-value)
-                                    #,kw-value
-                                    (#,predicate-false '#,rt-who 'kw-id
-                                                       '#,predicate #,kw-value))))]
-                       [default
-                        (list #`[('kw-id v . r)
-                                 (begin (set! #,kw-value v)
-                                        (#,process-input-list r))]
-                              #`(if (not-given? #,kw-value)
-                                  #,default
-                                  #,kw-value))]
-                       [predicate
-                        (list #`[('kw-id v . r)
-                                 (begin (set! #,kw-value v)
-                                        (#,process-input-list r))]
-                              #`(if (not-given? #,kw-value)
-                                  (#,missing-keyword '#,rt-who 'kw-id)
-                                  (if (#,predicate #,kw-value)
-                                    #,kw-value
-                                    (#,predicate-false '#,rt-who 'kw-id
-                                                       '#,predicate #,kw-value))))]
-                       [boolean
-                        (list #`[('kw-id . r)
-                                 (begin (set! #,kw-value #t)
-                                        (#,process-input-list r))]
-                              #`(not (not-given? #,kw-value)))]
-                       [else
-                        (list #`[('kw-id v . r)
-                                 (begin (set! #,kw-value v)
-                                        (#,process-input-list r))]
-                              #`(if (not-given? #,kw-value)
-                                  (#,missing-keyword '#,rt-who 'kw-id)
-                                  #,kw-value))])]
-                [_ (invalid)])))))
-      (syntax-case stx ()
-        [(_ et-who rt-who missing-value missing-keyword predicate-false
-            [kw-id options ...] ...)
-         (for-all identifier? 
-                  #'(missing-value missing-keyword predicate-false kw-id ...))         
-         (with-syntax* ([(kw-value ...) (generate-temporaries #'(kw-id ...))]
-                        [process-input-list (gen-temp)]
-                        [((match-clause value-expr) ...)
-                         (map (gen-kw-stx 
-                               (syntax->datum #'et-who) #'rt-who #'process-input-list
-                               #'missing-keyword #'predicate-false) 
-                              #'([kw-id options ...] ...)
-                              #'(kw-value ...))])
-           #'(lambda (input-list)
-               (let ([kw-value not-given] 
-                     ...
-                     [additional '()])               
-                 (let process-input-list ([l input-list])
-                   (match l
-                     match-clause
-                     ...
-                     [() 
-                      (set! additional (reverse additional))]
-                     ['(kw-id)
-                      (missing-value 'rt-who 'kw-id)]
-                     ...
-                     [(unknown . rest)
-                      (begin (set! additional (cons unknown additional))
-                             (process-input-list rest))]
-                     [_ 
-                      (assertion-violation 
-                       'rt-who "not a proper list" input-list)]))                   
-                 (letrec* ([kw-id value-expr] 
-                           ...)
-                   (values kw-id ... additional)))))])))
-  
-  (define-syntax keywords-parser/who
-    (syntax-rules ()
-      [(_ et-who rt-who . r)
-       (keywords-parser--meta et-who rt-who
-        missing-value--default missing-keyword--default predicate-false--default
-        . r)]))
+    (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand)
+    (only (xitomatl keywords parser) keywords-parser--meta not-given not-given?)
+    (for (only (xitomatl keywords parser) keywords-parser--define/kw) expand)
+    (only (xitomatl keywords other) keyword-condition? condition-keyword
+          missing-value--default missing-keyword--default predicate-false--default)
+    (for (only (xitomatl keywords other) parse-kw-formals process-options) expand))
   
   (define-syntax keywords-parser
     (syntax-rules ()
       [(_ . r)
-       (keywords-parser/who keywords-parser "a keywords parser" . r)]))
+       (keywords-parser/who "a keywords parser" . r)]))
   
-  (define-condition-type &keyword &condition
-    make-keyword-condition keyword-condition?
-    (keyword condition-keyword))
+  (define-syntax keywords-parser/who
+    (syntax-rules ()
+      [(_ rt-who . r)
+       (keywords-parser--meta rt-who eq?
+        missing-value--default missing-keyword--default predicate-false--default
+        . r)]))
 
-  (define (AV who msg kw-id . more)
-    (raise
-     (apply condition
-            (make-assertion-violation)
-            (make-who-condition who)
-            (make-message-condition msg)
-            (make-keyword-condition kw-id)
-            more)))
-  
-  (define (missing-value--default who kw-id)
-    (AV who "keyword missing value" kw-id))
-
-  (define (missing-keyword--default who kw-id)
-    (AV who "missing required keyword" kw-id))
-
-  (define (predicate-false--default who kw-id pred-form value)
-    (AV who "keyword predicate false" kw-id 
-        (make-predicate-condition pred-form)
-        (make-irritants-condition (list value))))
-
-  (define not-given (list #T)) ;; unique object
-  (define (not-given? x) (eq? x not-given))
-
-  ;;--------------------------------------------------------------------------
-  
   (define-syntax case-lambda/kw--meta
     (lambda (stx)
-      (define (parse-kw-formals et-who kw-formals)
-        (let parse ([kwf kw-formals]
-                    [pos-id '()])
-          (syntax-case kwf ()
-            [(pos . r) 
-             (identifier? #'pos)
-             (parse #'r (cons #'pos pos-id))]
-            [([kw-id . opts] ... . additional-id)
-             (and (for-all identifier? #'(kw-id ...))
-                  (or (null? (syntax->datum #'additional-id))
-                      (identifier? #'additional-id)))
-             (list #'([kw-id . opts] ...)
-                   (reverse pos-id)
-                   (syntax-case #'additional-id ()
-                     [() (gen-temp)]  ;; ignored
-                     [_ #'additional-id]))]
-            [_ (syntax-violation et-who "invalid keyword formals" stx kw-formals)])))
       (syntax-case stx ()
-        [(_ et-who rt-who [kw-formals . body])
-         (with-syntax ([(([kw-id . opts] ...) (pos-id ...) additional-id)
-                        (parse-kw-formals (syntax->datum #'et-who) #'kw-formals)])
-           #'(let ([parser 
-                    (keywords-parser/who et-who rt-who [kw-id . opts] ...)])
-               (lambda (pos-id ... . keywords)
-                 (let-values ([(kw-id ... additional-id)
-                               (parser keywords)])
+        [(_ rt-who [kw-formals . body])
+         (with-syntax ([((pos-id ...) ([kw-id . opts] ...) additional-id)
+                        (parse-kw-formals stx #'kw-formals (gen-temp))])
+           #'(lambda (pos-id ... . keywords)
+               (let ([parser (keywords-parser/who rt-who [kw-id . opts] ...)])
+                 (let-values ([(kw-id ... additional-id) (parser keywords)])
                    . body))))]
-        [(_ et-who rt-who [kw-formals . body] ...)
+        [(_ rt-who [kw-formals . body] ...)
          (with-syntax ([(parser ...) (generate-temporaries #'(kw-formals ...))]
-                       [((([kw-id . opts] ...) (pos-id ...) additional-id) ...)
-                        (map (lambda (kwf) 
-                               (parse-kw-formals (syntax->datum #'et-who) kwf))
+                       [(((pos-id ...) ([kw-id . opts] ...) additional-id) ...)
+                        (map (lambda (kwf) (parse-kw-formals stx kwf (gen-temp)))
                              #'(kw-formals ...))])
-           #'(let ([parser 
-                    (keywords-parser/clause-failed et-who [kw-id . opts] ...)]
-                   ...)
-               (let ([procs (list (cons
-                                   (length '(pos-id ...))
-                                   (lambda (pos-id ... . keywords)
-                                     (let-values ([(kw-id ... additional-id)
-                                                   (parser keywords)])
-                                       . body)))
-                                  ...)])
-                 (lambda args
-                   (let ([len (length args)])
-                     (let try-next ([procs procs])
-                       (if (pair? procs)
-                         (if (>= len (caar procs))
-                           ((call/cc
-                             (lambda (k)
-                               (with-exception-handler
-                                 (lambda (ex)
-                                   (if (clause-failed? ex)
-                                     (k (lambda () (try-next (cdr procs))))
-                                     (reraise ex)))
-                                 (lambda ()
-                                   (let-values ([vals (apply (cdar procs) args)])
-                                     (lambda () (apply values vals))))))))
-                           (try-next (cdr procs)))
-                         (apply assertion-violation 'rt-who
-                                "no clause matches arguments" args))))))))])))
+           #'(let ([procs (list (cons (length '(pos-id ...))
+                                      (lambda (pos-id ... . keywords)
+                                        (let ([parser (keywords-parser/clause-failed
+                                                       [kw-id . opts] ...)])
+                                          (let-values ([(kw-id ... additional-id)
+                                                        (parser keywords)])
+                                            . body))))
+                                ...)])
+               (lambda args
+                 (let ([len (length args)])
+                   (let try-next ([procs procs])
+                     (if (pair? procs)
+                       (if (>= len (caar procs))
+                         ((call/cc
+                           (lambda (k)
+                             (with-exception-handler
+                               (lambda (ex)
+                                 (if (clause-failed? ex)
+                                   (k (lambda () (try-next (cdr procs))))
+                                   (reraise ex)))
+                               (lambda ()
+                                 (let-values ([vals (apply (cdar procs) args)])
+                                   (lambda () (apply values vals))))))))
+                         (try-next (cdr procs)))
+                       (apply assertion-violation 'rt-who
+                              "no clause matches arguments" args)))))))])))
     
   (define-syntax keywords-parser/clause-failed
     (syntax-rules ()
-      [(_ et-who . r)
-       (keywords-parser--meta et-who ignored
+      [(_ . r)
+       (keywords-parser--meta ignored eq?
         missing-value/clause-failed 
         missing-keyword/clause-failed
         predicate-false/clause-failed
@@ -270,85 +116,84 @@
   (define-syntax case-lambda/kw
     (syntax-rules ()
       [(_ [kw-formals body0 body ...] ...)
-       (case-lambda/kw--meta case-lambda/kw "a case-lambda/kw procedure"
+       (case-lambda/kw--meta "a case-lambda/kw procedure"
                              [kw-formals body0 body ...] ...)]))
   
   (define-syntax lambda/kw
     (syntax-rules ()
       [(_ kw-formals body0 body ...)
-       (case-lambda/kw--meta lambda/kw "a lambda/kw procedure"
+       (case-lambda/kw--meta "a lambda/kw procedure"
                              [kw-formals body0 body ...])]))
-
+    
   (define-syntax define/kw
+    ;;; Optimized to process keywords at expand time.
     (lambda (stx)
-      (syntax-case stx ()
-        [(_ (name . kw-formals) body0 body ...)
-         (identifier? #'name)
-         #'(define name
-             (case-lambda/kw--meta define/kw name
-                                   [kw-formals body0 body ...]))])))
-  
-  ;;--------------------------------------------------------------------------
-  ;; Below is a half-completed define/kw which does an optimization of
-  ;; processing the input keywords and arguments at expand time.  But I
-  ;; started thinking the implementation complexity it requires is not
-  ;; worth the maintenance burden.
-#|
-  (define-syntax define/kw
-    (lambda (stx)
+      (define (gen-stx rt-who)
+        (lambda (kw-spec kw-value)
+          (with-syntax ([(kw-id . _) kw-spec])
+            (let-values ([(default predicate boolean) (process-options stx kw-spec)])
+              (cond [(and default predicate)
+                     (list #`(if (not-given? #,kw-value)
+                               #,default
+                               (if (#,predicate #,kw-value)
+                                 #,kw-value
+                                 (predicate-false--default '#,rt-who 'kw-id
+                                                           '#,predicate #,kw-value)))
+                           #'(:default #'not-given))]
+                    [default 
+                     (list #`(if (not-given? #,kw-value)
+                               #,default
+                               #,kw-value)
+                           #'(:default #'not-given))]
+                    [predicate 
+                     (list #`(if (#,predicate #,kw-value)
+                               #,kw-value
+                               (predicate-false--default '#,rt-who 'kw-id
+                                                         '#,predicate #,kw-value))
+                           '())]
+                    [boolean 
+                     (list kw-value #'(:boolean))]
+                    [else 
+                     (list kw-value '())])))))
       (syntax-case stx ()
         [(_ (name . kw-formals) . body)
-         (with-syntax* ([first-class (identifier-append #'here #'name '--first-class)]
-                        [(([kw-id . opts] ...) (pos-id ...) additional-id)
-                         (parse-kw-formals 'define/kw #'kw-formals)]
+         (with-syntax* ([((pos-id ...) ([kw-id . kw-opts] ...) additional-id ...)
+                         (parse-kw-formals stx #'kw-formals)]
                         [(kw-value ...) (generate-temporaries #'(kw-id ...))]
-                        [process-input-list (gen-temp)]
-                        [((match-clause value-expr) ...)
-                         (map (gen-kw-stx 
-                               'define/kw (syntax->datum #'name) process-input-list
-                               #'missing-keyword--default #'predicate-false--default) 
-                              #'([kw-id . opts] ...)
+                        [((value-expr kw-stx-opts) ...)
+                         (map (gen-stx #'name) 
+                              #'([kw-id . kw-opts] ...)
                               #'(kw-value ...))])
            #'(begin
-               (define (proc pos-id ... kw-value ... additional-id)
+               (define (proc pos-id ... kw-value ... additional-id ...)
                  (letrec* ([kw-id value-expr]
                            ...)
                    . body))
                (define first-class
-                 (lambda/kw kw-formals
-                   (proc pos-id ... kw-id ... additional-id)))
+                 (case-lambda/kw--meta name
+                   [kw-formals
+                    (proc pos-id ... kw-id ... additional-id ...)]))
                (define-syntax name
                  (lambda (stx)
-                   (define (process-args args-stx)
-                     (let ([kw-value #'not-given] 
-                           ...
-                           [additional '()])               
-                       (let process-input-list ([l args-stx])
-                         (match (if (pair? args-stx)
-                                  (cons (syntax->datum (car args-stx))
-                                        (cdr args-stx))
-                                  args-stx)
-                           match-clause
-                           ...
-                           [() 
-                            (set! additional (reverse additional))]
-                           ['(kw-id)
-                            ???(missing-value 'rt-who 'kw-id)]
-                           ...
-                           [(unknown . rest)
-                            (begin (set! additional (cons (car args-stx) additional))
-                                   (process-input-list rest))]
-                           #;[_ 
-                            (assertion-violation 
-                             'define/kw "not a proper list" input-list)]))
-                       ???(values kw-id ... additional)))
+                   (define parser 
+                     (keywords-parser--define/kw name [kw-id . kw-stx-opts] ...))
                    (syntax-case stx ()
-                     [(_ args (... ...))
-                      (with-syntax ([(pos-expr (... ...) kw-expr (... ...) additional-expr)
-                                     (process-args #'(args (... ...)))])
-                        #'(proc pos-expr (... ...) kw-expr (... ...) additional-expr))]
+                     [(_ pos-id ... kw-expr (... ...))
+                      ;; NOTE: Only (quote <identifier>) forms are recognized as keywords,
+                      ;; unlike run-time processing which recognizes symbol values; and
+                      ;; when multiple occurances of a keyword are present, only the last
+                      ;; one's expression is evaluated; and additional expressions are
+                      ;; evaluated only when the define/kw formals specified taking
+                      ;; additionals.
+                      (with-syntax* ([(kw-expr/ordered (... ...) additional-expr)
+                                      (let-values ([v (parser #'(kw-expr (... ...)))]) v)]
+                                     [(additional-expr (... ...))
+                                      (if (positive? (length '(additional-id ...)))
+                                        (list #'(list . additional-expr))
+                                        '())])
+                        #'(proc pos-id ... kw-expr/ordered (... ...)
+                                additional-expr (... ...)))]
                      [id
                       (identifier? #'id)
                       #'first-class])))))])))
-|#
 )
