@@ -213,7 +213,7 @@
  (match "((λ (x) (x x)) (λ (x) (x x)))" 
    [(:regex ".*(λ).*(λ).*" x x) x]))
 (check (match '(("parse me") "λλ")
-         [(((:and (:regex "(\\s*\\w+)+") a)) (:and b (:regex "\\S{0,3}")))
+         [(((:and (:regex "(?:\\s*\\w+)+") a)) (:and b (:regex "\\S{0,3}")))
           (positive? (string-length b))
           (string-append a b)])
        => "parse meλλ")
@@ -224,16 +224,23 @@
           (string=? x y)
           (string-append x y)])
        => "barbar")
-(check (match "asdf"
-         [(:regex ".*" x) x])
-       => #f)
-(check (match "asdf"
-         [(:regex ".*" x y z) (list x y z)])
-       => '(#f #f #f))
-(check (match "foo bar"
-         [(:regex "(\\w+)\\s+(\\w+)" _ _ x y)
-          (list x y)])
-       => '(#f #f))
+(check-failed (match "asdf"
+                [(:regex ".*" x) x]))
+(check-failed (match "asdf"
+                [(:regex ".*" x y z) (list x y z)]))
+(check-failed (match "foo bar"
+                [(:regex "(\\w+)\\s+(\\w+)" _ _ x y)
+                 (list x y)]))
+
+;;; symbols against regular expressions (uses :irregex pattern logic)
+
+(check-misuse-error (match '() [:symbol 1]))
+(check-misuse-error (match '() [(a (:symbol) b) 1]))
+(check (match 'foobar [(:symbol "fo+\\s*bar") 'ok]) => 'ok)
+(check (match 'foooo__bar [(:symbol "f(o+)(\\S*)bar" 'oooo '__) 'ok]) => 'ok)
+(check (match 'foozab [(:symbol "foo(?:(bar)|zab)" #F) 'ok]) => 'ok)
+(check-failed (match 'foobar [(:symbol "fo+\\s*bar" #F _ x) 'bad]))
+(check-failed (match 'foooo__bar [(:symbol "f(o+)(\\S*)bar" _) 'bad]))
 
 ;;; records
 
@@ -575,6 +582,10 @@
 (check (match '(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20) 
          [(a x ...) (list a x)])
        => '(1 (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)))
+(check-failed (match '(1 2 3 4 5 6 7) [(0 x ...) (list a b x)]))
+(check-failed (match '(1 2 3 4 5 6 7) [(a b c 0 x ...) (list a b x)]))
+(check-failed (match '(1 2 3 4 5 6 7) [(0 x ... 7) (list a b x)]))
+(check-failed (match '(1 2 3 4 5 6 7) [(a b c 0 x ... 6 7) (list a b x)]))
 (check-failed (match '() [(a x ... b) (list a x b)]))
 (check-failed (match '(1) [(a x ... b) (list a x b)]))
 (check (match '(1 2) [(a x ... b) (list a x b)])
@@ -777,6 +788,10 @@
 (check (match '#(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20) 
          [#(a x ...) (list a x)])
        => '(1 (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)))
+(check-failed (match '#(1 2 3 4 5 6 7) [#(0 x ...) (list a b x)]))
+(check-failed (match '#(1 2 3 4 5 6 7) [#(a b c 0 x ...) (list a b x)]))
+(check-failed (match '#(1 2 3 4 5 6 7) [#(0 x ... 7) (list a b x)]))
+(check-failed (match '#(1 2 3 4 5 6 7) [#(a b c 0 x ... 6 7) (list a b x)]))
 (check-failed (match '#() [#(a x ... b) (list a x b)]))
 (check-failed (match '#(1) [#(a x ... b) (list a x b)]))
 (check (match '#(1 2) [#(a x ... b) (list a x b)])

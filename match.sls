@@ -73,6 +73,9 @@
 ;;;    | (:regex <irx> <pat> ...)      String, if it matches the regular
 ;;;                                    expression and if the captured groups
 ;;;                                    (which are strings) match sub-patterns
+;;;    | (:symbol <irx> <pat> ...)     Symbol, if it matches the regular
+;;;                                    expression and if the captured groups
+;;;                                    (which are symbols) match sub-patterns
 ;;;    | (:record <r-type> <pat> ...)  Record of specified type,
 ;;;                                    whose fields' values match sub-patterns
 ;;;    | (:predicate <expr>)           If result of expression applied to value
@@ -100,8 +103,8 @@
     match-let match-let*)
   (import
     (rnrs)
-    (only (xitomatl irregex (or (0 6 (>= 2)) (0 (>= 7)) ((>= 1))))
-          irregex irregex-match irregex-match-substring)
+    (only (xitomatl irregex (or (0 (>= 7)) ((>= 1))))
+          irregex irregex-match irregex-match-substring irregex-match-num-submatches)
     (only (xitomatl records)
           record-type-accessors)
     (only (xitomatl vectors)
@@ -121,7 +124,8 @@
       (define (keyword? pat-stx)
         (and (identifier? pat-stx)
              (exists (lambda (x) (name=? pat-stx x)) 
-                     '(quote quasiquote :and :or :not :regex :record :predicate ...))))
+                     '(quote quasiquote :and :or :not 
+                       :regex :symbol :record :predicate ...))))
       (define (ooo-range-valid? ooo-stx)
         (syntax-case ooo-stx ()
           [(min max)
@@ -219,6 +223,14 @@
                          [((M V ...) ...) (map P #'(pat ...))])
              #'((make-matcher M-irregex irx '#(idx ...) (vector M ...))
                 V ... ...))]
+          ;; symbol, according to IrRegex regular expression
+          [(:symbol irx pat ...)
+           (identifier?/name=? #':symbol ':symbol)
+           (with-syntax ([(M V ...) (P #'(:regex irx pat ...))])
+             (syntax-case #'M (make-matcher M-irregex quote vector)
+               [(make-matcher M-irregex irx '#(idx ...) (vector M ...))
+                #'((make-matcher M-symbol irx '#(idx ...) (vector M ...))
+                   V ...)]))]
           ;; record
           [(:record rtype pat ...)
            (and (identifier?/name=? #':record ':record)
@@ -415,11 +427,20 @@
     (and (string? obj)
          (let ([m (irregex-match irx obj)])
            (and m
+                (= (irregex-match-num-submatches m) (vector-length matchers))
                 (do-sub-matching 
                  (vector-map (lambda (i) (irregex-match-substring m i))
                              idxs)
                  matchers
                  vars)))))
+  
+  (define (M-symbol obj vars irx idxs matchers)
+    (and (symbol? obj)
+         (M-irregex (symbol->string obj) vars irx idxs 
+                    (vector-map (lambda (M)
+                                  (lambda (str vars) 
+                                    (M (and str (string->symbol str)) vars)))
+                                matchers))))
   
   ;;; FIXME: need to use a weak hashtable
   #;(define rtd-ht (make-eq-hashtable))
@@ -508,28 +529,30 @@
                              (subvector obj 0 p-len)
                              preceding-matchers
                              vars)])
-                  (let match-last ([last '()] 
-                                   [y (- obj-len 1)])
-                    (let ([rest-vars (rest-matcher last '())])
-                      (if rest-vars
-                        (let match-ooo ([x y]
-                                        [accum-ooo-vars empty-ooo-vars]
-                                        [count 0])
-                          (if (>= x p-len)
-                            (and (or (not max) 
-                                     (< count max))
-                                 (let ([ooo-vars (ooo-matcher (vector-ref obj x) '())])
-                                   (and ooo-vars
-                                        (match-ooo (- x 1)
-                                                   (map cons ooo-vars accum-ooo-vars)
-                                                   (+ 1 count)))))
-                            (and (>= count min)
-                                 (append rest-vars
-                                         accum-ooo-vars
-                                         vars))))
-                        (and (>= y p-len)
-                             (match-last (cons (vector-ref obj y) last)
-                                         (- y 1)))))))))))
+                  (and vars
+                       (let match-last ([last '()] 
+                                        [y (- obj-len 1)])
+                         (let ([rest-vars (rest-matcher last '())])
+                           (if rest-vars
+                             (let match-ooo ([x y]
+                                             [accum-ooo-vars empty-ooo-vars]
+                                             [count 0])
+                               (if (>= x p-len)
+                                 (and (or (not max) 
+                                          (< count max))
+                                      (let ([ooo-vars
+                                             (ooo-matcher (vector-ref obj x) '())])
+                                        (and ooo-vars
+                                             (match-ooo (- x 1)
+                                                        (map cons ooo-vars accum-ooo-vars)
+                                                        (+ 1 count)))))
+                                 (and (>= count min)
+                                      (append rest-vars
+                                              accum-ooo-vars
+                                              vars))))
+                             (and (>= y p-len)
+                                  (match-last (cons (vector-ref obj y) last)
+                                              (- y 1))))))))))))
   
   ;;------------------------------------------------------------------------
   

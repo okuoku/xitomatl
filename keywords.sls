@@ -165,10 +165,12 @@
                               #'([kw-id . kw-opts] ...)
                               #'(kw-value ...))])
            #'(begin
-               (define (proc pos-id ... kw-value ... additional-id ...)
+               (define (proc pos-id ... kw-id ... additional-id ...)
+                 . body)
+               (define (proc/ve pos-id ... kw-value ... additional-id ...)
                  (letrec* ([kw-id value-expr]
                            ...)
-                   . body))
+                   (proc pos-id ... kw-id ... additional-id ...)))
                (define first-class
                  (case-lambda/kw--meta name
                    [kw-formals
@@ -191,8 +193,8 @@
                                       (if (positive? (length '(additional-id ...)))
                                         (list #'(list . additional-expr))
                                         '())])
-                        #'(proc pos-id ... kw-expr/ordered (... ...)
-                                additional-expr (... ...)))]
+                        #'(proc/ve pos-id ... kw-expr/ordered (... ...)
+                                   additional-expr (... ...)))]
                      [id
                       (identifier? #'id)
                       #'first-class])))))])))

@@ -449,6 +449,10 @@
   (list a b))
 (check (df4 'b 2) => '(1 2))
 (check (df4 'b 2 'a #\c) => '(#\c 2))
+(let ([c 0])
+  (define/kw (f [a :predicate (begin (set! c (+ 1 c)) char?)]) #T)
+  (apply f '(a #\c))
+  (check c => 1))
 
 
 (check-report)
