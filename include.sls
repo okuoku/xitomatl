@@ -68,10 +68,8 @@
     (lambda (stx)
       (syntax-case stx ()
         [(ctxt (lib-path* ...) file-path)
-         (for-all (lambda (s) (and (string? s) (positive? (string-length s)))) 
-                  (syntax->datum #'(file-path lib-path* ...)))
-         (let ([p (apply path-join (append (map syntax->datum #'(lib-path* ...))
-                                           (list (syntax->datum #'file-path))))]
+         (for-all path? (syntax->datum #'(lib-path* ... file-path)))
+         (let ([p (apply path-join (syntax->datum #'(lib-path* ... file-path)))]
                [sp (search-paths)])
            (let loop ([search sp])
              (if (null? search)

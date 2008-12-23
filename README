@@ -26,6 +26,12 @@ implementations.  Currently supported are: Ikarus, PLT Scheme, and Ypsilon.
 They support the *.IMPL.sls convention for implementation-specific libraries.
 Larceny might be supported once it supports this convention.
 
+Bug Reporting:
+--------------
+Submit bug reports at:
+
+  https://bugs.launchpad.net/ikarus-libraries/+filebug
+
 Disclaimer:  
 -----------
 My libraries are a moving target.  I'm continually changing things.  Other

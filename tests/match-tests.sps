@@ -232,7 +232,7 @@
                 [(:regex "(\\w+)\\s+(\\w+)" _ _ x y)
                  (list x y)]))
 
-;;; symbols against regular expressions (uses :irregex pattern logic)
+;;; symbols against regular expressions (uses :regex pattern logic)
 
 (check-misuse-error (match '() [:symbol 1]))
 (check-misuse-error (match '() [(a (:symbol) b) 1]))

@@ -174,7 +174,7 @@
   (lambda (x)
     (syntax-case x ()
       ((_ Template Cata Obj ThreadedIds)
-       #'(error 'Template "Unmatched datum" Obj))
+       #'(assertion-violation 'Template "Unmatched datum" Obj))
       ((_ Template Cata Obj ThreadedIds (Pat B0 B ...) Rest ...)
        #'(convert-pat Pat
            (match-help1 Template Cata Obj ThreadedIds 
@@ -291,11 +291,7 @@
                             (cons #'((match-equality-test) tmp var) guards)))
                   (loop (cdr ls)))))))
     (define (f syn vars guards cdecls depth)
-      (define (andmap f ls)
-        (cond
-          ((null? ls) #f)
-          ((null? (cdr ls)) (f (car ls)))
-          (else (and (f (car ls)) (andmap f (cdr ls))))))
+      (define andmap for-all)
       (syntax-case syn (unquote)
         ((unquote . stuff) ; separate for better error detection
          (syntax-case syn (unquote ->)
