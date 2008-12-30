@@ -1,3 +1,5 @@
+#! /usr/bin/env scheme-script
+
 ;;; Copyright (c) 2008 Derick Eddington
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,7 +24,6 @@
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 ;;; DEALINGS IN THE SOFTWARE.
 
-#! /usr/bin/env scheme-script
 #!r6rs
 (import
   (except (rnrs) file-exists?)

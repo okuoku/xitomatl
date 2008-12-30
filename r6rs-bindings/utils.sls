@@ -33,34 +33,12 @@
     (rnrs r5rs)
     (only (xitomatl define) define/AV)
     (only (xitomatl exceptions) catch)
-    (only (xitomatl predicates) symbol<? library-name?)
+    (only (xitomatl predicates) library-name<? library-name?)
     (xitomatl r6rs-bindings spec))
   
-  (define (all-libraries-names)
-    (define (libname<? a b)
-      (let loop ([a a] [b b])
-        (cond [(null? a) #t]
-              [(null? b) #f]
-              [(symbol=? (car a) (car b))
-               (loop (cdr a) (cdr b))]
-              [else (symbol<? (car a) (car b))])))
-    (list-sort
-     libname<?
-     #;(lambda (x y)
-       (cond [(and (list? x) (list? y))
-              (libname<? x y)]
-             [(and (symbol? x) (symbol? y))
-              (symbol<? x y)]
-             [else
-              (list? x)]))
-     (map (lambda (x) (filter symbol? x))  ;; remove possible version spec
-          (filter list? (map car spec)))   ;; only (rnrs ---) libraries
-     #;(map (lambda (x) 
-            (let ([n (car x)])
-              (if (list? n)
-                (filter symbol? n)  ;; remove possible version spec
-                n)))
-          spec)))
+  (define all-libraries-names
+    (list-sort library-name<?
+               (filter library-name? (map car spec)) #| only (rnrs ---) libraries |# ))
   
   (define/AV names-of
     ;;; This is a hack, and that's all I use it for.

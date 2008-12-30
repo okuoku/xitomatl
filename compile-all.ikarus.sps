@@ -39,6 +39,7 @@
   (only (xitomatl keywords other))
   (only (xitomatl keywords parser))
   (only (xitomatl lang))
+  (only (xitomatl library-utils))
   (only (xitomatl lists))
   (only (xitomatl lists compat))
   (only (xitomatl macro-utils))

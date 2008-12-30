@@ -30,14 +30,18 @@
     positive-integer?
     exact-positive-integer?
     exact-integer?
+    list-of?
+    #;datum?
+    pairwise?
     symbol<?
     name=?
     non-empty-string?
     char-line-ending?
     library-name?
-    list-of?
-    #;improper-list?
-    #;datum?)
+    library-name-symbol?
+    library-version?
+    library-name<?
+    library-version<?)
   (import
     (rnrs))
   
@@ -55,21 +59,60 @@
   
   (define (exact-integer? x)
     (and (integer? x) (exact? x)))
+  
+  (define (list-of? pred)
+    (letrec ([list-of?-pred
+              (lambda (x)
+                (if (pair? x)
+                  (and (pred (car x))
+                       (list-of?-pred (cdr x)))
+                  (null? x)))])
+      list-of?-pred))
+  
+  #;(define (datum? x)
+    ;; The naive implementation cannot handle cyclic structures.
+    ;; How to do this..?
+    )
 
-  ;;--------------------------------------------------------------------------
-  
-  (define (symbol<? x y . r)
-    (apply string<? (map symbol->string (cons* x y r))))
-  
-  (define (name=? x y . r)
-    (apply string=? 
-           (map (lambda (n) 
-                  (cond [(identifier? n) (symbol->string (syntax->datum n))]
-                        [(symbol? n) (symbol->string n)]
-                        [(string? n) n]
-                        [else (assertion-violation 'name=? 
-                               "not an identifier, symbol, or string" n)]))
-                (cons* x y r))))
+  (define pairwise?
+    ;;; Make a predicate which tests if all its arguments are pairwise true
+    ;;; for a given binary predicate.  0 and 1 arguments are always considered
+    ;;; true; e.g.: ((pairwise? <)) => #T and ((pairwise? =) 42) => #T.
+    ;;; The optional 2nd argument is an arbitrary procedure that takes 1
+    ;;; argument, and it is applied to each element once and must return a value
+    ;;; to use with the binary predicate, or raise an exception; this procedure
+    ;;; is useful for efficiently type-checking elements and/or transforming them.
+    (case-lambda
+      [(binary-pred)
+       (pairwise? binary-pred #F)]
+      [(binary-pred proc)
+       (let ([next (if proc
+                     (lambda (l) (proc (car l)))
+                     car)])
+         (lambda args
+           (or (null? args)
+               (let ([x (next args)])
+                 (let loop ([x x] [r (cdr args)])
+                   (or (null? r)
+                       (let ([y (next r)])
+                         (and (binary-pred x y)
+                              (loop y (cdr r))))))))))]))
+
+  (define symbol<?
+    (pairwise? string<?
+     (lambda (x)
+       (if (symbol? x)
+         (symbol->string x)
+         (assertion-violation 'symbol<? "not a symbol" x)))))
+
+  (define name=?
+    (pairwise? string=?
+     (lambda (x) 
+       (cond [(identifier? x) (symbol->string (syntax->datum x))]
+             [(symbol? x) (symbol->string x)]
+             [(string? x) x]
+             [else (assertion-violation 'name=? 
+                    "not an identifier, symbol, or string" x)]))))
   
   (define (non-empty-string? x)
     (and (string? x) (positive? (string-length x))))
@@ -79,34 +122,57 @@
          #t))
   
   (define (library-name? x)
-    (and (list? x)
-         (let loop ([l x] [is #F])
-           (cond [(null? l) is]
-                 [(and (symbol? (car l))
-                       (positive? (string-length (symbol->string (car l))))) 
-                  (loop (cdr l) #T)]
-                 [(and (null? (cdr l))
-                       (list? (car l))
-                       (for-all exact-non-negative-integer? (car l)))
-                  is]
-                 [else #F]))))
+    (and (pair? x)
+         (library-name-symbol? (car x))
+         (let loop ([x (cdr x)])
+           (if (pair? x)
+             (if (library-name-symbol? (car x))
+               (loop (cdr x))
+               (and (library-version? (car x))
+                    (null? (cdr x))))
+             (null? x)))))
 
-  ;;--------------------------------------------------------------------------
-  
-  (define (list-of? pred)
-    (letrec ([list-of?-pred
-              (lambda (x)
-                (cond [(pair? x) (and (pred (car x)) (list-of?-pred (cdr x)))]
-                      [(null? x) #t]
-                      [else #f]))])
-      list-of?-pred))
-  
-  #;(define (improper-list? x)
-    )
-  
-  #;(define (datum? x)
-    ;; The naive implementation cannot handle cyclic structures.
-    ;; How to do this..?
-    )
-  
+  (define (library-name-symbol? x)
+    (and (symbol? x)
+         (positive? (string-length (symbol->string x)))))
+
+  (define library-version? (list-of? exact-non-negative-integer?))
+
+  (define library-name<?
+    (pairwise?
+     (letrec ([name<?
+               (lambda (x y)
+                 (if (pair? x)
+                   (and (pair? y)
+                        (if (symbol? (car x))
+                          (and (symbol? (car y))
+                               (or (symbol<? (car x) (car y))
+                                   (and (symbol=? (car x) (car y))
+                                        (name<? (cdr x) (cdr y)))))
+                          (or (symbol? (car y))
+                              (library-version<? (car x) (car y)))))
+                   (pair? y)))])
+       name<?)
+     (lambda (x)
+       (if (library-name? x)
+         x
+         (assertion-violation 'library-name<? "not a library name" x)))))
+
+  (define library-version<?
+    (pairwise?
+     (letrec ([version<?
+               (lambda (x y)
+                 (if (pair? x)
+                   (and (pair? y)
+                        (or (< (car x) (car y))
+                            (and (= (car x) (car y))
+                                 (version<? (cdr x) (cdr y)))))
+                   (pair? y)))])
+       version<?)
+     (lambda (x)
+       (if (library-version? x)
+         x
+         (assertion-violation 'library-version<?
+                              "not a library version" x)))))
+
 )
