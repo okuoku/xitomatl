@@ -26,7 +26,7 @@
 (import 
   (rnrs)
   (xitomatl curry)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define-syntax check-values
   (syntax-rules ()

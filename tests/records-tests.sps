@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl records)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define-record-type A (fields a (mutable b) c))
 (define-record-type B (parent A) (fields (mutable d) e))

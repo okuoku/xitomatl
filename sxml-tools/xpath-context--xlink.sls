@@ -186,10 +186,10 @@
     (rnrs)
     (rnrs r5rs)
     (xitomatl include)
-    (rename (except (xitomatl srfi strings) string-copy string->list string-titlecase
+    (rename (except (srfi :13 strings) string-copy string->list string-titlecase
                     string-upcase string-downcase string-hash string-for-each)
             (string-index-right string-rindex))
-    (xitomatl srfi and-let*)
+    (srfi :2 and-let*)
     (xitomatl htmlprag)
     (xitomatl sxml-tools sxml-tools)
     (xitomatl sxml-tools sxpathlib)

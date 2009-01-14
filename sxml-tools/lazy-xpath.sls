@@ -123,10 +123,10 @@
     (except (rnrs r5rs) delay force)
     (prefix (only (rnrs r5rs) delay force) r5rs:)
     (xitomatl include)
-    (rename (except (xitomatl srfi strings) string-copy string->list string-titlecase
+    (rename (except (srfi :13 strings) string-copy string->list string-titlecase
                     string-upcase string-downcase string-hash string-for-each)
             (string-index-right string-rindex))
-    (xitomatl srfi and-let*)
+    (srfi :2 and-let*)
     (xitomatl sxml-tools sxpathlib)
     (xitomatl sxml-tools sxpath-ext)
     (xitomatl sxml-tools xpath-parser)

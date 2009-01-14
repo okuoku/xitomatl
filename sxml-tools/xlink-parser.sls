@@ -99,7 +99,7 @@
   (import
     (rnrs)
     (xitomatl include)
-    (rename (except (xitomatl srfi strings) string-copy string->list string-titlecase
+    (rename (except (srfi :13 strings) string-copy string->list string-titlecase
                     string-upcase string-downcase string-hash string-for-each)
             (string-index-right string-rindex))
     (xitomatl sxml-tools sxpathlib)

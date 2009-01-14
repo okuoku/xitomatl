@@ -27,7 +27,7 @@
   (rnrs)
   (xitomatl sxml-match)
   (xitomatl include)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (only (xitomatl common) printf))
 
   (define-syntax module

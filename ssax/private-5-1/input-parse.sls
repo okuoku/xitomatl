@@ -42,7 +42,7 @@
     (xitomatl ssax private-5-1 define-opt)
     (xitomatl ssax raise)
     (xitomatl ssax private-5-1 misc)
-    (except (xitomatl srfi strings) 
+    (except (srfi :13 strings) 
             string-copy string-for-each string->list
             string-upcase string-downcase string-titlecase string-hash))
   

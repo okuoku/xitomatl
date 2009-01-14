@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl irregex)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl enumerators))
 
 (define-syntax check-ex/not-advancing

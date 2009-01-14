@@ -29,7 +29,7 @@
     generate-report print-report)
   (import
     (rnrs)
-    (xitomatl srfi time)
+    (srfi :19 time)
     (xitomatl profiler meta)
     (only (xitomatl enumerators) fold)
     (only (xitomatl common) fprintf pretty-print format))

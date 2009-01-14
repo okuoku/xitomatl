@@ -73,7 +73,7 @@
   (import
     (except (rnrs) fold-right error)
     (xitomatl include)
-    (except (xitomatl srfi strings) string-copy string->list string-titlecase
+    (except (srfi :13 strings) string-copy string->list string-titlecase
             string-upcase string-downcase string-hash string-for-each)
     (only (xitomatl control) begin0)
     (xitomatl ssax raise)

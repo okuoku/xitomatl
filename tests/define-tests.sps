@@ -29,7 +29,7 @@
   (xitomatl define)
   (xitomatl define extras)
   (xitomatl conditions)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
   
 (rnrs:define-syntax check-syntax-error
   (syntax-rules ()

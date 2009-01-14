@@ -31,7 +31,7 @@
     print-exception print-condition)
   (import
     (rnrs)
-    (xitomatl srfi parameters)
+    (srfi :39 parameters)
     (only (xitomatl common) format printf fprintf pretty-print)
     (only (xitomatl exceptions) print-exception reraise)
     (only (xitomatl conditions) print-condition))

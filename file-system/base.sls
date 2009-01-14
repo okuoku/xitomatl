@@ -34,7 +34,7 @@
     directory-walk-enumerator directory-walk directory-walk/choice delete-any)
   (import
     (except (rnrs) file-exists?)
-    (xitomatl srfi cond-expand)
+    (srfi :0 cond-expand)
     (xitomatl file-system paths)
     (xitomatl file-system base compat)
     (only (xitomatl define) define/?)

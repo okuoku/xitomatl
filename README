@@ -9,22 +9,22 @@ pronounced something like "zye-toe-ma-tul", is the Aztec Nahuatl language word
 for tomato.  I chose an obscure word I like and which I doubt anyone will ever
 have a conflict with me over :-)
 
-See the test programs in the tests/ folder for examples of how to use my
-libraries.
+The Xitomatl collection requires SRFI libraries conforming to SRFI-97.  The SRFI
+libraries used by the author can be found at:
+
+  https://code.launchpad.net/~ikarus-libraries-team/ikarus-libraries/srfi
+
+The Xitomatl collection typically requires the latest development versions of
+R6RS implementations.  Currently supported are: Ikarus, PLT Scheme, and Ypsilon.
+They support the *.IMPL.sls convention for implementation-specific libraries.
+Larceny might be supported once it supports this convention.
+
+See the test programs in the "tests" folder for examples of
+how to use the libraries.
 
 For the latest development version, go to:
 
   https://code.launchpad.net/~derick-eddington/ikarus-libraries/xitomatl
-
-To use everything in the Xitomatl collection, you'll also need the 
-`(xitomatl srfi ---)' SRFIs ports which can be found at:
-
-  https://code.launchpad.net/~ikarus-libraries-team/ikarus-libraries/srfi
-
-My libraries typically require the latest development versions of R6RS
-implementations.  Currently supported are: Ikarus, PLT Scheme, and Ypsilon.
-They support the *.IMPL.sls convention for implementation-specific libraries.
-Larceny might be supported once it supports this convention.
 
 Bug Reporting:
 --------------

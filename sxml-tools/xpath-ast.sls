@@ -41,7 +41,7 @@
   (import
     (rnrs)
     (xitomatl include)
-    (xitomatl srfi and-let*)
+    (srfi :2 and-let*)
     (xitomatl sxml-tools xpath-parser)
     (xitomatl ssax private-5-1 output))
                 

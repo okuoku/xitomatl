@@ -25,7 +25,7 @@
 #!r6rs
 (import
   (except (rnrs) file-exists?)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl datum-find)
   (xitomatl enumerators)
   (xitomatl match)

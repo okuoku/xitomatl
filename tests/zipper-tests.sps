@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl zipper trees)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define t0 '(a (b c) d (e (f g) h)))
 (define z0 (zip-iterate/df t0))

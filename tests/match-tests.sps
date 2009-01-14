@@ -31,7 +31,7 @@
   (rnrs)
   (rnrs eval)
   (xitomatl match)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl irregex))
 
 (define-syntax check-failed

@@ -28,7 +28,7 @@
 (import
   (rnrs)
   (xitomatl ports)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl coroutines)
   (xitomatl bytevectors)
   (xitomatl control)

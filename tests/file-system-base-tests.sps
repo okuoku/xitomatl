@@ -25,11 +25,11 @@
 #!r6rs
 (import
   (except (rnrs) file-exists?)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl file-system base)
   (xitomatl file-system paths)
   (only (xitomatl enumerators) fold/enumerator)
-  (only (xitomatl srfi lists) list-index)
+  (only (srfi :1 lists) list-index)
   (only (xitomatl predicates) exact-non-negative-integer?)
   (only (xitomatl exceptions) reraise))
 

@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (rnrs eval)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (only (xitomatl exceptions) catch)
   (for (only (xitomatl file-system base) current-directory) expand)
   (xitomatl include))

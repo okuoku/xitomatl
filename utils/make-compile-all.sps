@@ -40,7 +40,7 @@
    (directory-walk-enumerator)
    "./"
    (lambda (path dirs files syms accum)
-     (if (irregex-match "\\./(\\.bzr|srfi|gtk|tests|utils|programs).*" path)
+     (if (irregex-match "\\./(\\.bzr|gtk|tests|utils|programs).*" path)
        (values dirs accum)
        (let loop ([files (filter (lambda (f) (irregex-match ".+\\.sls" f))
                                  files)]

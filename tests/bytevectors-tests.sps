@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl bytevectors)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (check (bytevector) 
        => #vu8())

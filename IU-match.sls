@@ -102,7 +102,7 @@
     (rnrs mutable-pairs)
     (only (xitomatl common) add1 sub1)
     (only (xitomatl lists) make-list last-pair)
-    (xitomatl srfi parameters))
+    (srfi :39 parameters))
   
 (define-syntax rec
   (syntax-rules ()

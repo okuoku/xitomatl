@@ -27,7 +27,7 @@
   (rnrs)
   (rnrs mutable-pairs)
   (xitomatl enumerators)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (only (xitomatl lists) make-list last-pair)
   (only (xitomatl ports) port-closed?))
 

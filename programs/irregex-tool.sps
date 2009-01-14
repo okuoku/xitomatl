@@ -34,7 +34,7 @@
   (xitomatl file-system paths)
   (xitomatl common)
   (xitomatl define)
-  (xitomatl srfi parameters))
+  (srfi :39 parameters))
 
 (define format-mode (make-parameter 's-expr))
 

@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl coroutines)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl lists))
 
 (define-syntax check-values

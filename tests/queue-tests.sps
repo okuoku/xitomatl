@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl queue)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define q (make-empty-queue))
 (check-queue q)

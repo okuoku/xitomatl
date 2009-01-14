@@ -41,7 +41,7 @@
   (import
     (rnrs)
     (only (xitomatl define) define/AV)
-    (only (xitomatl srfi parameters) make-parameter))
+    (only (srfi :39 parameters) make-parameter))
   
   ;; NOTE: Not currently thread-safe
   

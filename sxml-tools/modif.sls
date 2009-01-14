@@ -50,7 +50,7 @@
     (rnrs)
     (rnrs mutable-pairs)
     (xitomatl include)
-    (xitomatl srfi and-let*)
+    (srfi :2 and-let*)
     (xitomatl sxml-tools sxpathlib)
     (xitomatl sxml-tools xpath-context--xlink)
     (xitomatl sxml-tools ddo-txpath)

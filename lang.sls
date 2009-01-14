@@ -205,5 +205,5 @@
     (xitomatl strings)
     (xitomatl match)
     (xitomatl predicates)
-    (xitomatl srfi general-cond))
+    (srfi :61 cond))
 )

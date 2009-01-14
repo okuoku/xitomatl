@@ -27,7 +27,7 @@
   (rnrs)
   (rnrs eval)
   (xitomatl IU-match extras)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define-syntax must-be-a-syntax-error
   (syntax-rules ()

@@ -25,10 +25,10 @@
 #!r6rs
 (import
   (rnrs)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl profiler meta)
   (xitomatl profiler srfi-time)
-  (only (xitomatl srfi time) time?))
+  (only (srfi :19 time) time?))
 
 (define-syntax check-values
   (syntax-rules (=>)

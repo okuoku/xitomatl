@@ -30,7 +30,7 @@
   (import
     (rnrs)
     (only (xitomatl define) define/?)
-    (only (xitomatl srfi vectors) vector-concatenate))
+    (only (srfi :43 vectors) vector-concatenate))
   
   (define (record-type-field-procs rtd field-proc)
     (let loop ([rtd rtd] [procs '()])

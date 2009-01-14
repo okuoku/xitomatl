@@ -24,7 +24,7 @@
 (import
   (rnrs)
   (xitomatl htmlprag (0 16))
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define-syntax test-define
   (syntax-rules ()

@@ -25,7 +25,7 @@
 #!r6rs
 (import
   (rnrs)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl indexes))
 
 (check (iota 0) => '())

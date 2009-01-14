@@ -37,7 +37,7 @@
     (except (rnrs) error)
     (rnrs r5rs)
     (xitomatl include)
-    (except (xitomatl srfi strings) 
+    (except (srfi :13 strings) 
             string-copy string-for-each string->list
             string-upcase string-downcase string-titlecase string-hash)
     (only (xitomatl file-system base) file-regular?)

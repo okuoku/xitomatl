@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl delimited-control)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 ;------------------------------------------------------------------------
 ;			Shift tests

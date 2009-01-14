@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl exceptions)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define-syntax check-ex
   (syntax-rules (?)

@@ -30,7 +30,7 @@
     path-join path-split cleanse-path)
   (import
     (rnrs)
-    (xitomatl srfi cond-expand)
+    (srfi :0 cond-expand)
     (xitomatl strings))
   
   ;; If anyone ever wants to use my libraries on Windows,

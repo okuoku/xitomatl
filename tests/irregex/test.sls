@@ -29,7 +29,7 @@
     test-begin test-end test-exit)
   (import
     (rnrs)
-    (xitomatl srfi lightweight-testing))
+    (srfi :78 lightweight-testing))
   
   (define-syntax test 
     (syntax-rules ()

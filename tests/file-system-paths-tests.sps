@@ -26,7 +26,7 @@
 (import
   (rnrs)
   (xitomatl file-system paths)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (check (absolute-path? "")
        => #f)

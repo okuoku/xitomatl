@@ -27,7 +27,7 @@
   (except (rnrs) assert)
   (xitomatl ssax tree-trans)
   (xitomatl include)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (xitomatl ssax private-5-1 output)
   (only (xitomatl common) pretty-print))
 

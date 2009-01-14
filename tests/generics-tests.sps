@@ -27,7 +27,7 @@
   (rnrs)
   (rnrs eval)
   (xitomatl generics)
-  (xitomatl srfi lightweight-testing)
+  (srfi :78 lightweight-testing)
   (only (xitomatl define) define-values))
 
 (define-syntax check-AV-who-msg

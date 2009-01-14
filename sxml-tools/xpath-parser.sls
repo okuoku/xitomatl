@@ -51,7 +51,7 @@
     (rnrs)
     (rnrs r5rs)
     (xitomatl include)
-    (xitomatl srfi and-let*)
+    (srfi :2 and-let*)
     (xitomatl ssax private-5-1 output))
                 
   (include/resolve ("xitomatl" "sxml-tools") "xpath-parser.scm")

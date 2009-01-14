@@ -31,7 +31,7 @@
     (rnrs eval)
     (only (xitomatl define) define/?)
     (only (xitomatl exceptions) print-exception catch reraise)
-    (only (xitomatl srfi parameters) parameterize)
+    (only (srfi :39 parameters) parameterize)
     (only (xitomatl common) pretty-print)
     (only (xitomatl ports) textual-input-port? textual-output-port?)
     (xitomatl repl compat))

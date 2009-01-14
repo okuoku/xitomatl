@@ -26,7 +26,7 @@
 (import 
   (rnrs)
   (xitomatl fuego)
-  (xitomatl srfi lightweight-testing))
+  (srfi :78 lightweight-testing))
 
 (define-syntax check-exn
   (syntax-rules ()

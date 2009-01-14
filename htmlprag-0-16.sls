@@ -44,7 +44,7 @@
     (rnrs)
     (rnrs mutable-pairs)
     (xitomatl include)
-    (xitomatl srfi string-ports))
+    (srfi :6 basic-string-ports))
   
   (include/resolve ("xitomatl" "htmlprag") "htmlprag.scm")
 )
