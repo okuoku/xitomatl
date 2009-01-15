@@ -33,8 +33,10 @@
     (srfi :0 cond-expand)
     (xitomatl strings))
   
-  ;; If anyone ever wants to use my libraries on Windows,
-  ;; we can cond-expand or something this library to work.
+  ;; If anyone ever wants to use my libraries on Windows, we can cond-expand or
+  ;; something this library to work.
+  ;; TODO: Make run-time parameter to control if POSIX or Windows style is done;
+  ;;       this way, either platform can work with paths for the other.
   
   (define dir-sep-char #\/)
   (define dir-sep-str (string dir-sep-char)) ;; must be length of 1

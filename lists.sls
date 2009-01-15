@@ -26,15 +26,38 @@
 (library (xitomatl lists)
   (export
     make-list last-pair ;; from compat
+    sublist
     map/left-right/preserving map/filter
     remove-dups remv-dups remq-dups
     intersperse)
   (import
     (rnrs)
     (only (xitomatl define) define/? define/AV define/?/AV)
+    (only (xitomatl predicates) exact-non-negative-integer?)
     (xitomatl lists compat))
-  
-  ;;; TODO! These must be cyclic structure / circular list safe!
+
+  (define/?/AV sublist
+    (case-lambda/?
+      ((l start)
+       (sublist l start #F))
+      ((l (start exact-non-negative-integer?)
+          (end (lambda (x) (or (exact-non-negative-integer? x) (not x)))))
+       (unless (or (not end) (<= start end))
+         (AV "invalid range" start end)) 
+       (let loop ((x l) (i 0) (a '()))
+         (cond ((and end (= i end))
+                (reverse a))
+               ((pair? x)
+                (loop (cdr x) (+ 1 i) (if (>= i start) (cons (car x) a) a)))
+               ((null? x)
+                (cond ((> start i)
+                       (AV "start index greater than list's length" start i))
+                      (end
+                       (AV "end index greater than list's length" end i))
+                      (else
+                       (reverse a))))
+               (else
+                (AV "not a proper list" l)))))))
   
   ; Deterministic, left-to-right map
   ; It preserves sharing as much as possible: that is, if given the pair
@@ -69,7 +92,7 @@
                                      (loop (map cdr ls) (if x (cons x r) r) orig))]
                [(for-all null? ls) (reverse r)]
                [else (for-each (lambda (l o) (unless (or (pair? l) (null? l))
-                                             (AV "not a proper list" o))) 
+                                               (AV "not a proper list" o))) 
                                ls orig)
                      (for-each (lambda (l) (when (null? l)
                                              (AV "length mismatch" orig)))
@@ -83,7 +106,7 @@
            (cond [(pair? l) (let ([h (car l)] [t (cdr l)])
                               (loop (rf h t) (cons h r)))]
                  [(null? l) (reverse r)]
-                 [else (AV "not a list" l)])))]))  
+                 [else (AV "not a proper list" l)])))]))  
   
   (define-rem-dups remove-dups remove)
   (define-rem-dups remv-dups remv)
