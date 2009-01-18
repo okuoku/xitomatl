@@ -33,7 +33,7 @@
     (rnrs r5rs)
     (only (xitomatl define) define/AV)
     (only (xitomatl exceptions) catch)
-    (only (xitomatl predicates) library-name<? library-name?)
+    (only (xitomatl library-utils) library-name<? library-name?)
     (xitomatl r6rs-bindings spec))
   
   (define all-libraries-names

@@ -31,7 +31,7 @@
   (only (xitomatl irregex) irregex-match)
   (only (xitomatl match) match)
   (only (xitomatl ports) read-all)
-  (only (xitomatl predicates) symbol<?)
+  (only (xitomatl library-utils) library-name<?)
   (only (xitomatl lists) remove-dups)
   (only (xitomatl common) fprintf))
 
@@ -54,19 +54,9 @@
                    [_ accum]))))))
    '()))
 
-(define libraries-names/normalized
-  (remove-dups
-   (list-sort (lambda (a b)
-                (let loop ([a a] [b b])
-                  (cond [(null? a) #t]
-                        [(null? b) #f]
-                        [(symbol=? (car a) (car b))
-                         (loop (cdr a) (cdr b))]
-                        [else (symbol<? (car a) (car b))])))
-              (map (lambda (l)
-                     ;; remove possible version spec
-                     (filter symbol? l))
-                   libraries-names))))
+(define libraries-names/prepared
+  (list-sort library-name<?
+             (remove-dups libraries-names)))
 
 ;; for Ikarus
 (call-with-output-file "compile-all.ikarus.sps"
@@ -77,7 +67,7 @@
     (pf "(import\n")
     (for-each (lambda (ln)
                 (pf "  (only ~s)\n" ln))
-              libraries-names/normalized)
+              libraries-names/prepared)
     (pf ")\n")))
 
 ;; TODO?: For other implementations?

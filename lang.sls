@@ -188,7 +188,7 @@
     ;; predicates
     non-negative-integer? exact-non-negative-integer? positive-integer?
     exact-positive-integer? exact-integer? symbol<? name=? non-empty-string?
-    char-line-ending? library-name? list-of? #;improper-list? #;datum?
+    char-line-ending? list-of? #;improper-list? #;datum?
     ;; SRFI-61: more general cond
     cond
     )
