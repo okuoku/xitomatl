@@ -50,14 +50,14 @@
   (define-syntax define/who
     (lambda (stx)
       (syntax-case stx ()
-        [(kw (fname . frmls) b0 b ...)
+        [(_ (fname . frmls) b0 b ...)
          (identifier? #'fname)
-         #'(kw fname
+         #'(define/who fname
              (lambda frmls b0 b ...))]
-        [(ctxt name expr)
+        [(_ name expr)
          (identifier? #'name)
          #'(define name
-             (who-wrap ctxt name 
+             (who-wrap name name 
                expr))])))
   
   
@@ -77,14 +77,14 @@
   (define-syntax define/AV
     (lambda (stx)
       (syntax-case stx ()
-        [(kw (fname . frmls) b0 b ...)
+        [(_ (fname . frmls) b0 b ...)
          (identifier? #'fname)
-         #'(kw fname
+         #'(define/AV fname
              (lambda frmls b0 b ...))]
-        [(ctxt name expr)
+        [(_ name expr)
          (identifier? #'name)
          #'(define name
-             (AV-wrap ctxt name 
+             (AV-wrap name name 
                expr))])))
   
   (define (make-arg-check-failed who)
@@ -142,10 +142,10 @@
   (define-syntax define/?/AV
     (lambda (stx)
       (syntax-case stx ()
-        [(ctxt (fname . frmls) body0 body* ...)
+        [(_ (fname . frmls) body0 body* ...)
          (identifier? #'fname)
          #'(define fname
-             (AV-wrap ctxt fname
+             (AV-wrap fname fname
                (case-lambda/?--meta fname [frmls body0 body* ...])))]
         [(_ name expr)
          (identifier? #'name)

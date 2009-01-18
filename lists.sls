@@ -28,7 +28,7 @@
     make-list last-pair ;; from compat
     sublist
     map/left-right/preserving map/filter
-    remove-dups remv-dups remq-dups
+    remp-dups remove-dups remv-dups remq-dups
     intersperse)
   (import
     (rnrs)
@@ -98,19 +98,20 @@
                                              (AV "length mismatch" orig)))
                                ls)]))]))
 
-  (define-syntax define-rem-dups
-    (syntax-rules ()
-      [(_ name rf)
-       (define/AV (name l)    
-         (let loop ([l l] [r '()])
-           (cond [(pair? l) (let ([h (car l)] [t (cdr l)])
-                              (loop (rf h t) (cons h r)))]
-                 [(null? l) (reverse r)]
-                 [else (AV "not a proper list" l)])))]))  
-  
-  (define-rem-dups remove-dups remove)
-  (define-rem-dups remv-dups remv)
-  (define-rem-dups remq-dups remq)
+  (define (rem-dups rf l who)
+    (let loop ((l l) (r '()))
+      (cond ((pair? l) (let ((h (car l)) (t (cdr l)))
+                         (loop (rf h t) (cons h r))))
+            ((null? l) (reverse r))
+            (else (assertion-violation who "not a proper list" l)))))
+  (define (remp-dups proc l)
+    (rem-dups proc l 'remp-dups))
+  (define (remove-dups l)
+    (rem-dups remove l 'remove-dups))
+  (define (remv-dups l)
+    (rem-dups remv l 'remv-dups))
+  (define (remq-dups l)
+    (rem-dups remq l 'remq-dups))
   
   (define/AV (intersperse l sep)
     (let loop ([l l] [r '()] [sep sep] [orig l])

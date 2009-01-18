@@ -23,15 +23,10 @@
 ;;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
-(library (xitomatl control)
+(library (xitomatl environments compat)
   (export
-    begin0)
-  (import 
-    (rnrs))
-  
-  (define-syntax begin0
-    (syntax-rules ()
-      [(_ form0 form1 ...)
-       (let ([result form0])
-         (begin form1 ... result))]))
+    environment?
+    environment-symbols)
+  (import
+    (only (ikarus) environment? environment-symbols))
 )

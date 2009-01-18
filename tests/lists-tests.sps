@@ -131,6 +131,15 @@
 (check (map/filter odd? L) => (filter values (map odd? L)))
 (check (map/filter (lambda (x y z) (odd? (+ x y z))) L L L)
        => (filter values (map (lambda (x y z) (odd? (+ x y z))) L L L)))
+;;; remp-dups
+(check (remp-dups (lambda _ (assert #F)) '()) => '())
+(check (remp-dups remq '(a)) => '(a))
+(check (remp-dups remove '(a "b" #\c 4)) => '(a "b" #\c 4))
+(check (remp-dups (lambda (x r)
+                    (reverse (remp (lambda (y) (equal? (cadr x) (cadr y)))
+                                   r)))
+                  '((1 a) (2 #\b) (3 a) (4 "c") (5 #\b) (6 "c") (7 d) (8 a)))
+       => '((1 a) (7 d) (2 #\b) (6 "c")))
 ;;; remove-dups
 (check (remove-dups '(a "a" (b 2) c (b 2) (b 2) a d "a")) 
        => '(a "a" (b 2) c d))

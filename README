@@ -15,12 +15,13 @@ libraries used by the author can be found at:
   https://code.launchpad.net/~ikarus-libraries-team/ikarus-libraries/srfi
 
 The Xitomatl collection typically requires the latest development versions of
-R6RS implementations.  Currently supported are: Ikarus, PLT Scheme, and Ypsilon.
-They support the *.IMPL.sls convention for implementation-specific libraries.
-Larceny might be supported once it supports this convention.
+R6RS implementations.  Currently supported are Ikarus, Ypsilon, and PLT.  They
+support the *.IMPL.sls convention for implementation-specific libraries.
+Larceny might be supported once it supports this convention.  Or, if a better
+convention is created, I'll switch to using it.
 
-See the test programs in the "tests" folder for examples of
-how to use the libraries.
+See the test programs in the "tests" folder for examples of how to use the
+libraries.
 
 For the latest development version, go to:
 

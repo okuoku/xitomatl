@@ -23,15 +23,42 @@
 ;;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
-(library (xitomatl control)
+(library (xitomatl conditionals)
   (export
-    begin0)
+    aif
+    xor)
   (import 
     (rnrs))
   
-  (define-syntax begin0
+  (define-syntax aif
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ var ve te fe)
+         (identifier? #'var)
+         #'(let ([var ve])
+             (if var te fe))]
+        [(_ var pred ve te fe) 
+         (identifier? #'var)
+         #'(let ([var ve])
+             (if (pred var) te fe))])))
+
+  (define-syntax xor
     (syntax-rules ()
-      [(_ form0 form1 ...)
-       (let ([result form0])
-         (begin form1 ... result))]))
+      ((_ expr ...)
+       (xor-aux #F expr ...))))
+  
+  (define-syntax xor-aux
+    (syntax-rules ()
+      ((_ r)
+       r)
+      ((_ r expr)
+       (let ((x expr))
+         (if r
+           (and (not x) r)
+           x)))
+      ((_ r expr0 expr ...)
+       (let ((x expr0))
+         (and (or (not r) (not x))
+              (let ((n (or r x)))
+                (xor-aux n expr ...)))))))
 )

@@ -38,30 +38,7 @@
               'unexpected-return)
             => #T)]))
 
-(check (aif x (+ 1 2) 
-         (* x x) 
-         (assert #F))
-       => 9)
-(check (aif x (string? 'sym) 
-         (assert #F) 
-         (list x))
-       => '(#F))
-(check (aif x number? (+ 1 2)
-         (* x x) 
-         (assert #F))
-       => 9)
-(check (aif x integer? (+ 1.1 2)
-         (assert #F) 
-         (- x))
-       => -3.1)
-(let ([a 0] [b 0] [c 0] [d 0])
-  (check (aif x (begin (set! a (+ 1 a)) integer?) (begin (set! b (+ 1 b)) (+ 1.1 2))
-              (begin (set! c (+ 1 c)) 'bad) 
-              (begin (set! d (+ 1 d)) (- x)))
-         
-         => -3.1)
-  (check (list a b c d) => '(1 1 0 1)))
-(check-SV (aif "oops" 'foo 'true 'false))
+;;;; begin0
 
 (let ([x 1] [n 0])
   (check (begin0 
@@ -72,6 +49,7 @@
          => -1)
   (check x => 4)
   (check n => 1))
+(check-SV (begin0))
 
 
 (check-report)

@@ -162,13 +162,13 @@
             '(1 2 3))
 
 (test-equal "setter car"
-            (let ((x '(1 . 2)))
+            (let ((x (cons 1 2)))
               (match x (((set! a) . b) (a 3)))
               x)
             '(3 . 2))
 
 (test-equal "setter cdr"
-            (let ((x '(1 . 2)))
+            (let ((x (cons 1 2)))
               (match x ((a . (set! b)) (b 3)))
               x)
             '(1 . 3))

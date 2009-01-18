@@ -301,12 +301,27 @@
            (cons* x y z r))
          (f 'x "yy" #\z 1 -56.3 67/902))
        => '(x "yy" #\z 1 -56.3 67/902))
-(check (let ()
-         (define/? (f [x symbol?] [y string?] [z char?] 
-                      . #(r (lambda (r) (for-all number? r)))) 
-           (cons* x y z r))
-         (f 'x "yy" #\z 1 -56.3 67/902))
-       => '(x "yy" #\z 1 -56.3 67/902))
+(let ((a 0) (b 0) (c 0) (d 0))
+  (define/? (f [x (begin (set! a (+ 1 a)) symbol?)]
+               [y (begin (set! b (+ 1 b)) string?)]
+               [z (begin (set! c (+ 1 c)) char?)] 
+               . #(r (begin (set! d (+ 1 d))
+                            (lambda (r) (for-all number? r))))) 
+    (cons* x y z r))
+  (check (f 'x "yy" #\z 1 -56.3 67/902)
+         => '(x "yy" #\z 1 -56.3 67/902))
+  (check (f 'foo "bar" #\c 3 2 1)
+         => '(foo "bar" #\c 3 2 1))
+  (check (list a b c d) => '(2 2 2 2)))
+(let ()
+  (define/? (f [x (if (negative? y) string? list?)] y)
+    'ok)
+  (check (f '(foo) 1) => 'ok)
+  (check (f "foo" -1) => 'ok)
+  (check-AV/msg/AN "argument check failed" x
+    (f "foo" 1))
+  (check-AV/msg/AN "argument check failed" x
+    (f '(foo) -1)))
 (check-AV/who foo
   (let ()
     (define/? foo (lambda/? ([x char?]) x))

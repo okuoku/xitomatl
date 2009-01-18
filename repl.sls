@@ -34,6 +34,7 @@
     (only (srfi :39 parameters) parameterize)
     (only (xitomatl common) pretty-print)
     (only (xitomatl ports) textual-input-port? textual-output-port?)
+    (only (xitomatl environments) environment?)
     (xitomatl repl compat))
   
   

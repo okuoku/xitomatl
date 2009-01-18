@@ -108,7 +108,7 @@
         (error who "unsupported modification seconds" msecs))))
   
   #;(define (file-ctime path)
-    #|Use MzScheme's FFI to use C chmod, I guess|#)
+    #|Use MzScheme's FFI to use C ctime, I guess|#)
   
   (define file-exists?
     (case-lambda 

@@ -25,8 +25,7 @@
 #!r6rs
 (library (xitomatl repl compat)
   (export
-    current-input-port current-output-port current-error-port
-    environment?)
+    current-input-port current-output-port current-error-port)
   (import 
     (ikarus))
 )

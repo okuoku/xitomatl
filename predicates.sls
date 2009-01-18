@@ -25,6 +25,7 @@
 #!r6rs
 (library (xitomatl predicates)
   (export
+    not? and? or? xor?
     non-negative-integer?
     exact-non-negative-integer?
     positive-integer?
@@ -43,7 +44,60 @@
     library-name<?
     library-version<?)
   (import
-    (rnrs))
+    (rnrs)
+    (only (xitomatl conditionals) xor))
+
+  (define (not? pred)
+    (lambda (x)
+      (not (pred x))))
+
+  (define and?
+    (case-lambda
+      ((pred0 pred1)
+       (lambda (x) (and (pred0 x) (pred1 x))))
+      ((pred0 pred1 pred2)
+       (lambda (x) (and (pred0 x) (pred1 x) (pred2 x))))
+      (preds
+       (lambda (x)
+         (or (null? preds)
+             (let loop ((preds preds))
+               (if (null? (cdr preds))
+                 ((car preds) x)  ;; tail call
+                 (and ((car preds) x)
+                      (loop (cdr preds))))))))))
+
+  (define or?
+    (case-lambda
+      ((pred0 pred1)
+       (lambda (x) (or (pred0 x) (pred1 x))))
+      ((pred0 pred1 pred2)
+       (lambda (x) (or (pred0 x) (pred1 x) (pred2 x))))
+      (preds
+       (lambda (x)
+         (and (pair? preds)
+              (let loop ((preds preds))
+                (if (null? (cdr preds))
+                  ((car preds) x)  ;; tail call
+                  (or ((car preds) x)
+                      (loop (cdr preds))))))))))
+
+  (define xor?
+    ;; NOTE: Does not tail-call the last predicate.
+    (case-lambda
+      ((pred0 pred1)
+       (lambda (x) (xor (pred0 x) (pred1 x))))
+      ((pred0 pred1 pred2)
+       (lambda (x) (xor (pred0 x) (pred1 x) (pred2 x))))
+      (preds
+       (lambda (x)
+         (let loop ((preds preds) (r #F))
+           (if (null? preds)
+             r
+             (let ((v ((car preds) x)))
+               (if v
+                 (and (not r)
+                      (loop (cdr preds) v))
+                 (loop (cdr preds) r)))))))))
   
   (define (non-negative-integer? x)
     (and (integer? x) (not (negative? x))))
