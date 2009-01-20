@@ -29,11 +29,12 @@
     sublist
     map/left-right/preserving map/filter
     remp-dups remove-dups remv-dups remq-dups
-    intersperse)
+    intersperse group-by
+    alist->plist plist->alist)
   (import
     (rnrs)
     (only (xitomatl define) define/? define/AV define/?/AV)
-    (only (xitomatl predicates) exact-non-negative-integer?)
+    (only (xitomatl predicates) exact-non-negative-integer? exact-positive-integer?)
     (xitomatl lists compat))
 
   (define/?/AV sublist
@@ -118,6 +119,38 @@
       (cond [(pair? l) (loop (cdr l) (cons* sep (car l) r) sep orig)]
             [(null? l) (if (null? r) '() (reverse (cdr r)))]
             [else (AV "not a proper list" orig)])))
+
+  (define/?/AV group-by
+    (case-lambda/?
+      ((by)
+       (group-by by #F))
+      (((by exact-positive-integer?) remainders-ok?)
+       (lambda (l)
+         (let loop ((l l) (n 0) (g '()) (r '()))
+           (cond ((pair? l)
+                  (if (= n by)
+                    (loop (cdr l) 1 (list (car l)) (cons (reverse g) r))
+                    (loop (cdr l) (+ 1 n) (cons (car l) g) r)))
+                 ((null? l)
+                  (cond ((or (= n by) (and remainders-ok? (> n 0)))
+                         (reverse (cons (reverse g) r)))
+                        ((= n 0) '())
+                        (else (apply AV "remainder elements" (reverse g)))))
+                 (else (AV "not a proper list"))))))))
+
+  (define/AV (alist->plist x)
+    (let loop ((al x) (pl '()))
+      (cond ((and (pair? al) (pair? (car al)))
+             (loop (cdr al) (cons* (cdar al) (caar al) pl)))
+            ((null? al) (reverse pl))
+            (else (AV "not a proper alist" x)))))
+
+  (define/AV (plist->alist x)
+    (let loop ((pl x) (al '()))
+      (cond ((and (pair? pl) (pair? (cdr pl)))
+             (loop (cddr pl) (cons (cons (car pl) (cadr pl)) al)))
+            ((null? pl) (reverse al))
+            (else (AV "not a proper plist" x)))))
   
   #;(define/? (flatten [l list?])
     ;;; not sure exactly what I want the semantics to be
