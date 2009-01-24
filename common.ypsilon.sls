@@ -33,7 +33,7 @@
     )
   (import
     (rnrs)
-    (only (core) format gensym microsecond set-current-output-port!)
+    (only (core) format gensym set-current-output-port!)
     (prefix (only (core) pretty-print) ypsilon:)
     (only (time) time))
   
@@ -62,7 +62,7 @@
          (lambda ()
            (set! temp (current-output-port))
            (set-current-output-port! sop))
-         (lambda () (thunk))
+         thunk
          (lambda ()
            (set-current-output-port! temp)))
         (get))))

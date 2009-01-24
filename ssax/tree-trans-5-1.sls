@@ -28,6 +28,7 @@
     SRV:send-reply
     pre-post-order
     post-order
+    foldts
     replace-range)
   (import
     (except (rnrs) error)
