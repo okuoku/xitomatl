@@ -1,4 +1,4 @@
-;;; Copyright (c) 2008 Derick Eddington
+;;; Copyright (c) 2009 Derick Eddington
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
 ;;; copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,9 @@
     define-values)
   (import
     (rnrs)
-    (for (only (xitomatl macro-utils) formals-ok?/raise) expand)
+    (for (only (xitomatl macro-utils)
+               formals-ok?/raise with-syntax* gen-temp)
+         expand)
     (only (xitomatl common) format))
   
   (define (define-values-error expected received-vals)
@@ -38,24 +40,40 @@
   
   (define-syntax define-values
     (lambda (stx)
+      (define (make-define id index t)
+        #`(define #,id (vector-ref #,t #,index)))
+      (define (make-last-define id index t)
+        #`(define #,id
+            (let ((x (vector-ref #,t #,index)))
+              (set! #,t #F)
+              x)))
       (syntax-case stx ()
-        [(_ (id* ... . rid) expr)
-         (formals-ok?/raise #'(id* ... . rid) stx)         
-         #`(begin
-             (define t 
-               (call-with-values 
-                (lambda () #f expr) ;; #f first to prevent internal defines
-                (case-lambda
-                  [(id* ... . rid)
-                   (list id* ... #,@(if (identifier? #'rid) (list #'rid) '()))]
-                  [otherwise
-                   (define-values-error #,(length #'(id* ...)) otherwise)])))
-             (define id*
-               (let ([v (car t)]) (set! t (cdr t)) v))
-             ...
-             #,@(if (identifier? #'rid)
-                  (list #'(define rid
-                            (let ([v (car t)]) (set! t (cdr t)) v)))
-                  '()))])))  
+        ((_ (id ... . rid) expr)
+         (formals-ok?/raise #'(id ... . rid) stx)
+         (with-syntax*
+             ((t (gen-temp))
+              ((def ...)
+               (let loop ((frmls #'(id ... . rid))
+                          (i 0)
+                          (a '()))
+                 (syntax-case frmls ()
+                   ((x)
+                    (reverse (cons (make-last-define #'x i #'t) a)))
+                   ((x . r)
+                    (loop #'r (+ 1 i) (cons (make-define #'x i #'t) a)))
+                   (()
+                    '())
+                   (x
+                    (reverse (cons (make-last-define #'x i #'t) a)))))))
+           #`(begin
+               (define t
+                 (call-with-values
+                   (lambda () #F expr)  ;; #F first to prevent internal defines
+                   (case-lambda
+                     ((id ... . rid)
+                      (vector id ... #,@(if (identifier? #'rid) (list #'rid) '())))
+                     (otherwise
+                      (define-values-error #,(length #'(id ...)) otherwise)))))
+               def ...))))))  
   
 )
