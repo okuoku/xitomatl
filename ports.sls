@@ -1,26 +1,26 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
 (library (xitomatl ports)
@@ -93,35 +93,35 @@
        (port-map proc reader (current-input-port))]))
   
   (define/AV (open-compound-input-port list-or-proc maybe-transcoder)
-    ;;; A compound input port is a custom port which represents the logical
-    ;;; concatenation of other input ports.  It starts out with an ordered
-    ;;; collection of input ports and reads from the first one until end of
-    ;;; file is reached, whereupon it reads from the second one, and so on,
-    ;;; until end of file is reached on the last of the contained input ports,
-    ;;; and then subsequent reads from the compound input port will return end
-    ;;; of file.  After each component port is exhausted, it is closed.
-    ;;; Closing a compound input port closes all remaining component ports.
-    ;;; get-position and set-position! are not supported.
-    ;;; 
-    ;;; The first argument to open-compound-input-port must be either a list
-    ;;; of components or a zero-argument procedure which returns components.
-    ;;; If it is a procedure, it is called each time the next component port
-    ;;; is needed and it must return the next component or #f to indicate
-    ;;; there are no more.  The second argument must be either a transcoder or
-    ;;; #f.  If it is a transcoder, the compound input port will be textual
-    ;;; and the acceptable values for components are textual input ports,
-    ;;; binary input ports, strings, and bytevectors; otherwise the compound
-    ;;; input port will be binary and the acceptable values are binary input
-    ;;; ports and bytevectors.  For a textual compound input port, binary
-    ;;; input port components are transcoded, bytevector components are used
-    ;;; as the source of transcoded bytevector input ports, textual input
-    ;;; ports are used directly and their transcoder may be different than
-    ;;; the compound input port's, and string components are used as the
-    ;;; source of string input ports.  For a binary compound input port,
-    ;;; binary input port components are used directly and bytevector
-    ;;; components are used as the source of raw bytevector input ports.
+    ;; A compound input port is a custom port which represents the logical
+    ;; concatenation of other input ports.  It starts out with an ordered
+    ;; collection of input ports and reads from the first one until end of file
+    ;; is reached, whereupon it reads from the second one, and so on, until end
+    ;; of file is reached on the last of the contained input ports, and then
+    ;; subsequent reads from the compound input port will return end of file.
+    ;; After each component port is exhausted, it is closed.  Closing a compound
+    ;; input port closes all remaining component ports.  get-position and
+    ;; set-position! are not supported.
+    ;; 
+    ;; The first argument to open-compound-input-port must be either a list of
+    ;; components or a zero-argument procedure which returns components.  If it
+    ;; is a procedure, it is called each time the next component port is needed
+    ;; and it must return the next component or #f to indicate there are no
+    ;; more.  The second argument must be either a transcoder or #f.  If it is a
+    ;; transcoder, the compound input port will be textual and the acceptable
+    ;; values for components are textual input ports, binary input ports,
+    ;; strings, and bytevectors; otherwise the compound input port will be
+    ;; binary and the acceptable values are binary input ports and bytevectors.
+    ;; For a textual compound input port, binary input port components are
+    ;; transcoded, bytevector components are used as the source of transcoded
+    ;; bytevector input ports, textual input ports are used directly and their
+    ;; transcoder may be different than the compound input port's, and string
+    ;; components are used as the source of string input ports.  For a binary
+    ;; compound input port, binary input port components are used directly and
+    ;; bytevector components are used as the source of raw bytevector input
+    ;; ports.
     (define (make-handler prefix)
-      ;;; Returns a function which maps the allowable types into input-ports.
+      ;; Returns a function which maps the allowable types into input-ports.
       (define (invalid suffix x)
         (AV (string-append prefix " " suffix) x))
       (if maybe-transcoder
@@ -142,7 +142,7 @@
                 [else
                  (invalid "Not a binary input port or bytevector." n)]))))
     (define next
-      ;;; Returns the next input-port, or #f if there are no more.
+      ;; Returns the next input-port, or #f if there are no more.
       (cond 
         [(or (pair? list-or-proc) (null? list-or-proc))
          (let ([l list-or-proc]

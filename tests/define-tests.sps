@@ -1,26 +1,26 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
 (import
@@ -97,7 +97,7 @@
               (let () expr #t))
             => #t)]))
 
-;;; define-values
+;;;; define-values
 
 (define-values (a) 1)
 (check a => 1)
@@ -140,7 +140,7 @@
 (check-syntax-error
  (define-values (a b a) (values 1 2 3)))
 
-;;; currying
+;;;; currying
 
 (define (fn x) x)
 (check (fn 678) => 678)
@@ -149,7 +149,7 @@
 (define ((((fc2 a) b) c) d) (+ a b c d))
 (check ((((fc2 1) 2) 3) 4) => 10)
 
-;;; defining macro transformers
+;;;; defining macro transformers
 
 (define-syntax M
   (lambda (stx)
@@ -159,7 +159,7 @@
   (syntax-case stx () [(_ x) #'(list x)]))
 (check (M2 'zzz) => '(zzz))
 
-;;; define/who
+;;;; define/who
 
 (define/who (w0 x y . a) (list x y a who))
 (check (w0 1 2 3 4) => '(1 2 (3 4) w0))
@@ -168,7 +168,7 @@
 (define/who w2 (list who who))
 (check w2 => '(w2 w2))
 
-;;; define/AV
+;;;; define/AV
 
 (define/AV f0 (case-lambda [() (AV "oops")] [r r]))
 (check (f0 1 2 3) => '(1 2 3))
@@ -192,7 +192,7 @@
     (define/AV f (lambda () (AV "oops")))
     (f)))
 
-;;; define/?
+;;;; define/?
 
 (define/? f4 (case-lambda/? [() 'a] [(x) 'b]))
 (check (f4) => 'a)
@@ -373,7 +373,7 @@
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
 
-;;; define/?/AV
+;;;; define/?/AV
 
 (define/?/AV f27 (case-lambda/? [() 'a] [(x) 'b]))
 (check (f27) => 'a)

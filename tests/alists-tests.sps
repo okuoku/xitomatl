@@ -1,26 +1,26 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
 (import
@@ -94,7 +94,7 @@
 (check-improper ass-entries
   (ass-entries '((1 . y) oops (3 . z))))
 
-;;; order preserving tests
+;;;; order preserving tests
 
 (check (assoc-replace '((a . 1) (b . 2) (c . 3) (d . 4)) 'b "new") 
        => '((a . 1) (b . "new") (c . 3) (d . 4)))
@@ -117,7 +117,7 @@
          (list keys vals)) 
        => '((a b c d) (1 2 3 4)))
 
-;;; eq-alist tests
+;;;; eq-alist tests
 
 (check-AV (make-eq-alist "oops"))
 (check-AV (make-eq-alist '(oops)))
@@ -224,7 +224,7 @@
 (check (alist-size a3) => 1)
 (check (alist-mutable? a3) => #f)
 
-;;; eqv-alist tests
+;;;; eqv-alist tests
 
 (check-AV (make-eqv-alist "oops"))
 (check-AV (make-eqv-alist '(oops)))
@@ -319,7 +319,7 @@
 (check (alist-size a7) => 1)
 (check (alist-mutable? a7) => #f)
 
-;;; equal-alist tests
+;;;; equal-alist tests
 
 (check-AV (make-equal-alist "oops"))
 (check-AV (make-equal-alist '(oops)))
@@ -403,7 +403,7 @@
 (check (alist-size a11) => 1)
 (check (alist-mutable? a11) => #f)
 
-;;; pred-alist tests
+;;;; pred-alist tests
 
 (check-AV (make-pred-alist "oops"))
 (check-AV (make-pred-alist '(oops)))

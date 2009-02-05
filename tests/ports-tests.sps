@@ -1,28 +1,28 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
-;;; NOTE: The compound-input-port uses of coroutines are known to fail on PLT Scheme.
+;; NOTE: The compound-input-port uses of coroutines are known to fail on PLT Scheme.
 
 #!r6rs
 (import
@@ -53,7 +53,7 @@
             => 'caught)]))
 
 
-;;; Getting everything from a port
+;;;; Getting everything from a port
 
 (define text
 "Blah 123 ()\n\
@@ -83,9 +83,9 @@ a n d ((()))")
          read-all)
        => '(Blah 123 () "another" #\l #(i n) #\e a n d ((()))))
 
-;;; Compound input ports
+;;;; Compound input ports
 
-;; compound binary
+;;;; compound binary
 
 (define b0-bv #vu8(0 1 2 3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19))
 (define b1-bv #vu8())
@@ -109,7 +109,7 @@ a n d ((()))")
         (put-bytevector bp b-bv))))
   (list b0-fn b1-fn b2-fn b3-fn b4-fn b5-fn)
   (list b0-bv b1-bv b2-bv b3-bv b4-bv b5-bv))
-;; errors
+;;;; errors
 (check-AV-msg "not a list or procedure"
   (open-binary-compound-input-port 'oops))
 (check-AV-msg "not a proper list"
@@ -124,7 +124,7 @@ a n d ((()))")
   (call-with-port 
       (open-binary-compound-input-port (lambda () 'oops))
     get-u8))
-;; initially empty
+;;;; initially empty
 (let ([bcip (open-binary-compound-input-port '())])
   (check (eof-object? (get-u8 bcip)) => #t)
   (close-port bcip)
@@ -133,7 +133,7 @@ a n d ((()))")
   (check (eof-object? (get-u8 bcip)) => #t)
   (close-port bcip)
   (check-ex (get-u8 bcip)))
-;; single component
+;;;; single component
 (check (call-with-port
            (open-binary-compound-input-port (list b0-bv))
          get-bytevector-all)
@@ -163,7 +163,7 @@ a n d ((()))")
                        (set! v #f)))))
              get-bytevector-all)
            => b3-bv)))
-;; two components
+;;;; two components
 (check (call-with-port
            (open-binary-compound-input-port (list b4-bv b5-bv))
          get-bytevector-all)
@@ -197,7 +197,7 @@ a n d ((()))")
                           (set! v (cdr v))))))
                  get-bytevector-all)
                => (bytevector-append b3-bv b4-bv))))))
-;; many components
+;;;; many components
 (check (call-with-port
            (open-binary-compound-input-port (list b0-bv b1-bv b2-bv b3-bv b4-bv b5-bv))
          get-bytevector-all)
@@ -234,7 +234,7 @@ a n d ((()))")
            get-bytevector-all)
          => (bytevector-append b3-bv b3-bv b5-bv b1-bv b0-bv b3-bv b4-bv b2-bv))
   (for-each close-port ps))
-;; mixed bytevectors and binary input ports
+;;;; mixed bytevectors and binary input ports
 (let ([pa (open-file-input-port b5-fn)]
       [pb (open-file-input-port b0-fn)]
       [pc (open-file-input-port b2-fn)])
@@ -260,7 +260,7 @@ a n d ((()))")
            get-bytevector-all)
          => (bytevector-append b1-bv b0-bv b1-bv b1-bv b2-bv b3-bv b3-bv))
   (for-each close-port (list pa pb pc)))
-;; closing before finished closes all component ports
+;;;; closing before finished closes all component ports
 (let ([pa (open-file-input-port b5-fn)]
       [pb (open-file-input-port b0-fn)]
       [pc (open-file-input-port b2-fn)]
@@ -279,7 +279,7 @@ a n d ((()))")
   (check-ex (get-u8 pc))
   (check-ex (get-u8 pd)))
 
-;; compound textual (using native-transcoder)
+;;;; compound textual (using native-transcoder)
 
 (define t0-str "abcdefghijk\xD6D5;\xD64F;\xD681;lmnopqrstuvwxyz   ")
 (define t1-str "AB")
@@ -309,7 +309,7 @@ a n d ((()))")
         (put-string tp t-str))))
   (list t0-fn  t1-fn  t2-fn  t3-fn  t4-fn  t5-fn)
   (list t0-str t1-str t2-str t3-str t4-str t5-str))
-;; errors
+;;;; errors
 (check-AV-msg "not a list or procedure"
   (open-textual-compound-input-port 'oops))
 (check-AV-msg "not a proper list"
@@ -324,7 +324,7 @@ a n d ((()))")
   (call-with-port 
       (open-textual-compound-input-port (lambda () 'oops))
     get-char))
-;; initially empty
+;;;; initially empty
 (let ([tcip (open-textual-compound-input-port '())])
   (check (eof-object? (get-char tcip)) => #t)
   (close-port tcip)
@@ -333,7 +333,7 @@ a n d ((()))")
   (check (eof-object? (get-char tcip)) => #t)
   (close-port tcip)
   (check-ex (get-char tcip)))
-;; single component
+;;;; single component
 (check (call-with-port
            (open-textual-compound-input-port (list t0-str))
          get-string-all)
@@ -393,7 +393,7 @@ a n d ((()))")
                        (set! v #f)))))
              get-string-all)
            => b3-str)))
-;; two components
+;;;; two components
 (check (call-with-port
            (open-textual-compound-input-port (list t4-str b5-bv))
          get-string-all)
@@ -460,7 +460,7 @@ a n d ((()))")
                           (set! v (cdr v))))))
                  get-string-all)
                => (string-append b3-str t4-str))))))
-;; many components
+;;;; many components
 (check (call-with-port
            (open-textual-compound-input-port (list b0-bv t1-str t2-str t3-str b4-bv b5-bv))
          get-string-all)
@@ -501,7 +501,7 @@ a n d ((()))")
            get-string-all)
          => (string-append b3-str b3-str t5-str b1-str b0-str t3-str t4-str t2-str))
   (for-each close-port ps))
-;; mixed strings, bytevectors, textual input ports, and binary input ports
+;;;; mixed strings, bytevectors, textual input ports, and binary input ports
 (let ([pa (open-input-file t5-fn)]
       [pb (open-file-input-port b0-fn)]
       [pc (open-input-file t2-fn)])
@@ -527,7 +527,7 @@ a n d ((()))")
            get-string-all)
          => (string-append b1-str b0-str b1-str t1-str t2-str t3-str b3-str))
   (for-each close-port (list pa pb pc)))
-;; closing before finished closes all component ports
+;;;; closing before finished closes all component ports
 (let ([pa (open-input-file t5-fn)]
       [pb (open-file-input-port b0-fn)]
       [pc (open-input-file t2-fn)]
@@ -546,7 +546,7 @@ a n d ((()))")
   (check-ex (get-char pc))
   (check-ex (get-char pd)))
 
-;; clean-up
+;;;; clean-up
 (current-directory "/tmp")
 (for-each delete-file '("b0" "b1" "b2" "b3" "b4" "b5" "t0" "t1" "t2" "t3" "t4" "t5"))
 

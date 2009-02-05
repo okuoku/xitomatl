@@ -1,26 +1,26 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
 (import 
@@ -63,7 +63,7 @@
   (list :clone :unknown :already-exists :has? :keys
         :add-method! :add-parent! :add-value! :delete!))
 
-;; root-object
+;;;; root-object
 
 (check (send root-object :keys) 
        (=> (lambda (r e) (for-all (lambda (x) (memq x r)) e))) 
@@ -115,7 +115,7 @@
              => (unknown-exn? '(vi) o)))
 
 
-;; clone of root-object
+;;;; clone of root-object
 
 (define o0 (send root-object :clone))
 (check (fuego-object? o0) => #t)
@@ -124,7 +124,7 @@
        => #t)
 (basic-tests o0)
 
-;; inheritance / slot resolution
+;;;; inheritance / slot resolution
 
 (define o1 (send o0 :clone))
 ;; same tests as o0
@@ -161,7 +161,8 @@
 (send o1 :delete! 'm)
 (check (send o1 :has? 'm) => #f)
 (check (send o1 'm 'a 2 "x") => (list o1 'a 2 "x"))
-;; setting parent's value causes new slot to be allocated in the immediate instance for the new value so that the parent's stays unchanged
+;; Setting parent's value causes new slot to be allocated in the immediate
+;; instance for the new value so that the parent's stays unchanged.
 (send o1 'vm #\λ)
 (check (send o1 'vm) => #\λ)
 (check (send o1 :has? 'vm) => #t)
@@ -195,10 +196,14 @@
 (send o0 :delete! 'm)
 (check (send o1 'm 1 2 3) => 3) ;; second parent o2's 'm used
 
-;; unusual, intentionally allowed, reconfigurations of lower levels, "meta class" abilities
-;;;; NOT YET SURE
+;;;; unusual, intentionally allowed, reconfigurations of lower levels, "meta
+;;;; class" abilities
+;; NOT YET SURE
 
-;; object syntax, when used in a recursive region like define or letrec, lambdas can refer to the object being constructed, and full Scheme <body> form evaluation for doing rarer manual configuring of the new object, internally defined helpers, , etc
+;; Object syntax, when used in a recursive region like define or letrec, lambdas
+;; can refer to the object being constructed, and full Scheme <body> form
+;; evaluation for doing rarer manual configuring of the new object, internally
+;; defined helpers, etc.
 
 (define o3 (object))
 (check (fuego-object? o3) => #t)

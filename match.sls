@@ -1,98 +1,98 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Destructuring binding pattern matcher by Derick Eddington
-;;; 
-;;; Distinguishing features:
-;;; - Regular expression matching against strings, with sub-group matching.
-;;;   (Utilizes Alex Shinn's IrRegex library).
-;;; - Record matching, with field matching. 
-;;; - Arbitrary predicate matching.
-;;; - "and", "or", and "not" matching.
-;;; - quasiquote patterns, with the unquote'd expressions evaluated as 
-;;;   normal expressions in the environment of the match expression.
-;;; - "..." sequence matching, with specifiable minimum and maximum.
-;;; - Multiple "..." in the same pattern.
-;;; - "..." works with, and the same for, every compound pattern type, i.e.,
-;;;   regular expression with sub-group patterns, record with field patterns,
-;;;   "and", "or", and "not", nested "..." patterns, and everything else.
-;;; - "(x ... . r)" pattern matches a possibly empty chain of pairs,
-;;;   like syntax-case.
-;;; - Clean and tractable design. syntax-case eases implementation. 
-;;; - The executed expanded form uses procedural abstraction instead of
-;;;   generating redundant code.
-;;; - Efficient execution.
-;;; - Functional, i.e., no mutation.
-;;;
-;;; Grammar:
-;;; 
-;;; (match <expr> <clause> <clause> ...)
-;;; (match-let ([<pat> <expr>] ...) <body>)
-;;; (match-let* ([<pat> <expr>] ...) <body>)
-;;; (match-lambda <clause> <clause> ...)
-;;; (match-lambda* <clause> <clause> ...)
-;;; 
-;;; <clause> ::= (<pat> <expr>)
-;;;            | (<pat> <fender> <expr>)
-;;; <fender> ::= <expr>
-;;; <pat>                            Matches: 
-;;;  ::= _                             Anything, does not bind
-;;;    | <pat-var>                     Anything, bind variable
-;;;    | <constant>                    Datum, according to equal?
-;;;    | (quote <datum>)               Datum, according to equal?
-;;;    | (quasiquote <qq-template>)    Datum, according to equal?
-;;;    | ()                            Empty list
-;;;    | (<pat> . <pat>)               Pair
-;;;    | (<pat> <ooo> . <pat>)         Chain of pairs, possibly empty
-;;;    | #(<vec-pat> ...)              Vector
-;;;    | (:and <pat> ...)              If all sub-patterns match value
-;;;    | (:or <pat> ...)               If any sub-pattern matches value
-;;;    | (:not <pat>)                  If sub-pattern does not match value
-;;;    | (:regex <irx> <pat> ...)      String, if it matches the regular
-;;;                                    expression and if the captured groups
-;;;                                    (which are strings) match sub-patterns
-;;;    | (:symbol <irx> <pat> ...)     Symbol, if it matches the regular
-;;;                                    expression and if the captured groups
-;;;                                    (which are symbols) match sub-patterns
-;;;    | (:record <r-type> <pat> ...)  Record of specified type,
-;;;                                    whose fields' values match sub-patterns
-;;;    | (:predicate <expr>)           If result of expression applied to value
-;;;                                    returns true
-;;; <pat-var>  ::= Any <identifier> except: 
-;;;                ... quote quasiquote :and :or :not :regex :record :predicate
-;;; <constant> ::= <boolean> | <number> | <character> 
-;;;              | <string> | <bytevector>
-;;; <ooo>      ::= ... | (... <integer>) | (... <integer> <integer>)
-;;; <vec-pat>  ::= <pat> | <pat> <ooo>
-;;; <irx>      ::= <expr> which evaluates to a valid irregex for Alex Shinn's
-;;;                IrRegular Expressions library.
-;;;                I.e., a string, SRE, or compiled irregex.
-;;; <r-type>   ::= R6RS <record-name> handle for the record type.  This gets
-;;;                wrapped with record-type-descriptor.
-;;;              | (RTD <expr>) where the expression evaluates to a first-class
-;;;                record type descriptor
+;; Destructuring binding pattern matcher by Derick Eddington
+;; 
+;; Distinguishing features:
+;; - Regular expression matching against strings, with sub-group matching.
+;;   (Utilizes Alex Shinn's IrRegex library).
+;; - Record matching, with field matching. 
+;; - Arbitrary predicate matching.
+;; - "and", "or", and "not" matching.
+;; - quasiquote patterns, with the unquote'd expressions evaluated as 
+;;   normal expressions in the environment of the match expression.
+;; - "..." sequence matching, with specifiable minimum and maximum.
+;; - Multiple "..." in the same pattern.
+;; - "..." works with, and the same for, every compound pattern type, i.e.,
+;;   regular expression with sub-group patterns, record with field patterns,
+;;   "and", "or", and "not", nested "..." patterns, and everything else.
+;; - "(x ... . r)" pattern matches a possibly empty chain of pairs,
+;;   like syntax-case.
+;; - Clean and tractable design. syntax-case eases implementation. 
+;; - The executed expanded form uses procedural abstraction instead of
+;;   generating redundant code.
+;; - Efficient execution.
+;; - Functional, i.e., no mutation.
+;;
+;; Grammar:
+;; 
+;; (match <expr> <clause> <clause> ...)
+;; (match-let ([<pat> <expr>] ...) <body>)
+;; (match-let* ([<pat> <expr>] ...) <body>)
+;; (match-lambda <clause> <clause> ...)
+;; (match-lambda* <clause> <clause> ...)
+;; 
+;; <clause> ::= (<pat> <expr>)
+;;            | (<pat> <fender> <expr>)
+;; <fender> ::= <expr>
+;; <pat>                            Matches: 
+;;  ::= _                             Anything, does not bind
+;;    | <pat-var>                     Anything, bind variable
+;;    | <constant>                    Datum, according to equal?
+;;    | (quote <datum>)               Datum, according to equal?
+;;    | (quasiquote <qq-template>)    Datum, according to equal?
+;;    | ()                            Empty list
+;;    | (<pat> . <pat>)               Pair
+;;    | (<pat> <ooo> . <pat>)         Chain of pairs, possibly empty
+;;    | #(<vec-pat> ...)              Vector
+;;    | (:and <pat> ...)              If all sub-patterns match value
+;;    | (:or <pat> ...)               If any sub-pattern matches value
+;;    | (:not <pat>)                  If sub-pattern does not match value
+;;    | (:regex <irx> <pat> ...)      String, if it matches the regular
+;;                                    expression and if the captured groups
+;;                                    (which are strings) match sub-patterns
+;;    | (:symbol <irx> <pat> ...)     Symbol, if it matches the regular
+;;                                    expression and if the captured groups
+;;                                    (which are symbols) match sub-patterns
+;;    | (:record <r-type> <pat> ...)  Record of specified type,
+;;                                    whose fields' values match sub-patterns
+;;    | (:predicate <expr>)           If result of expression applied to value
+;;                                    returns true
+;; <pat-var>  ::= Any <identifier> except: 
+;;                ... quote quasiquote :and :or :not :regex :record :predicate
+;; <constant> ::= <boolean> | <number> | <character> 
+;;              | <string> | <bytevector>
+;; <ooo>      ::= ... | (... <integer>) | (... <integer> <integer>)
+;; <vec-pat>  ::= <pat> | <pat> <ooo>
+;; <irx>      ::= <expr> which evaluates to a valid irregex for Alex Shinn's
+;;                IrRegular Expressions library.
+;;                I.e., a string, SRE, or compiled irregex.
+;; <r-type>   ::= R6RS <record-name> handle for the record type.  This gets
+;;                wrapped with record-type-descriptor.
+;;              | (RTD <expr>) where the expression evaluates to a first-class
+;;                record type descriptor
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #!r6rs
@@ -151,13 +151,13 @@
           [(_ min)     #'(min #f)]
           [(_ min max) #'(min max)]
           [_           #'(0 #f)]))
-      ;;; P does the core of the syntax logic.  It is given a syntax object of
-      ;;; a match pattern.  It returns a syntax object that is a list whose
-      ;;; first element is an expression which evaluates to a matcher procedure
-      ;;; and whose, possibly empty, remaining elements are identifiers of
-      ;;; pattern variables, in lexical left-to-right order, which are to be
-      ;;; bound by the pattern.  P is used recursively as a recursive match
-      ;;; pattern is parsed.
+      ;; P does the core of the syntax logic.  It is given a syntax object of
+      ;; a match pattern.  It returns a syntax object that is a list whose
+      ;; first element is an expression which evaluates to a matcher procedure
+      ;; and whose, possibly empty, remaining elements are identifiers of
+      ;; pattern variables, in lexical left-to-right order, which are to be
+      ;; bound by the pattern.  P is used recursively as a recursive match
+      ;; pattern is parsed.
       (define (P pat-stx)
         (syntax-case pat-stx ()
           ;; empty list
@@ -369,11 +369,11 @@
        (lambda (obj vars)
          (M obj vars args ...))]))
   
-  ;;; `vars' in the below matchers is a list of the pattern variables' values,
-  ;;; in the reverse order the values are extracted when destructuring, i.e.,
-  ;;; accumulated in the order the values are extracted by cons'ing onto the
-  ;;; head of the list.  This is also the reverse order of the variables'
-  ;;; identifiers lexical occurance in the entire compound pattern.
+  ;; `vars' in the below matchers is a list of the pattern variables' values,
+  ;; in the reverse order the values are extracted when destructuring, i.e.,
+  ;; accumulated in the order the values are extracted by cons'ing onto the
+  ;; head of the list.  This is also the reverse order of the variables'
+  ;; identifiers lexical occurance in the entire compound pattern.
 
   (define (M-null obj vars)
     (and (null? obj)
@@ -442,7 +442,7 @@
                                     (M (and str (string->symbol str)) vars)))
                                 matchers))))
   
-  ;;; FIXME: need to use a weak hashtable
+  ;; FIXME: need to use a weak hashtable
   #;(define rtd-ht (make-eq-hashtable))
   
   (define (M-record obj vars rtd num matchers)

@@ -1,30 +1,30 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
-;;; BEWARE: The last section at the bottom of the file uses a lot of memory.
-;;;         Comment it out if you don't have enough.  On 32-bit Ikarus,
-;;;         it uses 800 MB.
+;; BEWARE: The last section at the bottom of the file uses a lot of memory.
+;;         Comment it out if you don't have enough.  On 32-bit Ikarus,
+;;         it uses 800 MB.
 
 #!r6rs
 (import 
@@ -79,7 +79,7 @@
     [(_ expr)
      (check-syntax-error/search-msg expr "misuse of pattern syntax")]))
 
-;;; pairs / lists
+;;;; pairs / lists
 
 (check (match '(a . b) [(x . y) (cons y x)]) => '(b . a))
 (check (let-values ([vs (match '(a . b) [(x . y) (values y x)])])
@@ -104,7 +104,7 @@
 (check-dups-error
  (match '(1 2 3 4) [(a b c a) (list a b c)]))
 
-;;; vectors
+;;;; vectors
 
 (check (match '#() [#() 'ok]) => 'ok)
 (check (match '#(1) [#(x) x]) => 1)
@@ -119,7 +119,7 @@
 (check-dups-error 
  (match (vector 1 2 3) [#(a a b) 'bad]))
 
-;;; quoting
+;;;; quoting
 
 (check-misuse-error (match '() [quote quote]))
 (check-misuse-error (match '() [(1 . quote) quote]))
@@ -133,7 +133,7 @@
 (check (match '(foo bar baz) [('foo x 'baz) x]) => 'bar)
 (check (match '(1 2 a b c) [(x y . '(a b c)) (list x y)]) => '(1 2))
 
-;;; quasiquoting
+;;;; quasiquoting
 
 (check-misuse-error (match '() [quasiquote quasiquote]))
 (check-misuse-error (match '() [(1 . quasiquote) quasiquote]))
@@ -149,13 +149,13 @@
           (list x y)]) 
        => '(1 2))
 
-;;; constants
+;;;; constants
 
 (check (match "asdf" ["asdf" #t]) => #t)
 (check (match 123 [123 #t]) => #t)
 (check (match #vu8(1 2) [#vu8(1 2) #t]) => #t)
 
-;;; IrRegex regular expressions
+;;;; IrRegex regular expressions
 
 (check-misuse-error (match '() [:regex :regex]))
 (check-misuse-error (match '() [(1 . :regex) :regex]))
@@ -232,7 +232,7 @@
                 [(:regex "(\\w+)\\s+(\\w+)" _ _ x y)
                  (list x y)]))
 
-;;; symbols against regular expressions (uses :regex pattern logic)
+;;;; symbols against regular expressions (uses :regex pattern logic)
 
 (check-misuse-error (match '() [:symbol 1]))
 (check-misuse-error (match '() [(a (:symbol) b) 1]))
@@ -242,7 +242,7 @@
 (check-failed (match 'foobar [(:symbol "fo+\\s*bar" #F _ x) 'bad]))
 (check-failed (match 'foooo__bar [(:symbol "f(o+)(\\S*)bar" _) 'bad]))
 
-;;; records
+;;;; records
 
 (check-misuse-error (match '() [:record :record]))
 (check-misuse-error (match '() [(1 . :record) :record]))
@@ -325,7 +325,7 @@
          [_ 'opaque])
        => .4)
 
-;;; and
+;;;; and
 
 (check-misuse-error (match '() [:and :and]))
 (check-misuse-error (match '() [(1 . :and) :and]))
@@ -349,7 +349,7 @@
    [(:and l ((:and v #(x)) (:and s (:regex "(?:f(o)o)+" (:and "nope" ss)))))
     (list l v x s ss)]))
 
-;;; or
+;;;; or
 
 (check-misuse-error (match '() [:or :or]))
 (check-misuse-error (match '() [(1 . :or) :or]))
@@ -426,7 +426,7 @@
     x
     z]))
 
-;;; not
+;;;; not
 
 (check-misuse-error (match '() [:not :not]))
 (check-misuse-error (match '() [(1 . :not) not]))
@@ -443,7 +443,7 @@
          [((:not (:regex "F[Oo]*")) #\c) 'ok])
        => 'ok)
 
-;;; everything
+;;;; everything
 
 (check (let-values 
            ([vs
@@ -458,7 +458,7 @@
          vs)
        => '(one b #\c "oo⁐⁐b"))
 
-;;; matches?, match-lambda, match-let, and friends
+;;;; matches?, match-lambda, match-let, and friends
 
 (check ((matches? 1) 1) => #t)
 (check ((matches? (x . y)) '(1 2 3)) => #t)
@@ -489,7 +489,7 @@
               [(a b) b])
    (list a b)))
 
-;;; arbitrary predicate pattern
+;;;; arbitrary predicate pattern
 
 (check-misuse-error (match '() [:predicate :predicate]))
 (check-misuse-error (match '() [(1 . :predicate) :predicate]))
@@ -513,7 +513,7 @@
 (check (thing? '#(foo "bar" .42 #\2 #(foo "zab")))
        => #f)
 
-;;; multiple list / improper list elements ... pattern
+;;;; multiple list / improper list elements ... pattern
 
 (check-misuse-error (match 1 [... ...]))
 (check-misuse-error (match 1 [(x . ...) x]))
@@ -732,7 +732,7 @@
                 [(a b x (... 4) 6 7 y (... 6) . r)
                  (list a b x y r)]))
 
-;;; multiple vector elements ... pattern
+;;;; multiple vector elements ... pattern
 
 (check-misuse-error (match '#(1) [#(...) ...]))
 (check-misuse-error (match '(1 #(2) 3) [(x #(...) y) (list x ... y)]))
@@ -929,7 +929,7 @@
                 [#(a b x (... 4) 6 7 y (... 6))
                  (list a b x y)]))
 
-;;; Huge sized
+;;;; Huge sized
 
 (begin  ;; #; comment-out this begin if you don't have enough memory.
 (define size #e1e7)

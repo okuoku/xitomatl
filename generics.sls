@@ -1,26 +1,26 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
 (library (xitomatl generics)
@@ -32,40 +32,37 @@
     (for (only (xitomatl macro-utils) identifier-append) expand)
     (only (xitomatl define) define-values define/?))
 
-  ;;; Generics are procedures which delegate to some underlying procedure 
-  ;;; determined by the arguments to the generic.  A per-generic association
-  ;;; of predicates to underlying-procedures is used to determine and find 
-  ;;; what underlying to use.  No O.O.P. is involved, though it could be done
-  ;;; on top.  Variable numbers of arguments ("rest arguments" lists) are fully
-  ;;; supported.  Specializations are added at run-time, so new ones can be
-  ;;; added by parties unknown to the creator of a generic.  Precedence is
-  ;;; according to the temporal order specializations are added, which
-  ;;; ensures the specializations added by the creator always have
-  ;;; precedence.  Performance will lessen the more arguments a
-  ;;; specialization has and will depend on how many other specializations
-  ;;; precede it.  Being fully run-time dynamic with a single simple way of
-  ;;; reconfiguring the specializations of a generic, the design is open to
-  ;;; possible future abilities such as removing specializations or reordering
-  ;;; their precedence.
+  ;; Generics are procedures which delegate to some underlying procedure
+  ;; determined by the arguments to the generic.  A per-generic association of
+  ;; predicates to underlying-procedures is used to determine and find what
+  ;; underlying to use.  No O.O.P. is involved, though it could be done on top.
+  ;; Variable numbers of arguments ("rest arguments" lists) are fully supported.
+  ;; Specializations are added at run-time, so new ones can be added by parties
+  ;; unknown to the creator of a generic.  Precedence is according to the
+  ;; temporal order specializations are added, which ensures the specializations
+  ;; added by the creator always have precedence.  Performance will lessen the
+  ;; more arguments a specialization has and will depend on how many other
+  ;; specializations precede it.  Being fully run-time dynamic with a single
+  ;; simple way of reconfiguring the specializations of a generic, the design is
+  ;; open to possible future abilities such as removing specializations or
+  ;; reordering their precedence.
   
-  ;;; For reconfigure/temporal and reconfigure/reverse-temporal,
-  ;;; `preds' must be of the type <argument-predicates> described in the
-  ;;; below comment about `specializations'.  That is,
-  ;;; `preds' must be: a possibly empty list of one-argument predicates which
-  ;;; return true or #f, or an improper list of predicates of the type just
-  ;;; described but with the final cdr being an any-number-of-arguments
-  ;;; predicate which returns true or #f, or a predicate of the type just
-  ;;; described for the final cdr of the improper list case.  This matches
-  ;;; the <formals> specification of a procedure's arguments:
-  ;;; (args ...) or (arg args ... . rest) or rest.
-  ;;; `proc' is the underlying procedure delegated to for the arguments case
-  ;;; specified by `preds'.  The number of arguments `proc' accepts must
-  ;;; match those specified by `preds'.  That is, `proc' must accept as many
-  ;;; arguments as there are one-argument predicates in `preds', and if there
-  ;;; is an any-number-of-arguments "rest arguments" predicate in/as `preds',
-  ;;; then `proc' must accept the additional, possibly variable, number of
-  ;;; "rest arguments" that the any-number-of-arguments predicate returned
-  ;;; true for.
+  ;; For reconfigure/temporal and reconfigure/reverse-temporal, `preds' must be
+  ;; of the type <argument-predicates> described in the below comment about
+  ;; `specializations'.  That is, `preds' must be: a possibly empty list of
+  ;; one-argument predicates which return true or #f, or an improper list of
+  ;; predicates of the type just described but with the final cdr being an
+  ;; any-number-of-arguments predicate which returns true or #f, or a predicate
+  ;; of the type just described for the final cdr of the improper list case.
+  ;; This matches the <formals> specification of a procedure's arguments: (args
+  ;; ...) or (arg args ... . rest) or rest.  `proc' is the underlying procedure
+  ;; delegated to for the arguments case specified by `preds'.  The number of
+  ;; arguments `proc' accepts must match those specified by `preds'.  That is,
+  ;; `proc' must accept as many arguments as there are one-argument predicates
+  ;; in `preds', and if there is an any-number-of-arguments "rest arguments"
+  ;; predicate in/as `preds', then `proc' must accept the additional, possibly
+  ;; variable, number of "rest arguments" that the any-number-of-arguments
+  ;; predicate returned true for.
   
   (define/? (reconfigure/temporal specializations 
                                   [preds valid-predicates-specification?]
@@ -161,19 +158,19 @@
                  (values g sg))))])))
   
   (define-syntax define-generic/temporal
-    ;;; (define-generic/temporal <identifier> <specialization-clause> ...)
-    ;;;
-    ;;; <specialization-clause> ::= (<predicate-formals> . <body>)
-    ;;; <predicate-formals> ::= ((<identifier> <predicate>) ...)
-    ;;;                       | ((<identifier> <predicate>)
-    ;;;                          (<identifier> <predicate>) ...
-    ;;;                          . #(<identifier> <rest-predicate>))
-    ;;;                       | #(<identifier> <rest-predicate>)
-    ;;; <predicate> ::= Expression which evaluates to a one-argument
-    ;;;                 function that returns true or #f.
-    ;;; <rest-predicate> ::= Expression which evaluates to an
-    ;;;                      any-number-of-arguments function that
-    ;;;                      returns true or #f.
+    ;; (define-generic/temporal <identifier> <specialization-clause> ...)
+    ;;
+    ;; <specialization-clause> ::= (<predicate-formals> . <body>)
+    ;; <predicate-formals> ::= ((<identifier> <predicate>) ...)
+    ;;                       | ((<identifier> <predicate>)
+    ;;                          (<identifier> <predicate>) ...
+    ;;                          . #(<identifier> <rest-predicate>))
+    ;;                       | #(<identifier> <rest-predicate>)
+    ;; <predicate> ::= Expression which evaluates to a one-argument
+    ;;                 function that returns true or #f.
+    ;; <rest-predicate> ::= Expression which evaluates to an
+    ;;                      any-number-of-arguments function that
+    ;;                      returns true or #f.
     (lambda (stx)
       (syntax-case stx ()
         [(_ name [pred-frmls . b] ...)

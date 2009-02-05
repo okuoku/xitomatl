@@ -63,7 +63,7 @@
       (if (null? l) (reverse dest)
         (loop (cdr l) (cons (car l) (cons elem dest)))))))
 
-;;; The ssax-sr5rs-5.1.tar.gz lib/SSAX.scm tests.
+;;;; The ssax-sr5rs-5.1.tar.gz lib/SSAX.scm tests.
 
 ; The following is a function that is often used in validation tests,
 ; to make sure that the computed result matches the expected one.

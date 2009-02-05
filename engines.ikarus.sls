@@ -1,26 +1,26 @@
-;;; Copyright (c) 2008 Derick Eddington
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a
-;;; copy of this software and associated documentation files (the "Software"),
-;;; to deal in the Software without restriction, including without limitation
-;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
-;;; and/or sell copies of the Software, and to permit persons to whom the
-;;; Software is furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; Except as contained in this notice, the name(s) of the above copyright
-;;; holders shall not be used in advertising or otherwise to promote the sale,
-;;; use or other dealings in this Software without prior written authorization.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
+;; Copyright (c) 2009 Derick Eddington
+;;
+;; Permission is hereby granted, free of charge, to any person obtaining a
+;; copy of this software and associated documentation files (the "Software"),
+;; to deal in the Software without restriction, including without limitation
+;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit persons to whom the
+;; Software is furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+;;
+;; Except as contained in this notice, the name(s) of the above copyright
+;; holders shall not be used in advertising or otherwise to promote the sale,
+;; use or other dealings in this Software without prior written authorization.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
 
 (library (xitomatl engines)
   (export
@@ -34,16 +34,16 @@
     (only (ikarus) engine-handler fxadd1 void die)
     (only (ikarus system $interrupts) $swap-engine-counter!))    
   
-  ;;; Based off of The Scheme Programming Language engines.
-  ;;; NOTE: This probably still has issues that need to be determined.
-  ;;; NOTE: not currently thread safe
+  ;; Based off of The Scheme Programming Language engines.
+  ;; NOTE: This probably still has issues that need to be determined.
+  ;; NOTE: not currently thread safe
   
   (define (start-timer ticks)
-    ;;; Because of the slight possibility the pcb->engine_counter could run out
-    ;;; inbetween when we install timer-handler and set the new ticks below
-    ;;; (which would cause timer-handler, and therefore the current do-expire,
-    ;;; to be called prematurely), the fuel is manually refilled to ensure 
-    ;;; there's enough.
+    ;; Because of the slight possibility the pcb->engine_counter could run out
+    ;; inbetween when we install timer-handler and set the new ticks below
+    ;; (which would cause timer-handler, and therefore the current do-expire, to
+    ;; be called prematurely), the fuel is manually refilled to ensure there's
+    ;; enough.
     ($swap-engine-counter! 1)
     (engine-handler timer-handler)
     ($swap-engine-counter! (fx- ticks)))
@@ -55,10 +55,10 @@
     (set! do-expire do-expire/oops))
   
   (define (stop-timer)
-    ;; add1 to return value of $swap-engine-counter! to account for
-    ;; the 1 tick stop-timer itself needs to consume.  This gives an accurate
-    ;; leftover value of 0 to the complete procedures whenever the process had
-    ;; just enough fuel to complete and have the engines system finish up.
+    ;; add1 to return value of $swap-engine-counter! to account for the 1 tick
+    ;; stop-timer itself needs to consume.  This gives an accurate leftover
+    ;; value of 0 to the complete procedures whenever the process had just
+    ;; enough fuel to complete and have the engines system finish up.
     (abs (fxmin (fxadd1 ($swap-engine-counter! 1)) 0)))
 
   (define (do-return/oops args)
@@ -73,11 +73,13 @@
   (define do-expire do-expire/oops)
   
   (define (timer-handler)
-    ;;; The pcb->engine_counter just passed 0, so there's definitely
-    ;;; enough fuel for do-expire to reset-state.
+    ;; The pcb->engine_counter just passed 0, so there's definitely
+    ;; enough fuel for do-expire to reset-state.
+    ;;
     ;; NOTE: In order to give a consistent logic to processes which calculated
     ;; they should only need X more ticks to complete, the ticks supplied by
-    ;; resume may need to be adjusted, and this may need to be updated as Ikarus changes.
+    ;; resume may need to be adjusted, and this may need to be updated as Ikarus
+    ;; changes.
     (start-timer (call/cc do-expire)))
   
   (define (new-engine resume)
@@ -89,17 +91,21 @@
         (die who "not a procedure" (if (procedure? complete) expire complete)))
       ((call/cc
          (lambda (escape)
-           ;;; For do-return, do-complete, do-expire, it is critical that there be enough fuel
-           ;;; before calling them and that reset-state be called by them.  This ensures, if the 
-           ;;; fuel runs out while calling stop-timer and when that continuation is later resumed,
-           ;;; it will continue on to calling the current do-whatever (which closes over the current
-           ;;; engine invocation continuation); if stop-timer was done in do-whatever and the fuel
-           ;;; ran out, when the continuation is resumed, it would be resuming in a now old/dead
-           ;;; do-whatever (which closes over the previous engine invocation) and it would incorrectly
-           ;;; return to the previous engine invocation instead of returning to the most recent one.
-           ;;; Calling stop-timer before reset-state is also necessary to guarentee reset-state has
-           ;;; enough fuel to complete without running out of fuel.  Calling reset-state from inside
-           ;;; do-whatever is necessary so that the current do-whatever still exists.
+           ;; For do-return, do-complete, do-expire, it is critical that there
+           ;; be enough fuel before calling them and that reset-state be called
+           ;; by them.  This ensures, if the fuel runs out while calling
+           ;; stop-timer and when that continuation is later resumed, it will
+           ;; continue on to calling the current do-whatever (which closes over
+           ;; the current engine invocation continuation); if stop-timer was
+           ;; done in do-whatever and the fuel ran out, when the continuation is
+           ;; resumed, it would be resuming in a now old/dead do-whatever (which
+           ;; closes over the previous engine invocation) and it would
+           ;; incorrectly return to the previous engine invocation instead of
+           ;; returning to the most recent one.  Calling stop-timer before
+           ;; reset-state is also necessary to guarentee reset-state has enough
+           ;; fuel to complete without running out of fuel.  Calling reset-state
+           ;; from inside do-whatever is necessary so that the current
+           ;; do-whatever still exists.
            (set! do-return
              (lambda (args)
                (reset-state)
