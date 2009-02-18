@@ -26,7 +26,7 @@
 (library (xitomatl conditions)
   (export
     make-argument-name-condition argument-name-condition? condition-argument-name
-    make-predicate-condition predicate-condition? condition-pred
+    make-predicate-expression-condition predicate-expression-condition? condition-predicate-expression
     make-port-position-condition port-position-condition? condition-port-position
     print-condition)
   (import
@@ -37,9 +37,9 @@
     make-argument-name-condition argument-name-condition?
     (n condition-argument-name))
       
-  (define-condition-type &predicate &condition
-    make-predicate-condition predicate-condition?
-    (p condition-pred))  ;; condition-predicate already taken by (rnrs)
+  (define-condition-type &predicate-expression &condition
+    make-predicate-expression-condition predicate-expression-condition?
+    (p condition-predicate-expression))
   
   (define-condition-type &port-position &condition
     make-port-position-condition port-position-condition?

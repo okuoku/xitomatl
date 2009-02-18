@@ -31,14 +31,14 @@
 
 (define c 
   (condition (make-argument-name-condition 'foo)
-             (make-predicate-condition 'thing?)
+             (make-predicate-expression-condition 'thing?)
              (make-port-position-condition 123)))
 
 (check (catch ex ([else (and (argument-name-condition? ex)
-                             (predicate-condition? ex)
+                             (predicate-expression-condition? ex)
                              (port-position-condition? ex)
                              (list (condition-argument-name ex)
-                                   (condition-pred ex)
+                                   (condition-predicate-expression ex)
                                    (condition-port-position ex)))])
          (raise c))
        => '(foo thing? 123))

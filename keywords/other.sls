@@ -35,7 +35,7 @@
   (import
     (rnrs)
     (only (xitomatl macro-utils) identifier?/name=? formals-ok?/raise)
-    (only (xitomatl conditions) make-predicate-condition))
+    (only (xitomatl conditions) make-predicate-expression-condition))
   
   (define (process-options full-stx kw-spec)
     (let loop ([options (with-syntax ([(_ . opts) kw-spec]) #'opts)] 
@@ -94,6 +94,6 @@
 
   (define (predicate-false--default who kw-id pred-form value)
     (AV who "keyword predicate false" kw-id 
-        (make-predicate-condition pred-form)
+        (make-predicate-expression-condition pred-form)
         (make-irritants-condition (list value))))  
 )

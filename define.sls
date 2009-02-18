@@ -91,7 +91,7 @@
     (lambda (pred-form arg-name arg-value)
       (assertion-violation/conditions who "argument check failed" (list arg-value)
         (make-argument-name-condition arg-name) 
-        (make-predicate-condition pred-form))))
+        (make-predicate-expression-condition pred-form))))
   
   (define-syntax case-lambda/?--meta
     (lambda (stx)

@@ -65,10 +65,10 @@
      (check (guard (ex [else (and (assertion-violation? ex)
                                   (message-condition? ex)
                                   (keyword-condition? ex)
-                                  (predicate-condition? ex)
+                                  (predicate-expression-condition? ex)
                                   (list (condition-message ex)
                                         (condition-keyword ex)
-                                        (condition-pred ex)))])
+                                        (condition-predicate-expression ex)))])
               expr
               'unexpected-return)
             => '("keyword predicate false" kw-name pred-form))]))

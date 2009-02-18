@@ -51,7 +51,7 @@
 
 (define text0 "This is a sentence.")
 
-;; irregex-search/all
+;;;; irregex-search/all
 
 (check (irregex-search/all "foobar" text0) 
        => '())
@@ -69,7 +69,7 @@
 (check-ex/not-advancing (irregex-search/all ".*" text0))
 (check-ex/not-advancing (irregex-search/all "x*?" text0))
 
-;; irregex-search/all/strings
+;;;; irregex-search/all/strings
 
 (check (irregex-search/all/strings "foobar" text0) 
        => '())
@@ -83,7 +83,7 @@
 
 ;;----------------------------------------------------------------------------
 
-;; pair-chain-chunking-lose-refs 
+;;;; pair-chain-chunking-lose-refs 
 ;; (currently same procedure as list-chunking-lose-refs and port-chunking-lose-refs)
 
 (let* ([chunk (apply list  ;; ensure we have newly allocated pairs and strings
@@ -122,7 +122,7 @@
   '("Once u" "" "p" "on " "" "a time." "." ". " 
     " There was a string " "used for tes" "ting ch" "unks!" ""))
 
-;; irregex-search/chunked/all
+;;;; irregex-search/chunked/all
 
 (check (irregex-search/chunked/all "foobar" list-chunker '(""))
        => '())
@@ -192,7 +192,7 @@
  (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
                              list-chunking-lose-refs))
 
-;; irregex-search/chunked/all/strings
+;;;; irregex-search/chunked/all/strings
 
 (check (irregex-search/chunked/all/strings "foobar" list-chunker '(""))
        => '())
@@ -226,7 +226,7 @@
   (open-string-input-port
    "The best way to implement the future is to avoid having to predict it."))
 
-;; irregex-search-port/all 
+;;;; irregex-search-port/all 
 
 (check (map irregex-match-substring 
             (irregex-search-port/all "([Tt]o).*?\\1" (make-sip)))
@@ -261,7 +261,7 @@
 (check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values 40))
 (check-ex/not-advancing (irregex-search-port/all "x*y*" (make-sip) values #e2e4))
 
-;; irregex-search-port/all/strings
+;;;; irregex-search-port/all/strings
 
 (check (irregex-search-port/all/strings "([Tt]o).*?\\1" (make-sip))
        => '("to implement the future is to"))
@@ -297,7 +297,7 @@
 ;; All the above procedures currently use the enumerators internally, so they test
 ;; most of the enumerators' logic.  The below only tests what the above has not.
 
-;; enumerators 
+;;;; enumerators 
 
 (check (fold/enumerator (irregex-string-enumerator "(\\w+)-\\w+")
                         "this-will-search-until-stop-and-this-won't-be-seen"
