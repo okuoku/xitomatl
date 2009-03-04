@@ -1,6 +1,6 @@
 ;;;; irregex.scm -- IrRegular Expressions
 ;;
-;; Copyright (c) 2005-2008 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2009 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -404,6 +404,9 @@
                ((x ignore-space) ~ignore-space?)
                ((u utf8) (if *allow-utf8-mode?* ~utf8? ~none))
                (else #f)))))))
+
+(define (maybe-string->sre obj)
+  (if (string? obj) (string->sre obj) obj))
 
 (define (string->sre str . o)
   (let ((end (string-length str))
@@ -1115,10 +1118,12 @@
         (else #f))
       (eq? 'eos sre)))
 
-(define (sre-has-submatchs? sre)
+(define (sre-has-submatches? sre)
   (and (pair? sre)
        (or (eq? 'submatch (car sre))
-           (any sre-has-submatchs? (cdr sre)))))
+           (if (eq? 'posix-string (car sre))
+               (sre-has-submatches? (string->sre (cadr sre)))
+               (any sre-has-submatches? (cdr sre))))))
 
 (define (sre-count-submatches sre)
   (let count ((sre sre) (sum 0))
@@ -1127,6 +1132,8 @@
               (+ sum (case (car sre)
                        ((submatch submatch-named) 1)
                        ((dsm) (+ (cadr sre) (caddr sre)))
+                       ((posix-string)
+                        (sre-count-submatches (string->sre (cadr sre))))
                        (else 0)))
               (cdr sre))
         sum)))
@@ -1146,6 +1153,8 @@
              (case (car sre)
                ((/ ~ & -)
                 (grow 1))
+               ((posix-string)
+                (lp (string->sre (cadr sre)) n lo hi return))
                ((seq : w/case w/nocase atomic)
                 (let lp2 ((ls (cdr sre)) (n n) (lo2 0) (hi2 0))
                   (if (null? ls)
@@ -1474,7 +1483,9 @@
           (irregex-match-end-index matches 0))
        (begin
          (irregex-match-start-source-set! matches 0 src)
-         (irregex-match-start-index-set! matches 0 ((chunker-get-start cnk) src))
+         (irregex-match-start-index-set! matches
+                                         0
+                                         ((chunker-get-start cnk) src))
          ((irregex-dfa/extract irx)
           cnk src ((chunker-get-start cnk) src)
           (irregex-match-end-source matches 0)
@@ -1814,6 +1825,8 @@
                   (let ((a (lp (cdar ls) (new-state-number next) flags next)))
                     (cond
                      (a
+                      ;;`((,(caar a) (epsilon . ,(caar next)) ,@(cdar a))
+                      ;;  ,@(cdr a))
                       (set-cdr! (car a) `((epsilon . ,(caar next)) ,@(cdar a)))
                       a)
                      (else
@@ -2096,7 +2109,7 @@
          (tmp-end-index-offset (+ 6 (* tmp 4))))
     (let lp ((sre sre) (n 1) (submatch-deps? #f))
       (cond
-       ((not (sre-has-submatchs? sre))
+       ((not (sre-has-submatches? sre))
         (if (not submatch-deps?)
             (lambda (cnk start i end j matches) #t)
             (let ((dfa (nfa->dfa (sre->nfa sre))))
@@ -2104,7 +2117,7 @@
                 (dfa-match/longest dfa cnk start i end j matches tmp)))))
        ((pair? sre)
         (case (car sre)
-          ((seq)
+          ((: seq)
            (let* ((right (sre-sequence (cddr sre)))
                   (match-left (lp (cadr sre) n #t))
                   (match-right
@@ -2147,7 +2160,9 @@
                                 ((or (not best-src)
                                      (if (eq? best-src right-src)
                                          (> right best-index)
-                                         (chunk-before? cnk best-src right-src)))
+                                         (chunk-before? cnk
+                                                        best-src
+                                                        right-src)))
                                  (lp2 (- k 1) right-src right))
                                 (else
                                  (lp2 (- k 1) best-src best-index))))
@@ -2616,10 +2631,10 @@
                         (not (char-alphanumeric? (string-ref str i)))
                         (let ((ch (chunker-next-char cnk src)))
                           (or (not ch) (not (char-alphanumeric? ch)))))
-                (char-alphanumeric?
-                 (if (> i ((chunker-get-start cnk) src))
-                     (string-ref str (- i 1))
-                     (chunker-prev-char cnk init src))))
+                    (if (> i ((chunker-get-start cnk) src))
+                        (char-alphanumeric? (string-ref str (- i 1)))
+                        (let ((prev (chunker-prev-char cnk init src)))
+                          (or (not prev) (char-alphanumeric? prev)))))
                (next cnk init src str i end matches fail)
                (fail))))
         ((nwb)  ;; non-word-boundary

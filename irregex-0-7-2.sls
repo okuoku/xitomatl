@@ -23,7 +23,7 @@
 ;; DEALINGS IN THE SOFTWARE.
 
 #!r6rs
-(library (xitomatl irregex (0 7 1))
+(library (xitomatl irregex (0 7 2))
   (export
     irregex string->irregex sre->irregex irregex? irregex-match-data?
     irregex-new-matches irregex-reset-matches!
@@ -36,7 +36,7 @@
     make-irregex-chunker irregex-match-subchunk
     irregex-dfa irregex-dfa/search irregex-dfa/extract
     irregex-nfa irregex-flags irregex-num-submatches irregex-lengths irregex-names
-    irregex-quote irregex-opt sre->string string->sre
+    irregex-quote irregex-opt sre->string string->sre maybe-string->sre
     ;; Needed by (xitomatl irregex extras)
     irregex-match-start-source-set! irregex-match-end-source-set!
     chunker-get-start chunker-get-end chunker-get-subchunk
@@ -51,7 +51,7 @@
     (only (xitomatl common) with-output-to-string))
 
   (define (error . args)
-    (apply assertion-violation "(library (xitomatl irregex (0 7 1)))" args))
+    (apply assertion-violation "(library (xitomatl irregex (0 7 2)))" args))
 
   (define-syntax any
     (syntax-rules ()
