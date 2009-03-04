@@ -38,6 +38,7 @@
   (only (xitomatl include compat))
   (only (xitomatl indexes))
   (only (xitomatl irregex (0 7 1)))
+  (only (xitomatl irregex extras))
   (only (xitomatl keywords))
   (only (xitomatl keywords other))
   (only (xitomatl keywords parser))

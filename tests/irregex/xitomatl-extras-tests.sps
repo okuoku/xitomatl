@@ -26,6 +26,7 @@
 (import
   (rnrs)
   (xitomatl irregex)
+  (xitomatl irregex extras)
   (srfi :78 lightweight-testing)
   (xitomatl enumerators))
 

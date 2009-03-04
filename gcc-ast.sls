@@ -42,6 +42,7 @@
     (rnrs mutable-pairs)
     (only (xitomatl common) format)
     (xitomatl irregex)
+    (xitomatl irregex extras)
     (xitomatl IU-match))
   
   (define-syntax dpf
