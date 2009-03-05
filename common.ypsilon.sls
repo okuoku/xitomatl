@@ -28,12 +28,12 @@
     format printf fprintf pretty-print
     gensym
     time
-    with-output-to-string
+    with-input-from-string with-output-to-string
     ;; TODO: add to as needed/appropriate
     )
   (import
     (rnrs)
-    (only (core) format gensym set-current-output-port!)
+    (only (core) format gensym set-current-input-port! set-current-output-port!)
     (prefix (only (core) pretty-print) ypsilon:)
     (only (time) time))
   
@@ -55,15 +55,20 @@
        (ypsilon:pretty-print x p)
        (newline p)]))
 
+  (define (parameterize-current-port port set-port! val thunk)
+    (define (swap)
+      (let ((t (port)))
+        (set-port! val)
+        (set! val t)))
+    (dynamic-wind swap thunk swap))
+  
+  (define (with-input-from-string str thunk)
+    (parameterize-current-port current-input-port set-current-input-port!
+                               (open-string-input-port str) thunk))
+
   (define (with-output-to-string thunk)
     (let-values ([(sop get) (open-string-output-port)])
-      (let ((temp #f))
-        (dynamic-wind
-         (lambda ()
-           (set! temp (current-output-port))
-           (set-current-output-port! sop))
-         thunk
-         (lambda ()
-           (set-current-output-port! temp)))
-        (get))))
+      (parameterize-current-port current-output-port set-current-output-port!
+                                 sop thunk)
+      (get)))
 )

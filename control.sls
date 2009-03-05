@@ -25,7 +25,8 @@
 #!r6rs
 (library (xitomatl control)
   (export
-    begin0)
+    begin0
+    compose)
   (import 
     (rnrs))
   
@@ -34,4 +35,12 @@
       [(_ form0 form1 ...)
        (let ([result form0])
          (begin form1 ... result))]))
+
+  (define (compose . procs)
+    (lambda args
+      (let loop ((procs (reverse procs)) (args args))
+        (if (null? procs)
+          (apply values args)
+          (let-values ((vals (apply (car procs) args)))
+            (loop (cdr procs) vals))))))
 )

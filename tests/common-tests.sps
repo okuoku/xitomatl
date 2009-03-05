@@ -84,6 +84,9 @@
   (check (symbol=? g (string->symbol (symbol->string g))) => #F))
 ;; time -- how to test...?
 #;(check  => )
+;; with-input-from-string
+(check (with-input-from-string "(1 \"two\" #\\3 #(4/5) . six)" read)
+       => '(1 "two" #\3 #(4/5) . six))
 ;; with-output-to-string
 (check (with-output-to-string 
         (lambda () (display "something")))

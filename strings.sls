@@ -49,14 +49,14 @@
     (case-lambda
       [(str) 
        (string-split str whitespace #f)]
-      [(str delim-strs)
-       (string-split str delim-strs #f)]
-      [(str delim-strs keep-empty)
-       (unless (and (string? str) (string? delim-strs))
+      [(str delim-chars)
+       (string-split str delim-chars #f)]
+      [(str delim-chars keep-empty)
+       (unless (and (string? str) (string? delim-chars))
          (assertion-violation 'string-split "not a string" 
-                              (if (string? delim-strs) str delim-strs)))
+                              (if (string? delim-chars) str delim-chars)))
        (let ([strlen (string-length str)]
-             [dellen (string-length delim-strs)])
+             [dellen (string-length delim-chars)])
          (let loop ([i (- strlen 1)]
                     [to strlen]
                     [accum '()])
@@ -67,7 +67,7 @@
              (let ([c (string-ref str i)])
                (let check ([j 0])
                  (cond [(= j dellen) (loop (- i 1) to accum)]
-                       [(char=? c (string-ref delim-strs j))
+                       [(char=? c (string-ref delim-chars j))
                         (loop (- i 1) i (let ([i+1 (+ i 1)])
                                           (if (or (< i+1 to) keep-empty)
                                             (cons (substring str i+1 to) accum)

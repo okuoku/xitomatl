@@ -29,14 +29,18 @@
     format printf fprintf pretty-print
     gensym
     time
-    with-output-to-string
+    with-input-from-string with-output-to-string
     ;; TODO: add to as needed/appropriate
     )
   (import
-    (except (rnrs) current-output-port)
+    (except (rnrs) current-input-port current-output-port)
     (only (scheme) add1 sub1 format printf fprintf gensym time
-                   current-output-port parameterize)
+                   current-input-port current-output-port parameterize)
     (only (scheme pretty) pretty-print))
+
+  (define (with-input-from-string str thunk)
+    (parameterize ((current-input-port (open-string-input-port str)))
+      (thunk)))
   
   (define (with-output-to-string thunk)
     (let-values ([(sop get) (open-string-output-port)])

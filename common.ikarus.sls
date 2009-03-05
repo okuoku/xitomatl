@@ -28,7 +28,7 @@
     format printf fprintf pretty-print
     gensym
     time
-    with-output-to-string
+    with-input-from-string with-output-to-string
     ;; TODO: add to as needed/appropriate
     )
   (import
