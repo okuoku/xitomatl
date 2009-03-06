@@ -24,7 +24,7 @@
 
 #!r6rs
 (import
-  (except (rnrs) file-exists?)
+  (except (rnrs) file-exists? delete-file)
   (srfi :78 lightweight-testing)
   (xitomatl file-system base)
   (xitomatl file-system paths)
@@ -90,6 +90,7 @@
 ;; file-exists?
 (check (file-exists? "a") => #t)
 (check (file-exists? "a/x") => #t)
+(check (file-exists? "doesnt-exist") => #F)
 ;; delete-directory
 (check (delete-directory "c") => #t)
 (check (file-exists? "c") => #f)
@@ -98,9 +99,7 @@
   (delete-directory "c" #t))
 (delete-directory "e" #t)  ;; returns unspecified value(s)
 (check (file-exists? "e") => #f)
-(check (delete-directory "e") => #f)
-(check-io-f-error delete-directory "e"
-  (delete-directory "e" #t))
+(assert (file-regular? "z" #F))
 (check (delete-directory "z") => #f)
 (check-io-f-error delete-directory "z"
   (delete-directory "z" #t))
@@ -109,12 +108,16 @@
 (check (file-exists? "z") => #f)
 (check-io-f-error delete-file "z"
   (delete-file "z"))
+(check-io-f-error delete-file "d"
+  (delete-file "d"))
 ;; change-mode
 (change-mode "a/ab/abb" #o500)
 (check (file-exists? "a/ab/abb") => #t)
 (check-io-f-error call-with-output-file "a/ab/abb/nope"
   (call-with-output-file "a/ab/abb/nope"
     (lambda (fop) (display "nope" fop))))
+(check-io-f-error change-mode "doesnt-exist"
+  (change-mode "doesnt-exist" 0))
 ;; file-mtime file-ctime
 (check (exact-non-negative-integer? (file-mtime "a/ab")) => #T)
 (check (exact-non-negative-integer? (file-ctime "a/ab/abb")) => #T)
@@ -127,6 +130,8 @@
 ;; make-directory
 (make-directory "new" #o200)  ;; returns unspecified value(s)
 (check (file-exists? "new") => #t)
+(check-io-f-error make-directory "new"
+  (make-directory "new"))
 (check-io-f-error directory-list "new"
   (directory-list "new"))
 ;; file-readable? file-writable? file-executable?
@@ -155,6 +160,10 @@
 (check (delete-directory "a/ab/aba") => #t)
 (check (file-exists? "b/sym") => #f)
 (check (file-exists? "b/sym" #f) => #t)
+(change-mode "d" #o000)
+(check-io-f-error make-symbolic-link "d/nope"
+  (make-symbolic-link "blah" "d/nope"))
+(change-mode "d" #o755)
 ;; file-regular? 
 (check (file-regular? "d/da/y") => #t)
 (check (file-regular? "d/da/y" #f) => #t)
@@ -167,6 +176,7 @@
 (make-symbolic-link ".." "d/sym")
 (check (file-regular? "d/sym") => #f)
 (check (file-regular? "d/sym" #f) => #f)
+(check (file-regular? "doesnt-exist") => #F)
 ;; file-directory? 
 (check (file-directory? "d") => #t)
 (check (file-directory? "d" #f) => #t)
@@ -176,6 +186,7 @@
 (check (file-directory? "d/da/sym" #f) => #f)
 (check (file-directory? "d/sym") => #t)
 (check (file-directory? "d/sym" #f) => #f)
+(check (file-directory? "doesnt-exist") => #F)
 ;; file-symbolic-link?
 (check (file-symbolic-link? "d/da/sym") => #t)
 (check (file-symbolic-link? "d/sym") => #t)
@@ -183,6 +194,7 @@
 (check (file-symbolic-link? "d/da") => #f)
 (check (file-symbolic-link? "d/da/y") => #f)
 (check (file-symbolic-link? ".") => #f)
+(check (file-symbolic-link? "doesnt-exist") => #F)
 ;; deleting symbolic link
 (delete-file "d/da/sym")
 (check (file-symbolic-link? "d/da/sym") => #f)
@@ -190,36 +202,41 @@
 (check (file-exists? "d/da/sym" #f) => #f)
 ;; rename-file
 (rename-file "d/da/y" "d/da/yayaya")
-(check (file-exists? "d/da/y") => #F)
-(check (file-regular? "d/da/yayaya") => #T)
+(check (file-exists? "d/da/y" #F) => #F)
+(check (file-regular? "d/da/yayaya" #F) => #T)
 (rename-file "d/da/yayaya" "d/da/y")
-(check (file-exists? "d/da/yayaya") => #F)
-(check (file-regular? "d/da/y") => #T)
+(check (file-exists? "d/da/yayaya" #F) => #F)
+(check (file-regular? "d/da/y" #F) => #T)
 (rename-file "d/da" "d/dadada")
-(check (file-exists? "d/da") => #F)
-(check (file-directory? "d/dadada") => #T)
+(check (file-exists? "d/da" #F) => #F)
+(check (file-directory? "d/dadada" #F) => #T)
 (rename-file "d/dadada" "d/da")
-(check (file-exists? "d/dadada") => #F)
-(check (file-directory? "d/da") => #T)
+(check (file-exists? "d/dadada" #F) => #F)
+(check (file-directory? "d/da" #F) => #T)
 (rename-file "b/sym" "b/symsym")
-(check (file-exists? "b/sym") => #F)
+(check (file-exists? "b/sym" #F) => #F)
 (check (file-symbolic-link? "b/symsym") => #T)
 (rename-file "b/symsym" "b/sym")
-(check (file-exists? "b/symsym") => #F)
+(check (file-exists? "b/symsym" #F) => #F)
 (check (file-symbolic-link? "b/sym") => #T)
+(assert (not (file-exists? "b/sym")))
+(make-symbolic-link ".." "b/sym2")
+(check-io-f-error rename-file "b/sym2"
+  (rename-file "b/sym2" "b/sym"))  ;; broken symlink exists
+(delete-file "b/sym2")
 (check-io-f-error rename-file "doesnt-exist"
   (rename-file "doesnt-exist" "bad"))
 (check-io-f-error rename-file "a/ab/x"
-  (rename-file "a/ab/x" "d/da" #T))
+  (rename-file "a/ab/x" "d/da" #T))  ;; file to directory
 (check-io-f-error rename-file "a/ab"
-  (rename-file "a/ab" "d/da/y" #T))
+  (rename-file "a/ab" "d/da/y" #T))  ;; directory to file
 (call-with-output-file "temp"
   (lambda (fop) (put-string fop (call-with-input-file "a/ab/x" get-string-all))))
 (check-io-f-error rename-file "temp"
   (rename-file "temp" "a/ab/x"))  ;; "a/ab/x" already exists
 (rename-file "temp" "a/ab/x" #T)
-(check (file-exists? "temp") => #F)
-(check (file-exists? "a/ab/x") => #T)
+(check (file-exists? "temp" #F) => #F)
+(check (file-exists? "a/ab/x" #F) => #T)
 ;; file-size
 (call-with-port (open-file-output-port "fsz")
   (lambda (fop) (put-bytevector fop #vu8(1 2 3 4 5 6 7))))
@@ -263,7 +280,6 @@
           (directory-walk-enumerator 'bottom-up)
           "."
           (lambda (path dirs files syms accum)
-            (define (s l) (list-sort string<? l))
             (values #t (cons path accum)))
           '())])
   (define (li x)
@@ -355,7 +371,7 @@
 (check-io-f-error delete-file "d/da/dab/x"
   (delete-any "d/da/dab/x" #t))
 (check (delete-any "b/sym") => #t)
-(check (file-exists? "b/sym") => #f)
+(check (file-exists? "b/sym" #F) => #f)
 (check (delete-any "b/sym") => #f)
 (check-io-f-error delete-file "b/sym"
   (delete-any "b/sym" #t))

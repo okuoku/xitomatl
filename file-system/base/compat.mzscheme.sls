@@ -89,9 +89,7 @@
       [(path) 
        (mz:with-handlers ([mz:exn:fail:filesystem? (reraise/io-f 'make-directory path)])
          (mz:make-directory path))]
-      [(path mode)       
-       (unless (fixnum? mode)
-         (assertion-violation 'make-directory "not a fixnum" mode))
+      [(path mode)
        (make-directory path)
        (change-mode path mode)]))
   

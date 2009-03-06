@@ -33,7 +33,7 @@
     ;; This library's things
     directory-walk-enumerator directory-walk directory-walk/choice delete-any)
   (import
-    (except (rnrs) file-exists?)
+    (except (rnrs) file-exists? delete-file)
     (srfi :0 cond-expand)
     (xitomatl file-system paths)
     (xitomatl file-system base compat)

@@ -26,8 +26,9 @@
 
 #!r6rs
 (import
-  (except (rnrs) file-exists?)
+  (except (rnrs) file-exists? delete-file)
   (xitomatl irregex)
+  (xitomatl irregex extras)
   (xitomatl match)
   (xitomatl enumerators)
   (xitomatl file-system base)
