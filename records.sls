@@ -28,26 +28,22 @@
     record-type-accessors
     record-type-mutators)
   (import
-    (rnrs)
-    (only (xitomatl define) define/?)
-    (only (srfi :43 vectors) vector-concatenate))
+    (rnrs))
   
   (define (record-type-field-procs rtd field-proc)
     (let loop ([rtd rtd] [procs '()])
       (if rtd
         (loop (record-type-parent rtd)
-              (cons (let ([len (vector-length (record-type-field-names rtd))])
-                      (let loop ([i (- len 1)] [v (make-vector len)])
-                        (cond [(negative? i) v]
-                              [else (vector-set! v i (field-proc rtd i))
-                                    (loop (- i 1) v)])))
-                    procs))
-        (vector-concatenate procs))))
+              (let ([len (vector-length (record-type-field-names rtd))])
+                (let loop ([i (- len 1)] [procs procs])
+                  (cond [(negative? i) procs]
+                        [else (loop (- i 1) (cons (field-proc rtd i) procs))]))))
+        procs)))
   
-  (define/? (record-type-accessors [rtd record-type-descriptor?])
+  (define (record-type-accessors rtd)
     (record-type-field-procs rtd record-accessor))
   
-  (define/? (record-type-mutators [rtd record-type-descriptor?])
+  (define (record-type-mutators rtd)
     (record-type-field-procs rtd (lambda (rtd i)
                                    (and (record-field-mutable? rtd i)
                                         (record-mutator rtd i)))))

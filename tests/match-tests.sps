@@ -79,6 +79,36 @@
     [(_ expr)
      (check-syntax-error/search-msg expr "misuse of pattern syntax")]))
 
+(define-syntax check-regex-mismatch
+  (syntax-rules ()
+    [(_ who num-pats num-subs expr) 
+     (check (guard (ex [(assertion-violation? ex)
+                        (and (message-condition? ex)
+                             (who-condition? ex)
+                             (irritants-condition? ex)
+                             (cons* (condition-who ex) 
+                                    (condition-message ex)
+                                    (condition-irritants ex)))])
+              expr
+              'unexpected-return)
+            => `(match ,(string-append who " sub-patterns mismatch sub-matches")
+                       ,num-pats ,num-subs))]))
+
+(define-syntax check-record-mismatch
+  (syntax-rules ()
+    [(_ num-pats num-subs expr) 
+     (check (guard (ex [(assertion-violation? ex)
+                        (and (message-condition? ex)
+                             (who-condition? ex)
+                             (irritants-condition? ex)
+                             (cons* (condition-who ex) 
+                                    (condition-message ex)
+                                    (condition-irritants ex)))])
+              expr
+              'unexpected-return)
+            => `(match ":record sub-patterns mismatch fields"
+                       ,num-pats ,num-subs))]))
+
 ;;;; pairs / lists
 
 (check (match '(a . b) [(x . y) (cons y x)]) => '(b . a))
@@ -164,8 +194,11 @@
 (check-misuse-error (match '() [(a (:regex)) :regex]))
 (check-misuse-error (match '() [((:regex) b) :regex]))
 (check-misuse-error (match '() [(a (:regex) b) :regex]))
+(check-failed (match "a\nbcde\n\nf" 
+                [(:regex "(a.?b)(.*)(\\n\n)(\\w)" b _ d e) 
+                 (list b d e)]))
 (check (match "a\nbcde\n\nf" 
-         [(:regex "(a.?b)(.*)(\\n\n)(\\w)" b _ d e) 
+         [(:regex (irregex "(a.?b)(.*)(\\n\n)(\\w)" 'single-line) b _ d e) 
           (list b d e)]) 
        => '("a\nb" "\n\n" "f"))
 (check (match "a\nbcde\n\nf" 
@@ -175,22 +208,12 @@
                   b _ d e) 
           (list b d e)]) 
        => '("a\nb" "\n\n" "f"))
-(let ([irx (irregex "(a.?b)(.*)(\\n\n)(\\w)" 'single-line)])
-  (check (match "a\nbcde\n\nf" 
-           [(:regex irx b _ d e) 
-            (list b d e)]) 
-         => '("a\nb" "\n\n" "f")))
 (check-failed (match "a\nbcde\n\nf" 
                 [(:regex '(seq (submatch (seq "a" (? nonl) "b")) (submatch (* nonl))
                                (submatch (seq #\linefeed "\n"))
                                (submatch (or alphanumeric ("_"))))
                          b _ d e) 
                  (list b d e)]))
-(check-failed
- (let ([irx (irregex "(a.?b)(.*)(\\n\n)(\\w)")])
-   (match "a\nbcde\n\nf" 
-     [(:regex irx b _ d e) 
-      (list b d e)])))
 (check-failed (match 'not-string
                 [(:regex ".*") 'bad]))
 (check (match 'not-string
@@ -224,13 +247,16 @@
           (string=? x y)
           (string-append x y)])
        => "barbar")
-(check-failed (match "asdf"
-                [(:regex ".*" x) x]))
-(check-failed (match "asdf"
-                [(:regex ".*" x y z) (list x y z)]))
-(check-failed (match "foo bar"
-                [(:regex "(\\w+)\\s+(\\w+)" _ _ x y)
-                 (list x y)]))
+(check-regex-mismatch ":regex" 1 0
+ (match "asdf"
+   [(:regex ".*" x) 'bad]))
+(check-regex-mismatch ":regex" 0 1
+ (match "asdf"
+   [(:regex "(.*)") 'bad]))
+(check-regex-mismatch ":regex" 4 2
+ (match "foo bar"
+   [(:regex "(\\w+)\\s+(\\w+)" _ _ x y)
+    (list x y)]))
 
 ;;;; symbols against regular expressions (uses :regex pattern logic)
 
@@ -239,8 +265,10 @@
 (check (match 'foobar [(:symbol "fo+\\s*bar") 'ok]) => 'ok)
 (check (match 'foooo__bar [(:symbol "f(o+)(\\S*)bar" 'oooo '__) 'ok]) => 'ok)
 (check (match 'foozab [(:symbol "foo(?:(bar)|zab)" #F) 'ok]) => 'ok)
-(check-failed (match 'foobar [(:symbol "fo+\\s*bar" #F _ x) 'bad]))
-(check-failed (match 'foooo__bar [(:symbol "f(o+)(\\S*)bar" _) 'bad]))
+(check-regex-mismatch ":symbol" 3 0
+ (match 'foobar [(:symbol "fo+\\s*bar" #F _ x) 'bad]))
+(check-regex-mismatch ":symbol" 1 2
+ (match 'foooo__bar [(:symbol "f(o+)(\\S*)bar" _) 'bad]))
 
 ;;;; records
 
@@ -279,7 +307,7 @@
          ['nope 'bad]
          [(:record A 'one x) (string? x) x])
        => "two")
-(check-failed 
+(check-record-mismatch 3 2 
  (let ()
    (define-record-type A (fields a (mutable b)))
    (define-record-type B (parent A) (fields c))
@@ -443,52 +471,6 @@
          [((:not (:regex "F[Oo]*")) #\c) 'ok])
        => 'ok)
 
-;;;; everything
-
-(check (let-values 
-           ([vs
-             (match `(#("zzeee") 123 #((,b "fooo⁐⁐bar" (ign . #\c)) (a #(1 b #\p))))
-               [(`#(,zzz)
-                 (:not 124)
-                 #(((:record B f "two" 3) 
-                    (:regex "fo(o*⁐{2}b)ar" m)
-                    ((:and (:not "ign") _) . x)) 
-                   ('a #(1 (:and y (:not 'B)) #\p))))
-                (values f y x m)])])
-         vs)
-       => '(one b #\c "oo⁐⁐b"))
-
-;;;; matches?, match-lambda, match-let, and friends
-
-(check ((matches? 1) 1) => #t)
-(check ((matches? (x . y)) '(1 2 3)) => #t)
-(check ((matches? (x ... . r)) 'any) => #t)
-(check ((matches? (:or 1 (:regex "\\s+"))) "foo") => #f)
-(check ((matches? (:and _ (:predicate string?))) 1) => #f)
-(check ((match-lambda [123 #f] [_ #t]) 234) => #t)
-(check ((match-lambda* [(x y . z) (reverse z)] [_ #f]) 1 2 3 4 5) => '(5 4 3))
-
-(check (let-values ([vs (match-let ([(a b c) '(1 2 3)] 
-                                    [#(d (e (f))) '#(4 (5 (6)))])
-                          (define x 'asdf)
-                          (values a b c d e f x))])
-         vs)
-       => '(1 2 3 4 5 6 asdf))
-(check-dups-error 
- (match-let ([(a b c) '(1 2 3)]
-             [#(d (b (f))) '#(4 (5 (6)))])
-   (list a b c d f)))
-
-(check (match-let* ([(a b) '(1 (2 3))]
-                    [(a b) b]
-                    [#(#(b) "s" a) `#(#(,(- a)) "s" ,(* 2 b))])
-         (list a b))
-       => '(6 -2))
-(check-dups-error
- (match-let* ([(a b a) '(1 (2 3))]
-              [(a b) b])
-   (list a b)))
-
 ;;;; arbitrary predicate pattern
 
 (check-misuse-error (match '() [:predicate :predicate]))
@@ -512,6 +494,21 @@
        => #f)
 (check (thing? '#(foo "bar" .42 #\2 #(foo "zab")))
        => #f)
+
+;;;; nested combinations
+
+(check (let-values 
+           ([vs
+             (match `(#("zzeee") 123 #((,b "fooo⁐⁐bar" (ign . #\c)) (a #(1 b #\p))))
+               [(`#(,zzz)
+                 (:not 124)
+                 #(((:record B f "two" 3) 
+                    (:regex "fo(o*⁐{2}b)ar" m)
+                    ((:and (:not "ign") _) . x)) 
+                   ('a #(1 (:and y (:not 'B)) #\p))))
+                (values f y x m)])])
+         vs)
+       => '(one b #\c "oo⁐⁐b"))
 
 ;;;; multiple list / improper list elements ... pattern
 
@@ -929,6 +926,191 @@
                 [#(a b x (... 4) 6 7 y (... 6))
                  (list a b x y)]))
 
+;;;; matches?, match-lambda, match-let, and friends
+
+(check ((matches? 1) 1) => #t)
+(check ((matches? (x . y)) '(1 2 3)) => #t)
+(check ((matches? (x ... . r)) 'any) => #t)
+(check ((matches? (:or 1 (:regex "\\s+"))) "foo") => #f)
+(check ((matches? (:and _ (:predicate string?))) 1) => #f)
+(check ((match-lambda [123 #f] [_ #t]) 234) => #t)
+(check ((match-lambda* [(x y . z) (reverse z)] [_ #f]) 1 2 3 4 5) => '(5 4 3))
+
+(check (let-values ([vs (match-let ([(a b c) '(1 2 3)] 
+                                    [#(d (e (f))) '#(4 (5 (6)))])
+                          (define x 'asdf)
+                          (values a b c d e f x))])
+         vs)
+       => '(1 2 3 4 5 6 asdf))
+(check-dups-error 
+ (match-let ([(a b c) '(1 2 3)]
+             [#(d (b (f))) '#(4 (5 (6)))])
+   (list a b c d f)))
+
+(check (match-let* ([(a b) '(1 (2 3))]
+                    [(a b) b]
+                    [#(#(b) "s" a) `#(#(,(- a)) "s" ,(* 2 b))])
+         (list a b))
+       => '(6 -2))
+(check-dups-error
+ (match-let* ([(a b a) '(1 (2 3))]
+              [(a b) b])
+   (list a b)))
+
+;;;; Expressions are evaluated only once
+
+(let-syntax
+    ((check-once
+      (lambda (stx)
+        (syntax-case stx ()
+          ((ctxt expr)
+           (with-syntax ((inc (datum->syntax #'ctxt 'inc)))
+             #'(let* ((x 0)
+                      (inc (lambda () (set! x (+ 1 x)))))
+                 (check expr => 'ok)
+                 (check x => 1))))))))
+  ;; quasiquote
+  (check-once (match '((1) (1) (1) (1))
+                ((`(,(begin (inc) 1)) ...)
+                 'ok)))
+  (check-once (match '(((1) (1) (1)) ((1) (1)) ((1)) ((1) (1) (1)))
+                (((`(,(begin (inc) 1)) ...) ...)
+                 'ok)))
+  ;; and
+  (check-once (match '#(1 1 1 1)
+                (#((:and x `,(begin (inc) 1)) ...)
+                 'ok)))
+  (check-once (match '#(#(1 1 1) #(1 1) #(1) #(1 1 1))
+                (#(#((:and x `,(begin (inc) 1)) ...) ...)
+                 'ok)))
+  ;; or
+  (check-once (match '(1 1 1 1)
+                (((:or 2 `,(begin (inc) 1)) ...)
+                 'ok)))
+  (check-once (match '((1 1 1) (1 1) (1) (1 1 1))
+                ((((:or 2 `,(begin (inc) 1)) ...) ...)
+                 'ok)))
+  ;; not
+  (check-once (match '#(2 2 2 2)
+                (#((:not `,(begin (inc) 1)) ...)
+                 'ok)))
+  (check-once (match '#((2 2 2) (2 2) (2) (2 2 2))
+                (#(((:not `,(begin (inc) 1)) ...) ...)
+                 'ok)))
+  ;; regex
+  (check-once (match '("foox" "zax" "asdfx")
+                (((:regex "(.+)(.)" x `,(begin (inc) "x")) ...)
+                 'ok)))
+  (check-once (match '(("foox" "zax" "asdfx") ("foox" "zax") ("foox"))
+                ((((:regex "(.+)(.)" x `,(begin (inc) "x")) ...) ...)
+                 'ok)))
+  (check-once (match '("foox" "zax" "asdfx")
+                (((:regex (begin (inc) ".+.")) ...)
+                 'ok)))
+  (check-once (match '(("foox" "zax" "asdfx") ("foox" "zax") ("foox"))
+                ((((:regex (begin (inc) ".+.")) ...) ...)
+                 'ok)))
+  ;; symbol
+  (check-once (match '#(foox zax asdfx)
+                (#((:symbol "(.+)(.)" x `,(begin (inc) 'x)) ...)
+                 'ok)))
+  (check-once (match '(#(foox zax asdfx) #(foox zax) #(foox))
+                ((#((:symbol "(.+)(.)" x `,(begin (inc) 'x)) ...) ...)
+                 'ok)))
+  (check-once (match '#(foox zax asdfx)
+                (#((:symbol (begin (inc) ".+.")) ...)
+                 'ok)))
+  (check-once (match '(#(foox zax asdfx) #(foox zax) #(foox))
+                ((#((:symbol (begin (inc) ".+.")) ...) ...)
+                 'ok)))
+  ;; record
+  (check-once (match (map make-A '(a b c d) '(1 1 1 1))
+                (((:record A x `,(begin (inc) 1)) ...)
+                 'ok)))
+  (check-once (match (list (map make-A '(a b c d) '(1 1 1 1))
+                           (map make-A '(a b) '(1 1))
+                           (map make-A '(a) '(1)))
+                ((((:record A x `,(begin (inc) 1)) ...) ...)
+                 'ok)))
+  (check-once (match (map make-A '(a b c d) '(1 1 1 1))
+                (((:record (RTD (begin (inc) (record-type-descriptor A))) _ _) ...)
+                 'ok)))
+  (check-once (match (list (map make-A '(a b c d) '(1 1 1 1))
+                           (map make-A '(a b) '(1 1))
+                           (map make-A '(a) '(1)))
+                ((((:record (RTD (begin (inc) (record-type-descriptor A))) _ _) ...) ...)
+                 'ok)))
+  ;; predicate
+  (let ((x 0))
+    (check (match '#(1 1 1 1)
+             (#((:predicate (lambda (o) (set! x (+ 1 x)) #T)) ...)
+              'ok))
+           => 'ok)
+    (check x => 4))
+  (check-once (match '#(1 1 1 1)
+                (#((:predicate (begin (inc) (lambda (o) #T))) ...)
+                 'ok)))
+  (check-once (match '#((1 2 3) (1 2) (1) (1 2 3))
+                (#(((:predicate (begin (inc) (lambda (o) #T))) ...) ...)
+                 'ok)))
+  ;; pair chain -- already partially tested by above
+  (check-once (match '((1 1 1 2) (1 1 2) (1 2) (2))
+                (((1 ... `,(begin (inc) 2)) ...)
+                 'ok)))
+  (check-once (match '(((1 1 1 2) (1 1 2) (1 2) (2))
+                       ((2) (1 2) (1 1 2) (1 1 1 2))
+                       ((1 1 2) (1 1 1 2) (2) (1 2)))
+                ((((1 ... `,(begin (inc) 2)) ...) ...)
+                 'ok)))
+  ;; pair / list / improper list
+  (check-once (match '((1 . 2) (1 . 2) (1 . 2) (1 . 2))
+                (((`,(begin (inc) 1) . 2) ...)
+                 'ok)))
+  (check-once (match '(((1 . 2) (1 . 2) (1 . 2) (1 . 2))
+                       ((1 . 2) (1 . 2) (1 . 2))
+                       ((1 . 2)))
+                ((((`,(begin (inc) 1) . 2) ...) ...)
+                 'ok)))
+  (check-once (match '((1 . 2) (1 . 2) (1 . 2) (1 . 2))
+                (((1 . `,(begin (inc) 2)) ...)
+                 'ok)))
+  (check-once (match '(((1 . 2) (1 . 2) (1 . 2) (1 . 2))
+                       ((1 . 2) (1 . 2) (1 . 2))
+                       ((1 . 2)))
+                ((((1 . `,(begin (inc) 2)) ...) ...)
+                 'ok)))
+  ;; vector sequence -- already partially tested by above
+  (check-once (match '#(#(a 1 1 1 2) #(a 1 1 2) #(a 1 2) #(a 2))
+                (#(#(`,(begin (inc) 'a) 1 ... 2) ...)
+                 'ok)))
+  (check-once (match '(#(#(a 1 1 1 2) #(a 1 1 2) #(a 1 2) #(a 2))
+                       #(#(a 2) #(a 1 2) #(a 1 1 2) #(a 1 1 1 2))
+                       #(#(a 1 1 2) #(a 1 1 1 2) #(a 2) #(a 1 2)))
+                ((#(#(`,(begin (inc) 'a) 1 ... 2) ...) ...)
+                 'ok)))
+  (check-once (match '#(#(a 1 1 1 2) #(a 1 1 2) #(a 1 2) #(a 2))
+                (#(#('a 1 ... `,(begin (inc) 2)) ...)
+                 'ok)))
+  (check-once (match '(#(#(a 1 1 1 2) #(a 1 1 2) #(a 1 2) #(a 2))
+                       #(#(a 2) #(a 1 2) #(a 1 1 2) #(a 1 1 1 2))
+                       #(#(a 1 1 2) #(a 1 1 1 2) #(a 2) #(a 1 2)))
+                ((#(#('a 1 ... `,(begin (inc) 2)) ...) ...)
+                 'ok)))
+  ;; vector
+  (check-once (match '(#(1 2 3) #(1 2 3) #(1 2 3))
+                ((#(1 `,(begin (inc) 2) 3) ...)
+                 'ok)))
+  (check-once (match '#((#(1 2 3) #(1 2 3) #(1 2 3))
+                        (#(1 2 3) #(1 2 3))
+                        (#(1 2 3)))
+                (#((#(1 `,(begin (inc) 2) 3) ...) ...)
+                 'ok)))
+  ;; complex combinations
+  (check-once (match `#(x (x #(x x x x (#((x . #(x x (x x x (x x ,(make-A 'x "foobar") ,(make-A 'x "foozab"))) (x x x (x x ,(make-A 'x "foobar") ,(make-A 'x "foozab"))) (x x x (x x ,(make-A 'x "foobar") ,(make-A 'x "foozab"))))) x x) . x)) x) x)
+                (#(_ (_ #(_ _ ... (#((_ . #(_ _ (_ ... (_ _ (:record A _ (:regex "foo(.*)" (:not (:or 2 (:and _ `,(begin (inc) 1)))))) ...)) ...)) _ ...) . _)) _) _)
+                 'ok)))
+  )
+
 ;;;; Huge sized
 
 (begin  ;; #; comment-out this begin if you don't have enough memory.
@@ -1049,6 +1231,7 @@
          [#(x ... 999 1000 1001 y ... 6225192 6225193 z ...)
           (list (length x) (length y) (length z))])
        => `(998 6224190 ,(- size 6225193)))
+(set! v #f)  ;; free memory
 )
 
 
