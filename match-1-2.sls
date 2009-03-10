@@ -25,7 +25,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Destructuring binding pattern matcher by Derick Eddington
 ;; 
-;; Distinguishing features:
+;; Features:
 ;; - Regular expression matching against strings, with sub-group matching.
 ;;   (Utilizes Alex Shinn's IrRegex library).
 ;; - Record matching, with field matching. 
@@ -45,15 +45,20 @@
 ;;   generating redundant code.
 ;; - Efficient execution.
 ;; - Functional, i.e., no mutation.
+;; - match-lambda does the main matching logic and the other forms are defined
+;;   in terms of it. This allows patterns' internal matchers to be initialized
+;;   only once per match-lambda expression evaluation, which for some patterns
+;;   can significantly improve efficiency when repeated calls to a match-lambda
+;;   procedure are done.
 ;;
 ;; Grammar:
 ;; 
+;; (match-lambda <clause> <clause> ...)
+;; (match-lambda* <clause> <clause> ...)
 ;; (match <expr> <clause> <clause> ...)
 ;; (matches? <pat>)
 ;; (match-let ([<pat> <expr>] ...) <body>)
 ;; (match-let* ([<pat> <expr>] ...) <body>)
-;; (match-lambda <clause> <clause> ...)
-;; (match-lambda* <clause> <clause> ...)
 ;; 
 ;; <clause> ::= (<pat> <expr>)
 ;;            | (<pat> <fender> <expr>)
@@ -98,7 +103,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #!r6rs
-(library (xitomatl match (1 1))
+(library (xitomatl match (1 2))
   (export
     match matches?
     match-lambda match-lambda*
@@ -119,7 +124,7 @@
                exact-non-negative-integer? exact-positive-integer?)
          expand))
   
-  (define-syntax match
+  (define-syntax match-lambda
     (lambda (in-stx)
       (define (keyword? pat-stx)
         (and (identifier? pat-stx)
@@ -181,7 +186,7 @@
           ;; prevent misuse of pattern syntax keywords
           [invalid
            (keyword? #'invalid)
-           (syntax-violation #f "misuse of pattern syntax" in-stx pat-stx)]          
+           (syntax-violation 'match "misuse of pattern syntax" in-stx pat-stx)]
           ;; anything, do bind
           [var
            (identifier? #'var)
@@ -213,7 +218,8 @@
                            (for-all (lambda (x)
                                       (equal? syms (map syntax->datum x)))
                                     (cdr Vs)))
-                   (syntax-violation #f ":or pattern variables mismatch" in-stx pat-stx)))
+                   (syntax-violation 'match ":or pattern variables mismatch"
+                                     in-stx pat-stx)))
                (with-syntax ([(V ...) (if (positive? (length Vs))
                                         (car Vs)
                                         '())])
@@ -225,7 +231,8 @@
            (identifier?/name=? #':not ':not)
            (with-syntax ([(M V ...) (P #'pat)])
              (when (positive? (length #'(V ...)))
-               (syntax-violation #f ":not pattern contains variables" in-stx pat-stx))
+               (syntax-violation 'match ":not pattern contains variables"
+                                 in-stx pat-stx))
              #'((let ((m M))
                   (make-matcher M-not m))))]
           ;; string, according to IrRegex regular expression
@@ -286,7 +293,7 @@
           ;; prevent misuse of pattern syntax keywords
           [(invalid . _)
            (keyword? #'invalid)
-           (syntax-violation #f "misuse of pattern syntax" in-stx pat-stx)]          
+           (syntax-violation 'match "misuse of pattern syntax" in-stx pat-stx)]
           ;; pair / list / improper list
           [(pat-car . pat-cdr)
            (with-syntax ([(car-M car-V ...) (P #'pat-car)]
@@ -342,7 +349,7 @@
            #'((make-matcher M-datum const))])) 
       ;; start transforming
       (syntax-case in-stx () 
-        [(_ expr clause0 clause ...)
+        [(_ clause0 clause ...)
          (with-syntax 
              ([((matcher fender-proc ... true-expr-proc) ...)
                (map (lambda (c) 
@@ -355,35 +362,30 @@
                            #'(M 
                               (lambda (V ...) fender) ...
                               (lambda (V ...) true-expr)))]
-                        [_ (syntax-violation #f "invalid clause" in-stx c)]))
-                    #'(clause0 clause ...))])
+                        [_ (syntax-violation 'match "invalid clause" in-stx c)]))
+                    #'(clause0 clause ...))]
+              [(m ...) (generate-temporaries #'(clause0 clause ...))])
            ;; macro output
-           #'(let ([obj expr])
-               (cond
-                 [(do-matching matcher obj fender-proc ...)
-                  => (lambda (vars)
-                       (apply true-expr-proc vars))]
-                 ...
-                 [else (failed-to-match obj)])))])))
+           #'(let ((m matcher) ...)
+               (lambda (obj)
+                 (cond
+                   [(do-matching m obj fender-proc ...)
+                    => (lambda (vars) (apply true-expr-proc vars))]
+                   ...
+                   [else (failed-to-match obj)]))))])))
   
   (define-syntax do-matching
     (syntax-rules ()
       [(_ matcher obj)
-       (do-matching/no-fender matcher obj)]
+       (let ([vars (matcher obj '())])
+         (and vars
+              (reverse vars)))]
       [(_ matcher obj fender)
-       (do-matching/fender matcher obj fender)]))
-  
-  (define (do-matching/no-fender matcher obj)
-    (let ([vars (matcher obj '())])
-      (and vars
-           (reverse vars))))
-  
-  (define (do-matching/fender matcher obj fender)
-    (let ([vars (matcher obj '())])
-      (and vars
-           (let ([vars (reverse vars)])
-             (and (apply fender vars)
-                  vars)))))
+       (let ([vars (matcher obj '())])
+         (and vars
+              (let ([vars (reverse vars)])
+                (and (apply fender vars)
+                     vars))))]))
 
   (define (AV msg . irrts)
     (apply assertion-violation 'match msg irrts))
@@ -567,26 +569,31 @@
                                               (- y 1))))))))))))
   
   ;;------------------------------------------------------------------------
+
+  (define-syntax match
+    (syntax-rules ()
+      ((_ expr clause0 clause ...)
+       ((match-lambda clause0 clause ...) expr))))
   
   (define-syntax matches?
     (syntax-rules ()
       [(_ pattern)
-       (match-lambda
-         [pattern #t]
-         [_ #f])]))
-  
-  (define-syntax match-lambda
-    (syntax-rules ()
-      [(_ clause ...)
-       (lambda (x) (match x clause ...))]))
+       (match-lambda [pattern #t] [_ #f])]))
   
   (define-syntax match-lambda*
     (syntax-rules ()
       [(_ clause ...)
-       (lambda x (match x clause ...))]))
+       (let ((m (match-lambda clause ...)))
+         (lambda x (m x)))]))
   
   (define-syntax match-let
     (syntax-rules ()
+      [(_ () body0 body ...)
+       (let () body0 body ...)]
+      [(_ ([pat expr]) body0 body ...) 
+       (match expr
+         [pat
+          (let () body0 body ...)])]
       [(_ ([pat expr] ...) body0 body ...) 
        (match (vector expr ...) 
          [#(pat ...) 
@@ -597,8 +604,6 @@
       [(_ () body0 body ...)
        (let () body0 body ...)]
       [(_ ([pat0 expr0] [pat expr] ...) body0 body ...)
-       ;; TODO: Can move around to make more effecient after match-lambda is
-       ;; made more efficient.
        (match expr0 
          [pat0 
           (match-let* ([pat expr] ...) body0 body ...)])]))

@@ -57,7 +57,7 @@
   (only (xitomatl lists))
   (only (xitomatl lists compat))
   (only (xitomatl macro-utils))
-  (only (xitomatl match (1 1)))
+  (only (xitomatl match (1 2)))
   (only (xitomatl persistence base))
   (only (xitomatl persistence transcoded-serializing))
   (only (xitomatl ports))

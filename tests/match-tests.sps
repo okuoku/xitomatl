@@ -1109,6 +1109,18 @@
   (check-once (match `#(x (x #(x x x x (#((x . #(x x (x x x (x x ,(make-A 'x "foobar") ,(make-A 'x "foozab"))) (x x x (x x ,(make-A 'x "foobar") ,(make-A 'x "foozab"))) (x x x (x x ,(make-A 'x "foobar") ,(make-A 'x "foozab"))))) x x) . x)) x) x)
                 (#(_ (_ #(_ _ ... (#((_ . #(_ _ (_ ... (_ _ (:record A _ (:regex "foo(.*)" (:not (:or 2 (:and _ `,(begin (inc) 1)))))) ...)) ...)) _ ...) . _)) _) _)
                  'ok)))
+  ;; match-lambda, match-lambda*, matches?
+  (check-once (letrec ((m (match-lambda
+                            (`,(begin (inc) 1) 'ok)
+                            ((x (... 1)) (car (map m x))))))
+                (m '(1 1 1 1 1))))
+  (check-once (letrec ((m (match-lambda*
+                            ((`,(begin (inc) 1)) 'ok)
+                            ((x (... 1)) (car (map m x))))))
+                (m 1 1 1 1 1)))
+  (check-once (letrec ((m? (matches? (:or `,(begin (inc) 1)
+                                          ((:predicate (lambda (x) (m? x))) ...)))))
+                (and (m? '(1 1 1 1 1)) 'ok)))
   )
 
 ;;;; Huge sized
