@@ -31,8 +31,8 @@
   (import
     (rnrs)
     (for (only (rnrs base) quote) (meta -1))
-    (only (xitomatl match) match)
     (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand)
+    (for (only (xitomatl indexes) enumerate) expand)
     (only (xitomatl keywords other) missing-value--default
                                     missing-keyword--default predicate-false--default)
     (for (only (xitomatl keywords other) process-options) expand))
@@ -42,86 +42,79 @@
   
   (define-syntax keywords-parser--meta
     (lambda (stx)
-      (define (gen-stx rt-who process-input-list kw=? missing-keyword predicate-false)
-        (lambda (kw-spec kw-value)
-          (with-syntax ([(kw-id . _) kw-spec])
+      (define (gen-stx rt-who kw=? missing-keyword predicate-false
+                       kw-values process-input-list car-id cdr-id additional)
+        (lambda (kw-spec index)
+          (with-syntax ([(kw-id . _) kw-spec]
+                        [v (gen-temp)])
+            (define (gen-clause/val)
+              #`((and (#,kw=? #,car-id 'kw-id)
+                      (pair? #,cdr-id))
+                 (vector-set! #,kw-values #,index (car #,cdr-id))
+                 (#,process-input-list (cdr #,cdr-id) #,additional)))
+            (define (gen-test/val true false)
+              #`(let ((v (vector-ref #,kw-values #,index)))
+                  (if (not-given? v) #,false #,true)))
+            (define (gen-pred/val pred)
+              #`(if (#,pred v)
+                  v
+                  (#,predicate-false '#,rt-who 'kw-id '#,pred v)))
+            (define (gen-missing)
+              #`(#,missing-keyword '#,rt-who 'kw-id))
+            (define (gen-clause/bool)
+              #`((#,kw=? #,car-id 'kw-id)
+                 (vector-set! #,kw-values #,index #T)
+                 (#,process-input-list #,cdr-id #,additional)))
+            (define (gen-test/bool)
+              #`(not (not-given? (vector-ref #,kw-values #,index))))
             (let-values ([(default predicate boolean) (process-options stx kw-spec)])
               (cond [(and default predicate)
-                     (list #`[(x v . r)
-                              (#,kw=? x 'kw-id)
-                              (begin (set! #,kw-value v)
-                                     (#,process-input-list r))]
-                           #`(if (not-given? #,kw-value)
-                               #,default
-                               (if (#,predicate #,kw-value)
-                                 #,kw-value
-                                 (#,predicate-false '#,rt-who 'kw-id
-                                                    '#,predicate #,kw-value))))]
+                     (list (gen-clause/val)
+                           (gen-test/val (gen-pred/val predicate) default))]
                     [default
-                     (list #`[(x v . r)
-                              (#,kw=? x 'kw-id)
-                              (begin (set! #,kw-value v)
-                                     (#,process-input-list r))]
-                           #`(if (not-given? #,kw-value)
-                               #,default
-                               #,kw-value))]
+                     (list (gen-clause/val)
+                           (gen-test/val #'v default))]
                     [predicate
-                     (list #`[(x v . r)
-                              (#,kw=? x 'kw-id)
-                              (begin (set! #,kw-value v)
-                                     (#,process-input-list r))]
-                           #`(if (not-given? #,kw-value)
-                               (#,missing-keyword '#,rt-who 'kw-id)
-                               (if (#,predicate #,kw-value)
-                                 #,kw-value
-                                 (#,predicate-false '#,rt-who 'kw-id
-                                                    '#,predicate #,kw-value))))]
+                     (list (gen-clause/val)
+                           (gen-test/val (gen-pred/val predicate) (gen-missing)))]
                     [boolean
-                     (list #`[(x . r)
-                              (#,kw=? x 'kw-id)
-                              (begin (set! #,kw-value #T)
-                                     (#,process-input-list r))]
-                           #`(not (not-given? #,kw-value)))]
+                     (list (gen-clause/bool)
+                           (gen-test/bool))]
                     [else
-                     (list #`[(x v . r)
-                              (#,kw=? x 'kw-id)
-                              (begin (set! #,kw-value v)
-                                     (#,process-input-list r))]
-                           #`(if (not-given? #,kw-value)
-                               (#,missing-keyword '#,rt-who 'kw-id)
-                               #,kw-value))])))))
+                     (list (gen-clause/val)
+                           (gen-test/val #'v (gen-missing)))])))))
       (syntax-case stx ()
         [(_ rt-who kw=? missing-value missing-keyword predicate-false
             [kw-id options ...] ...)
          (for-all identifier? 
                   #'(kw=? missing-value missing-keyword predicate-false kw-id ...))
-         (with-syntax* ([(kw-value ...) (generate-temporaries #'(kw-id ...))]
-                        [process-input-list (gen-temp)]
-                        [((match-clause value-expr) ...)
-                         (map (gen-stx #'rt-who #'process-input-list #'kw=?
-                               #'missing-keyword #'predicate-false) 
+         (with-syntax* ([num (length #'(kw-id ...))]
+                        [(kw-values process-input-list car-id cdr-id additional)
+                         (generate-temporaries '(1 2 3 4 5))]
+                        [((cond-clause value-expr) ...)
+                         (map (gen-stx #'rt-who #'kw=?
+                                       #'missing-keyword #'predicate-false
+                                       #'kw-values #'process-input-list
+                                       #'car-id #'cdr-id #'additional) 
                               #'([kw-id options ...] ...)
-                              #'(kw-value ...))])
+                              (enumerate #'(kw-id ...)))])
            #'(lambda (input-list)
-               (let ([kw-value not-given] 
-                     ...
-                     [additional '()])               
-                 (let process-input-list ([l input-list])
-                   (match l
-                     match-clause
-                     ...
-                     [(x . rest)
-                      (if (exists (lambda (y) (kw=? x y)) '(kw-id ...))
-                        (missing-value 'rt-who x)
-                        (begin (set! additional (cons x additional))
-                               (process-input-list rest)))]
-                     [() 
-                      (set! additional (reverse additional))]
-                     [_ 
-                      (assertion-violation 'rt-who "not a proper list" input-list)]))
-                 (letrec* ([kw-id value-expr] 
-                           ...)
-                   (values kw-id ... additional)))))])))
+               (let ((kw-values (make-vector num not-given)))
+                 (let process-input-list ((l input-list) (additional '()))
+                   (cond ((pair? l)
+                          (let ((car-id (car l)) (cdr-id (cdr l)))
+                            (cond cond-clause ...
+                                  (else (if (exists (lambda (x) (kw=? car-id x))
+                                                    '(kw-id ...))
+                                          (missing-value 'rt-who car-id)
+                                          (process-input-list cdr-id
+                                           (cons car-id additional)))))))
+                         ((null? l)
+                          (letrec* ((kw-id value-expr) ...)
+                            (values kw-id ... (reverse additional))))
+                         (else
+                          (assertion-violation 'rt-who "not a proper list"
+                                               input-list)))))))])))
   
   (define (missing-value--define/kw who kw-id)
     (missing-value--default who (syntax-case kw-id (quote)
