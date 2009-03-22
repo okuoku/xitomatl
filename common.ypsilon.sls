@@ -33,8 +33,8 @@
     )
   (import
     (rnrs)
-    (only (core) format gensym set-current-input-port! set-current-output-port!)
-    (prefix (only (core) pretty-print) ypsilon:)
+    (only (core) format set-current-input-port! set-current-output-port!)
+    (prefix (only (core) pretty-print gensym) ypsilon:)
     (only (time) time))
   
   (define (add1 x) (+ x 1))
@@ -54,6 +54,16 @@
       [(x p)
        (ypsilon:pretty-print x p)
        (newline p)]))
+
+  (define gensym
+    (case-lambda
+      (()
+       (ypsilon:gensym))
+      ((name)
+       (ypsilon:gensym (cond ((string? name) name)
+                             ((symbol? name) (symbol->string name))
+                             (else (assertion-violation 'gensym
+                                    "not a string or symbol" name)))))))
 
   (define (parameterize-current-port port set-port! val thunk)
     (define (swap)

@@ -32,8 +32,8 @@
   
   (define-syntax my:define
     (syntax-rules ()
-      [(_ ((maybe-list . f1) . f2) expr expr* ...)
-       (my:define (maybe-list . f1)
+      [(_ ((maybe-pair . f1) . f2) expr expr* ...)
+       (my:define (maybe-pair . f1)
          (lambda f2 expr expr* ...))]
       [(_ . rest)
        (define . rest)]))

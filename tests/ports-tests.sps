@@ -53,6 +53,47 @@
             => 'caught)]))
 
 
+;;;; Predicates
+
+;; binary-input-port? binary-output-port?
+;; textual-input-port? textual-output-port? port-closed?
+(define bip (open-bytevector-input-port #vu8(1 2 3)))
+(check (binary-input-port? bip) => #T)
+(check (binary-output-port? bip) => #F)
+(check (textual-input-port? bip) => #F)
+(check (textual-output-port? bip) => #F)
+(check (port-closed? bip) => #F)
+(close-port bip)
+(check (port-closed? bip) => #T)
+(define bop
+  (let-values (((bop bop-g) (open-bytevector-output-port)))
+    bop))
+(check (binary-input-port? bop) => #F)
+(check (binary-output-port? bop) => #T)
+(check (textual-input-port? bop) => #F)
+(check (textual-output-port? bop) => #F)
+(check (port-closed? bop) => #F)
+(close-port bop)
+(check (port-closed? bop) => #T)
+(define sip (open-string-input-port "abc"))
+(check (binary-input-port? sip) => #F)
+(check (binary-output-port? sip) => #F)
+(check (textual-input-port? sip) => #T)
+(check (textual-output-port? sip) => #F)
+(check (port-closed? sip) => #F)
+(close-port sip)
+(check (port-closed? sip) => #T)
+(define sop
+  (let-values (((sop sop-g) (open-string-output-port)))
+    sop))
+(check (binary-input-port? sop) => #F)
+(check (binary-output-port? sop) => #F)
+(check (textual-input-port? sop) => #F)
+(check (textual-output-port? sop) => #T)
+(check (port-closed? sop) => #F)
+(close-port sop)
+(check (port-closed? sop) => #T)
+
 ;;;; Getting everything from a port
 
 (define text

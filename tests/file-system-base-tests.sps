@@ -375,6 +375,32 @@
 (check (delete-any "b/sym") => #f)
 (check-io-f-error delete-file "b/sym"
   (delete-any "b/sym" #t))
+;; make-path-to
+(make-path-to "no-path-to-me")
+(check (file-exists? "no-path-to-me" #F) => #F)
+(make-path-to "path/to/some/thing/new")
+(check (file-directory? "path" #F) => #T)
+(check (file-directory? "path/to" #F) => #T)
+(check (file-directory? "path/to/some" #F) => #T)
+(check (file-directory? "path/to/some/thing" #F) => #T)
+(check (file-exists? "path/to/some/thing/new" #F) => #F)
+(make-path-to "path/to/some/where/else")
+(check (file-directory? "path" #F) => #T)
+(check (file-directory? "path/to" #F) => #T)
+(check (file-directory? "path/to/some" #F) => #T)
+(check (file-directory? "path/to/some/where" #F) => #T)
+(check (file-exists? "path/to/some/where/else" #F) => #F)
+(make-symbolic-link "to" "path/sym")
+(assert (file-symbolic-link? "path/sym"))
+(make-path-to "path/sym/foo/bar")
+(check (file-directory? "path" #F) => #T)
+(check (file-symbolic-link? "path/sym") => #T)
+(check (file-directory? "path/sym") => #T)
+(check (file-directory? "path/sym/foo" #F) => #T)
+(check (file-exists? "path/sym/foo/bar" #F) => #F)
+(call-with-output-file "path/to/file" (lambda (fop) (write 1 fop)))
+(check-io-f-error make-path-to "path/to/file"
+  (make-path-to "path/to/file/oops/oops"))
 
 ;; clean-up
 (let ([tests-dir (current-directory)])

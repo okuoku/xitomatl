@@ -71,10 +71,15 @@
   (with-output-to-file fn
     (lambda () (pretty-print '(a "b" #\c))))
   (check (call-with-input-file fn read) => '(a "b" #\c))
+  (check (let ((s (call-with-input-file fn get-string-all)))
+           (string-ref s (- (string-length s) 1)))
+         => #\newline)
   (delete-file fn))
 (let-values ([(sop get) (open-string-output-port)])
   (pretty-print '(a "b" #\c) sop)
-  (check (read (open-string-input-port (get))) => '(a "b" #\c)))
+  (let ((s (get)))
+    (check (read (open-string-input-port s)) => '(a "b" #\c))
+    (check (string-ref s (- (string-length s) 1)) => #\newline)))
 ;; gensym
 (let ([g (gensym)])
   (check (symbol? g) => #T)
@@ -82,6 +87,8 @@
   (check (symbol=? g g) => #T)
   (check (eq? g (string->symbol (symbol->string g))) => #F)
   (check (symbol=? g (string->symbol (symbol->string g))) => #F))
+(check (symbol? (gensym 'foo)) => #T)
+(check (symbol? (gensym "foo")) => #T)
 ;; time -- how to test...?
 #;(check  => )
 ;; with-input-from-string

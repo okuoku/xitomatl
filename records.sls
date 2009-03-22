@@ -25,27 +25,39 @@
 #!r6rs
 (library (xitomatl records)
   (export
+    record-type-fields
     record-type-accessors
     record-type-mutators)
   (import
     (rnrs))
-  
-  (define (record-type-field-procs rtd field-proc)
-    (let loop ([rtd rtd] [procs '()])
+
+  (define (record-type-things rtd proc)
+    (let loop ((rtd rtd) (things '()))
       (if rtd
         (loop (record-type-parent rtd)
-              (let ([len (vector-length (record-type-field-names rtd))])
-                (let loop ([i (- len 1)] [procs procs])
-                  (cond [(negative? i) procs]
-                        [else (loop (- i 1) (cons (field-proc rtd i) procs))]))))
-        procs)))
-  
+              (let ((fns (vector->list (record-type-field-names rtd))))
+                (let loop ((i (- (length fns) 1))
+                           (fns (reverse fns))
+                           (things things))
+                  (if (null? fns)
+                    things
+                    (loop (- i 1)
+                          (cdr fns)
+                          (cons (proc rtd (car fns) i)
+                                things))))))
+        things)))
+
+  (define (record-type-fields rtd)
+    (record-type-things rtd
+     (lambda (rtd fn i) fn)))
+    
   (define (record-type-accessors rtd)
-    (record-type-field-procs rtd record-accessor))
+    (record-type-things rtd
+     (lambda (rtd fn i) (record-accessor rtd i))))
   
   (define (record-type-mutators rtd)
-    (record-type-field-procs rtd (lambda (rtd i)
-                                   (and (record-field-mutable? rtd i)
-                                        (record-mutator rtd i)))))
-  
+    (record-type-things rtd
+     (lambda (rtd fn i)
+       (and (record-field-mutable? rtd i)
+            (record-mutator rtd i)))))
 )

@@ -22,6 +22,12 @@
 ;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 ;; DEALINGS IN THE SOFTWARE.
 
+;; TODO: Don't automatically normalize paths.
+;;       Rename cleanse-path to normalize-path.
+;;       Rename dir-sep-str to path-separator.
+;;       Remove dir-sep-char and root-dir-str.
+;;       Maybe more clean-up.
+
 #!r6rs
 (library (xitomatl file-system paths)
   (export
@@ -31,6 +37,7 @@
   (import
     (rnrs)
     (srfi :0 cond-expand)
+    (only (xitomatl define) define/?)
     (xitomatl strings))
   
   ;; If anyone ever wants to use my libraries on Windows, we can cond-expand or
@@ -58,9 +65,10 @@
   (define (path=? x y . r)
     (apply string=? (map cleanse-path (cons* x y r))))
   
-  (define (path-join . ps)
-    (let ([r (string-intersperse (apply append (map _path-split ps)) 
-                                 dir-sep-str)])
+  (define/? (path-join . #(ps (lambda (ps) (for-all string? ps))))
+    (let* ((ps (filter (lambda (p) (positive? (string-length p))) ps))
+           (r (string-intersperse (apply append (map _path-split ps))
+                                  dir-sep-str)))
       (if (and (not (null? ps))
                (absolute-path? (car ps)))  ;; Windows version wouldn't do this, just return r
         (string-append dir-sep-str r)

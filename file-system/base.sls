@@ -31,7 +31,8 @@
     file-exists? file-regular? file-directory? file-symbolic-link?
     file-readable? file-writable? file-executable? file-size rename-file
     ;; This library's things
-    directory-walk-enumerator directory-walk directory-walk/choice delete-any)
+    directory-walk-enumerator directory-walk directory-walk/choice
+    delete-any make-path-to)
   (import
     (except (rnrs) file-exists? delete-file)
     (srfi :0 cond-expand)
@@ -63,6 +64,7 @@
            (let loop ([l (catch ex ([(i/o-filename-error? ex)
                                      (warning who ;; does raise-continuable
                                       "Exception raised from directory walking"
+                                      ;; TODO?: Why simple-conditions?
                                       (if (condition? ex) (simple-conditions ex) ex)
                                       path)
                                      ;; Continuing not currently working with PLT's
@@ -192,6 +194,21 @@
            [else 
             (delete-file path)])
          (if want-error (values) #t))]))
+
+  (define/? (make-path-to (path path?))
+    (define (raise-io-f msg p)
+      (raise (condition (make-who-condition 'make-path-to)
+                        (make-message-condition msg)
+                        (make-i/o-filename-error p))))
+    (let loop ((todo (reverse (cdr (reverse (path-split path)))))
+               (done ""))
+      (when (pair? todo)
+        (let ((p (path-join done (car todo))))
+          (cond ((not (file-exists? p #F))
+                 (make-directory p))
+                ((file-directory? p))
+                (else (raise-io-f "already exists, but not a directory" p)))
+          (loop (cdr todo) p)))))
   
   (cond-expand 
     [posix]  ;; okay
