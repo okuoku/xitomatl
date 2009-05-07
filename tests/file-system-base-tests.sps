@@ -80,6 +80,24 @@
 (make-test-tree)
 (current-directory "/tmp/xitomatl-tests")
 (check (cleanse-path (current-directory)) => "/tmp/xitomatl-tests")
+;; directory-enumerator
+(check (let-values ((vals
+                     (fold/enumerator
+                      directory-enumerator
+                      "."
+                      (lambda (e . a) (apply values #T (cons e a))))))
+         (list-sort string<? vals))
+       => '("a" "b" "c" "d" "e" "z"))
+(check-io-f-error directory-enumerator "does-not-exist"
+  (fold/enumerator
+   directory-enumerator
+   "does-not-exist"
+   (lambda _ (assert #F))))
+(check-io-f-error directory-enumerator "z"
+  (fold/enumerator
+   directory-enumerator
+   "z"
+   (lambda _ (assert #F))))
 ;; directory-list
 (check (list-sort string<? (directory-list ".")) 
        => '("a" "b" "c" "d" "e" "z"))

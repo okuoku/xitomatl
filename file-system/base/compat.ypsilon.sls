@@ -27,7 +27,7 @@
 (library (xitomatl file-system base compat)
   (export
     (rename (yp:current-directory current-directory))
-    directory-list delete-directory delete-file
+    directory-enumerator directory-list delete-directory delete-file
     make-directory make-symbolic-link change-mode file-mtime file-ctime
     file-exists? file-regular? file-directory? file-symbolic-link?
     file-readable? file-writable? file-executable? file-size rename-file)
@@ -66,6 +66,9 @@
          (handle-io-ex who fn)
          (lambda () expr ...)))))
 
+  (define (directory-enumerator . _)
+    (assertion-violation 'directory-enumerator "not implemented"))
+  
   (define/who (directory-list path)
     (remp (lambda (x) (member x '("." "..")))
           (with-reraise-io who path

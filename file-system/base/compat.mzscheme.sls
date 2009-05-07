@@ -25,7 +25,8 @@
 #!r6rs
 (library (xitomatl file-system base compat)
   (export
-    current-directory directory-list delete-file delete-directory
+    directory-enumerator directory-list
+    current-directory delete-file delete-directory
     make-symbolic-link make-directory change-mode file-mtime file-ctime
     file-exists? file-regular? file-directory? file-symbolic-link?
     file-readable? file-writable? file-executable? file-size rename-file)
@@ -49,7 +50,7 @@
          (define (id . _) (assertion-violation 'id "not implemented"))
          ...)]))
   
-  (not-implemented change-mode file-ctime)
+  (not-implemented directory-enumerator change-mode file-ctime)
   
   (define (reraise/io-f who path)
     (lambda (exn) 

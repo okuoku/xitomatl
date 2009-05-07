@@ -26,7 +26,8 @@
 (library (xitomatl file-system base)
   (export
     ;; From compat
-    current-directory directory-list delete-directory delete-file
+    directory-enumerator directory-list
+    current-directory delete-directory delete-file
     make-directory make-symbolic-link change-mode file-mtime file-ctime
     file-exists? file-regular? file-directory? file-symbolic-link?
     file-readable? file-writable? file-executable? file-size rename-file
@@ -41,9 +42,6 @@
     (only (xitomatl define) define/?)
     (only (xitomatl enumerators) fold/enumerator)
     (only (xitomatl exceptions) catch warning))
-  
-  ;; TODO? directory-enumerator which uses FFI to get directory entries as they're
-  ;;       needed; contrasted with directory-list which gets them all at once.
   
   (define/? directory-walk-enumerator
     ;; Like all (xitomatl enumerators) enumerators, proc must return as its 

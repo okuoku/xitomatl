@@ -24,7 +24,8 @@
 
 (library (xitomatl file-system base compat)
   (export
-    current-directory directory-list delete-directory delete-file
+    directory-enumerator directory-list
+    current-directory delete-directory delete-file
     make-directory make-symbolic-link change-mode file-mtime file-ctime
     file-exists? file-regular? file-directory? file-symbolic-link?
     file-readable? file-writable? file-executable? file-size rename-file)
@@ -44,7 +45,7 @@
          ...))))
 
   (not-implemented
-   directory-list delete-directory delete-file
+   directory-enumerator directory-list delete-directory delete-file
    make-directory make-symbolic-link change-mode file-mtime file-ctime
    file-exists? file-regular? file-directory? file-symbolic-link?
    file-readable? file-writable? file-executable? file-size rename-file)
