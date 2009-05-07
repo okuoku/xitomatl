@@ -99,30 +99,35 @@
 (check (g0 '(x)) => '((x)))
 (check (g0 's 3 's #\c) => '(#\c s 3 s))
 ;; misuse errors
-(check-AV-who-msg make-generic "argument check failed" (make-generic values "oops" "oops"))
-(define-values (g1 g1-specialize!) 
-  (make-generic (lambda args 
-                  (apply reconfigure/temporal args) 
-                  'oops)))
+(check-AV-who-msg make-generic "argument check failed"
+  (make-generic 1 #\c))
 (check-AV-who-msg reconfigure/temporal "argument check failed" 
-  (g1-specialize! 'oops values))
+  (reconfigure/temporal '() 'oops values))
 (check-AV-who-msg reconfigure/temporal "argument check failed" 
-  (g1-specialize! (list 'oops) values))
+  (reconfigure/temporal '() (list 'oops) values))
 (check-AV-who-msg reconfigure/temporal "argument check failed" 
-  (g1-specialize! (cons* char? number? 'oops) values))
+  (reconfigure/temporal '() (cons* char? number? 'oops) values))
 (check-AV-who-msg reconfigure/temporal "argument check failed"
-  (g1-specialize! (list number?) 'oops))
-(check-AV-who-msg generic-specialize! "invalid specializations value"
-  (g1-specialize! '() values))
+  (reconfigure/temporal '() (list number?) 'oops))
+(define-values (g1 g1-specs) 
+  (make-generic))
+(check-no-spec "a generic" (g1))
+(check-AV-who-msg "a generic specializer" "invalid specializations value"
+  (g1-specs 'oops))
+(check-AV-who-msg "a generic specializer" "invalid specializations value"
+  (g1-specs (list (list 'oops values))))
+(check-AV-who-msg "a generic specializer" "invalid specializations value"
+  (g1-specs (list (list (list 'oops) values))))
+(check-AV-who-msg "a generic specializer" "invalid specializations value"
+  (g1-specs (list (list (cons* char? number? 'oops) values))))
+(check-AV-who-msg "a generic specializer" "invalid specializations value"
+  (g1-specs (list (list (list number?) 'oops))))
 (let ()
-  (define-values (foo foo-s!) 
-    (make-generic (lambda args 
-                    (apply reconfigure/temporal args) 
-                    'oops)
-                  'foo 'foo-s!))
+  (define-values (foo foo-specs) 
+    (make-generic 'foo 'foo-specs))
   (check-no-spec foo (foo))
-  (check-AV-who-msg foo-s! "invalid specializations value"
-    (foo-s! '() values)))
+  (check-AV-who-msg foo-specs "invalid specializations value"
+    (foo-specs 'oops)))
 ;; define-generic/temporal syntax
 (define-generic/temporal g2
   [() 1]

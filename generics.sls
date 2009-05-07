@@ -46,7 +46,7 @@
   ;; simple way of reconfiguring the specializations of a generic, the design is
   ;; open to possible future abilities such as removing specializations or
   ;; reordering their precedence.
-  
+
   ;; For reconfigure/temporal and reconfigure/reverse-temporal, `preds' must be
   ;; of the type <argument-predicates> described in the below comment about
   ;; `specializations'.  That is, `preds' must be: a possibly empty list of
@@ -63,40 +63,42 @@
   ;; predicate in/as `preds', then `proc' must accept the additional, possibly
   ;; variable, number of "rest arguments" that the any-number-of-arguments
   ;; predicate returned true for.
-  
-  (define/? (reconfigure/temporal specializations 
+
+  (define/? (reconfigure/temporal specializations
                                   [preds valid-predicates-specification?]
                                   [proc procedure?])
-    (append specializations 
+    (append specializations
             (list (list preds proc))))
-  
+
   #;(define/? (reconfigure/reverse-temporal specializations
                                           [preds valid-predicates-specification?]
                                           [proc procedure?])
     (cons (list preds proc) specializations))
-  
+
   #|(define (reconfigure/type-domain ---)
     ---)|#
-  
+
   (define (valid-predicates-specification? x)
-    (cond [(pair? x) (and (procedure? (car x)) 
+    (cond [(pair? x) (and (procedure? (car x))
                           (valid-predicates-specification? (cdr x)))]
           [(null? x)]
           [(procedure? x)]
           [else #f]))
-  
+
   (define (valid-specializations? x)
     (cond [(pair? x) (and (valid-predicates-specification? (caar x))
                           (procedure? (cadar x))
                           (valid-specializations? (cdr x)))]
           [(null? x)]
           [else #f]))
-  
+
+  (define (symbol-or-string? x) (or (symbol? x) (string? x)))
+
   (define/? make-generic
     (case-lambda/?
-      [(reconfigure) 
-       (make-generic reconfigure 'generic 'generic-specialize!)]
-      [([reconfigure procedure?] [gwho symbol?] [swho symbol?])
+      [()
+       (make-generic "a generic" "a generic specializer")]
+      [([gwho symbol-or-string?] [swho symbol-or-string?])
        ;; specializations ::= (<specialization> ...)
        ;; <specialization> ::= (<argument-predicates> <specialized-procedure>
        ;;                       <supplemental> ...)
@@ -108,17 +110,17 @@
        ;;                            which returns true or #f.
        ;; <specialized-procedure> ::= Procedure with arity matching <argument-predicates>
        ;;                             which returns any number and type of values
-       ;; <supplemental> ::= Any value. Used by reconfigure.
+       ;; <supplemental> ::= Any value. Possibly used by reconfigure.
        (let ([specializations '()])
          (values
            ;; The generic
            (lambda args
              (let ([proc
                     (let next-spec ([specs specializations])
-                      (cond 
+                      (cond
                         [(pair? specs)
                          (let next-pred ([preds (caar specs)] [test-args args])
-                           (cond 
+                           (cond
                              [(pair? preds)
                               (if (and (pair? test-args)
                                        ((car preds) (car test-args)))
@@ -133,18 +135,21 @@
                                 (cadar specs)  ;; found the right specialized procedure
                                 (next-spec (cdr specs)))]
                              [else (assert #F)]))]
-                        [(null? specs) 
+                        [(null? specs)
                          (apply assertion-violation gwho "no specialization" args)]
                         [else (assert #F)]))])
                (apply proc args)))
-           ;; Its specializer
-           (lambda args
-             (set! specializations 
-                   (let ([specs (apply reconfigure specializations args)])
-                     (unless (valid-specializations? specs)
-                       (assertion-violation swho "invalid specializations value" specs))
-                     specs)))))]))
-  
+           ;; Its specializations parameter (SRFI-39-compatible).
+           (case-lambda
+             (() specializations)
+             ((x) (if (valid-specializations? x)
+                    (set! specializations x)
+                    (assertion-violation swho "invalid specializations value" x))))))]))
+
+  (define (make-specializer reconfigure specializations)
+    (lambda args
+      (specializations (apply reconfigure (specializations) args))))
+
   (define-syntax define-generic--meta
     (lambda (stx)
       (syntax-case stx ()
@@ -152,11 +157,12 @@
          (identifier? #'name)
          (with-syntax ([specialize! (identifier-append #'name #'name "-specialize!")])
            #'(define-values (name specialize!)
-               (let-values ([(g sg) (make-generic reconfig 'name 'specialize!)])
-                 (sg sargs ...)
-                 ...
-                 (values g sg))))])))
-  
+               (let-values ([(g specs) (make-generic 'name 'specialize!)])
+                 (let ((sg (make-specializer reconfig specs)))
+                   (sg sargs ...)
+                   ...
+                   (values g sg)))))])))
+
   (define-syntax define-generic/temporal
     ;; (define-generic/temporal <identifier> <specialization-clause> ...)
     ;;
@@ -175,7 +181,7 @@
       (syntax-case stx ()
         [(_ name [pred-frmls . b] ...)
          (identifier? #'name)
-         (with-syntax ([((preds frmls) ...) 
+         (with-syntax ([((preds frmls) ...)
                         (map (lambda (pf)
                                (syntax-case pf ()
                                  [([a p] ...)
@@ -183,7 +189,6 @@
                                  [([a p] ... . #(ar pr))
                                   #'((cons* p ... pr) (a ... . ar))]))
                              #'(pred-frmls ...))])
-           #'(define-generic--meta name reconfigure/temporal 
+           #'(define-generic--meta name reconfigure/temporal
                (preds (lambda frmls . b)) ...))])))
-  
 )
