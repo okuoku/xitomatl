@@ -70,7 +70,7 @@
     ;; TODO: could this be made tail-recursive / constant space?
     (let loop ([f f] [l l] [orig l])
       (cond [(pair? l) (let ([h (car l)] [t (cdr l)])
-                         (let ([h1 (f h)] [t1 (loop f t orig)])
+                         (let* ([h1 (f h)] [t1 (loop f t orig)])
                            (if (and (eq? h1 h) (eq? t1 t)) 
                              l
                              (cons h1 t1))))] 

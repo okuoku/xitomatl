@@ -26,5 +26,14 @@
   (export
     make-list last-pair)
   (import
-    (primitives make-list last-pair))
+    (only (xitomatl define) define/?)
+    (only (xitomatl predicates) exact-non-negative-integer?)
+    (prefix (primitives make-list) larceny:)
+    (primitives last-pair))
+
+  (define/? make-list
+    (case-lambda/?
+      ((n) (make-list n #F))
+      (((n exact-non-negative-integer?) v)
+       (larceny:make-list n v))))
 )

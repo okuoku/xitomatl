@@ -108,5 +108,11 @@
   (define (identifier?/name=? id name)
     (and (identifier? id)
          (name=? id name)))
-  
+
+#;(define (syntax-object->source-location-expression stx)
+    (let ((file-name (host:source-location-file-name stx))
+          (char-pos (host:source-location-char-pos stx)))
+      (assert (or (not file-name) (string? file-name)))
+      (assert (or (not char-pos) (number? char-pos)))
+      #`(make-source-location #,file-name #,char-pos)))
 )

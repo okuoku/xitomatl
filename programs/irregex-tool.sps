@@ -24,6 +24,12 @@
 ;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 ;; DEALINGS IN THE SOFTWARE.
 
+;; TODO?: SXML format-mode
+
+;; TODO?: Colored output.  Detect TERM.  Use IRREGEX_TOOL_COLORS.
+
+;; TODO: Detect binary-type files and have option to skip.
+
 #!r6rs
 (import
   (except (rnrs) file-exists? delete-file)

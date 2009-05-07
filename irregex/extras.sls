@@ -198,6 +198,9 @@
                            (loop (cddr r) (+ 1 n))))))
                    (let-values ([(continue . next-seeds) (apply proc m seeds)])
                      (if continue
+                       ;; TODO: Can't use get-subchunk.  Must use
+                       ;; irregex-search/chunked with a start index (relative to
+                       ;; the start chunk).
                        (loop (get-subchunk end-chunk end-index
                                            end-chunk (get-end end-chunk))
                              next-seeds)
