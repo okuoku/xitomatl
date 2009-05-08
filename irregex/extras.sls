@@ -22,7 +22,9 @@
     (only (xitomatl predicates) exact-positive-integer?)
     (only (xitomatl ports) textual-input-port?)
     (only (xitomatl enumerators) fold/enumerator)
-    (xitomatl irregex))
+    (xitomatl irregex #;(or (0 7 (>= 3))
+                            (0 (>= 8))
+                            ((>= 1)))))
 
   (define-syntax assert
     (syntax-rules ()
