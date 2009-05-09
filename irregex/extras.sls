@@ -19,12 +19,12 @@
     (rename (rnrs) (assert rnrs:assert))
     (rnrs mutable-pairs)
     (only (xitomatl define) define/? define/AV)
-    (only (xitomatl predicates) exact-positive-integer?)
+    (only (xitomatl predicates) exact-positive-integer? or?)
     (only (xitomatl ports) textual-input-port?)
     (only (xitomatl enumerators) fold/enumerator)
-    (xitomatl irregex #;(or (0 7 (>= 3))
-                            (0 (>= 8))
-                            ((>= 1)))))
+    (xitomatl irregex (or (0 7 (>= 3))
+                          (0 (>= 8))
+                          ((>= 1)))))
 
   (define-syntax assert
     (syntax-rules ()
@@ -138,21 +138,13 @@
        (irregex-chunk-enumerator irx chunker #f)]
       [(irx chunker lose-refs)
        (let ([irx-c (irregex irx)]
-             [get-start (chunker-get-start chunker)]
-             [get-end (chunker-get-end chunker)]
-             [get-subchunk (chunker-get-subchunk chunker)])
-         (assert (procedure? get-subchunk))
-         ;; This must be true of the get-subchunk of the chunker used with this
-         ;; enumerator: (eq? (get-next end) (get-next (get-subchunk start i end j)))
+             [get-start (chunker-get-start chunker)])
          (lambda (chunk proc seeds)
-           (let loop ([chk chunk] [seeds seeds])
-             (let ([m (irregex-search/chunked irx-c chunker chk)])
+           (let loop ([chk chunk] [i (get-start chunk)] [seeds seeds])
+             (let ([m (irregex-search/chunked irx-c chunker chk i)])
                (if m
                  (let ([end-chunk (irregex-match-end-source m 0)]
                        [end-index (irregex-match-end-index m 0)])
-                   (when (and (eq? chk end-chunk)
-                              (>= (get-start chk) end-index))
-                     (AV "pattern not advancing search" irx (get-start chk) end-index))
                    (when lose-refs
                      ;; Losing possible reference(s) reachable from the match
                      ;; object to chunk(s) outside the match chunks is done to
@@ -181,12 +173,10 @@
                            (loop (cddr r) (+ 1 n))))))
                    (let-values ([(continue . next-seeds) (apply proc m seeds)])
                      (if continue
-                       ;; TODO: Can't use get-subchunk.  Must use
-                       ;; irregex-search/chunked with a start index (relative to
-                       ;; the start chunk).
-                       (loop (get-subchunk end-chunk end-index
-                                           end-chunk (get-end end-chunk))
-                             next-seeds)
+                       (if (or (not (eq? chk end-chunk))
+                               (< i end-index))
+                         (loop end-chunk end-index next-seeds)
+                         (AV "pattern not advancing search" irx))
                        (apply values next-seeds))))
                  (apply values seeds))))))]))
 
@@ -211,28 +201,28 @@
 
   ;;--------------------------------------------------------------------------
 
-  (define/? (make-pair-chain-chunker [get-next procedure?])
-    (letrec
-        ([get-string car]
-         [get-start  (lambda (chunk) 0)]
-         [get-end    (lambda (chunk) (string-length (car chunk)))]
-         [get-substring
-          (lambda (chunkA start chunkB end)
-            (if (eq? chunkA chunkB)
-              (substring (car chunkA) start end)
-              (let loop ([next (cdr chunkA)]
-                         [res (list (let ([s (car chunkA)])
-                                      (substring s start (string-length s))))])
-                (assert (pair? next))
-                (if (eq? next chunkB)
-                  (string-cat-reverse (cons (substring (car next) 0 end) res))
-                  (loop (cdr next) (cons (car next) res))))))]
-         [get-subchunk
-          (lambda (chunkA start chunkB end)
-            (cons (get-substring chunkA start chunkB end)
-                  (cdr chunkB)))])
-      (make-irregex-chunker get-next get-string get-start get-end
-                            get-substring get-subchunk)))
+  (define/? make-pair-chain-chunker
+    (case-lambda/?
+      ((get-next)
+       (make-pair-chain-chunker get-next #F))
+      (([get-next procedure?] [get-subchunk (or? not procedure?)])
+       (letrec
+           ([get-string car]
+            [get-start  (lambda (chunk) 0)]
+            [get-end    (lambda (chunk) (string-length (car chunk)))]
+            [get-substring
+             (lambda (chunkA start chunkB end)
+               (if (eq? chunkA chunkB)
+                 (substring (car chunkA) start end)
+                 (let loop ([next (cdr chunkA)]
+                            [res (list (let ([s (car chunkA)])
+                                         (substring s start (string-length s))))])
+                   (assert (pair? next))
+                   (if (eq? next chunkB)
+                     (string-cat-reverse (cons (substring (car next) 0 end) res))
+                     (loop (cdr next) (cons (car next) res))))))])
+         (make-irregex-chunker get-next get-string get-start get-end
+                               get-substring get-subchunk)))))
 
   (define (pair-chain-chunking-lose-refs submatch-chunks)
     (assert (<= 2 (length submatch-chunks)))
@@ -301,5 +291,5 @@
   (define (port-chunking-make-initial-chunk port)
     (cons "" port))
 
-  (define port-chunker (make-port-chunker 128))  ;; good default size?
+  (define port-chunker (make-port-chunker #x400))  ;; good default size?
 )

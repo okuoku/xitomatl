@@ -3,8 +3,6 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-;; TODO: Test fix of get-subchunk.
-
 #!r6rs
 (import
   (rnrs)
@@ -156,10 +154,10 @@
                                         list-chunking-lose-refs))
        => '("e"))
 (check (map irregex-match-substring
-            (irregex-search/chunked/all "^.+$" list-chunker chunked-text0))
+            (irregex-search/chunked/all "^.*$" list-chunker chunked-text0))
        => '("Once upon a time...  There was a string used for testing chunks!"))
 (check (map irregex-match-substring
-            (irregex-search/chunked/all "^.+$" list-chunker chunked-text0
+            (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
                                         list-chunking-lose-refs))
        => '("Once upon a time...  There was a string used for testing chunks!"))
 (check (irregex-search/chunked/all "(?:(foo)|(bar))\\s*zab" list-chunker 
@@ -170,11 +168,6 @@
                                            (irregex-match-substring m 1)
                                            (irregex-match-substring m 2))))
        => '(("bar  zab" #f "bar") ("foozab" "foo" #f)))
-(check-ex/not-advancing 
- (irregex-search/chunked/all "^.*$" list-chunker chunked-text0))
-(check-ex/not-advancing 
- (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
-                             list-chunking-lose-refs))
 
 ;;;; irregex-search/chunked/all/strings
 
@@ -195,10 +188,8 @@
        => '("On" "on" "or"))
 (check (irregex-search/chunked/all/strings "(e)((\\w+)(e))" list-chunker chunked-text0)
        => '("ere"))
-(check (irregex-search/chunked/all/strings "^.+$" list-chunker chunked-text0)
+(check (irregex-search/chunked/all/strings "^.*$" list-chunker chunked-text0)
        => '("Once upon a time...  There was a string used for testing chunks!"))
-(check-ex/not-advancing 
- (irregex-search/chunked/all/strings "^.*$" list-chunker chunked-text0))
 
 ;;----------------------------------------------------------------------------
     
@@ -290,10 +281,18 @@
                             (or (not (string=? s "stop"))
                                 (values #f s)))))
        => "stop")
-(check (fold/enumerator (irregex-chunk-enumerator ".+" list-chunker)
+(check (fold/enumerator (irregex-chunk-enumerator "." list-chunker)
                         '("zabbo")
                         (lambda (_) (values #f 'ok)))
        => 'ok)
+(check (fold/enumerator (irregex-chunk-enumerator ".*?" list-chunker)
+                        '("zabbo")
+                        (lambda (m) (values #f (irregex-match-substring m))))
+       => "")
+(check-ex/not-advancing
+ (fold/enumerator (irregex-chunk-enumerator ".*?" list-chunker)
+                  '("zabbo")
+                  (lambda (_) #T)))
 (check (fold/enumerator (irregex-list-enumerator ".")
                         chunked-text0
                         (lambda (m i) (values #t (+ 1 i)))
