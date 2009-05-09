@@ -20,7 +20,8 @@
     irregex-quote irregex-opt sre->string string->sre maybe-string->sre
     ;; Needed by (xitomatl irregex extras)
     irregex-match-start-source-set! irregex-match-end-source-set!
-    chunker-get-start chunker-get-end chunker-get-subchunk
+    chunker-get-next chunker-get-str chunker-get-start
+    chunker-get-end chunker-get-substring chunker-get-subchunk
     string-cat-reverse)
   (import
     (rename (except (rnrs) error remove)

@@ -9,15 +9,13 @@
     irregex-search/all irregex-search/all/strings
     irregex-search/chunked/all irregex-search/chunked/all/strings
     irregex-search-port/all irregex-search-port/all/strings
-    irregex-enumerator irregex-string-enumerator irregex-chunk-enumerator
-    irregex-list-enumerator irregex-port-enumerator
-    make-pair-chain-chunker pair-chain-chunking-lose-refs
+    irregex-chunk-enumerator irregex-string-enumerator
+    irregex-list-enumerator irregex-port-enumerator irregex-enumerator
     list-chunker list-chunking-lose-refs
     port-chunker make-port-chunker port-chunking-lose-refs
-    port-chunking-make-initial-chunk)
+    port-chunking-make-initial-chunk make-lose-refs)
   (import
     (rename (rnrs) (assert rnrs:assert))
-    (rnrs mutable-pairs)
     (only (xitomatl define) define/? define/AV)
     (only (xitomatl predicates) exact-positive-integer? or?)
     (only (xitomatl ports) textual-input-port?)
@@ -98,40 +96,6 @@
 
   ;;--------------------------------------------------------------------------
 
-  (define/AV (irregex-enumerator irx)
-    (lambda (coll proc seeds)
-      (cond
-        [(string? coll)
-         ((irregex-string-enumerator irx) coll proc seeds)]
-        [(list? coll)
-         ((irregex-list-enumerator irx) coll proc seeds)]
-        [(textual-input-port? coll)
-         ((irregex-port-enumerator irx) coll proc seeds)]
-        [else
-         (AV "invalid collection type" coll)])))
-
-  (define/AV irregex-string-enumerator
-    (case-lambda
-      [(irx)
-       (irregex-string-enumerator irx 0)]
-      [(irx start)
-       (irregex-string-enumerator irx start #f)]
-      [(irx start end)
-       (let ([irx-c (irregex irx)])
-         (lambda (str proc seeds)
-           (let ([end (or end (string-length str))])
-             (let loop ([i start] [seeds seeds])
-               (let ([m (irregex-search irx-c str i end)])
-                 (if m
-                   (let ([end-index (irregex-match-end-index m 0)])
-                     (unless (< i end-index)  ;; Prevents infinite loops for some regexs.
-                       (AV "pattern not advancing search" irx start i end-index end))
-                     (let-values ([(continue . next-seeds) (apply proc m seeds)])
-                       (if continue
-                         (loop end-index next-seeds)
-                         (apply values next-seeds))))
-                   (apply values seeds)))))))]))
-
   (define/AV irregex-chunk-enumerator
     (case-lambda
       [(irx chunker)
@@ -148,12 +112,15 @@
                    (when lose-refs
                      ;; Losing possible reference(s) reachable from the match
                      ;; object to chunk(s) outside the match chunks is done to
-                     ;; allow outside chunk(s) to be GC'ed when they're no longer
-                     ;; needed during the search, which is necessary for efficient
-                     ;; memory usage.  lose-refs must return chunks that will work
-                     ;; with chunker's procedures.  lose-refs must not
-                     ;; mutate the chunks given to it.  The only thing mutated is
-                     ;; the new match object which was made just for us.
+                     ;; allow outside chunk(s) to be GC'ed when they're no
+                     ;; longer needed during the search, which is necessary for
+                     ;; efficient memory usage.  lose-refs must return chunks
+                     ;; which will work with chunker's procedures.  lose-refs
+                     ;; must not mutate the chunks given to it, it must return
+                     ;; new chunk objects referring to the same underlying
+                     ;; string pieces but not referring to chunks outside the
+                     ;; match range.  The only thing mutated is the new match
+                     ;; object which was made just for us.
                      (let ([replacements
                             (let loop ([n (irregex-match-num-submatches m)]
                                        [submatch-chunks '()])
@@ -180,6 +147,20 @@
                        (apply values next-seeds))))
                  (apply values seeds))))))]))
 
+  (define irregex-string-enumerator
+    (let ((string-chunker
+           (make-irregex-chunker (lambda (_) #F) car cadr caddr)))
+      (case-lambda
+        [(irx)
+         (irregex-string-enumerator irx 0)]
+        [(irx start)
+         (irregex-string-enumerator irx start #f)]
+        [(irx start end)
+         (let ((ce (irregex-chunk-enumerator irx string-chunker)))
+           (lambda (str proc seeds)
+             (ce (list str start (or end (string-length str)))
+                 proc seeds)))])))
+
   (define (irregex-list-enumerator irx)
     (let ([ce (irregex-chunk-enumerator irx list-chunker list-chunking-lose-refs)])
       (lambda (l proc seeds)
@@ -199,97 +180,90 @@
          (lambda (port proc seeds)
            (ce (port-chunking-make-initial-chunk port) proc seeds)))]))
 
+  (define/AV (irregex-enumerator irx)
+    (lambda (coll proc seeds)
+      (cond
+        [(string? coll)
+         ((irregex-string-enumerator irx) coll proc seeds)]
+        [(list? coll)
+         ((irregex-list-enumerator irx) coll proc seeds)]
+        [(textual-input-port? coll)
+         ((irregex-port-enumerator irx) coll proc seeds)]
+        [else
+         (AV "invalid collection type" coll)])))
+
   ;;--------------------------------------------------------------------------
 
-  (define/? make-pair-chain-chunker
-    (case-lambda/?
-      ((get-next)
-       (make-pair-chain-chunker get-next #F))
-      (([get-next procedure?] [get-subchunk (or? not procedure?)])
-       (letrec
-           ([get-string car]
-            [get-start  (lambda (chunk) 0)]
-            [get-end    (lambda (chunk) (string-length (car chunk)))]
-            [get-substring
-             (lambda (chunkA start chunkB end)
-               (if (eq? chunkA chunkB)
-                 (substring (car chunkA) start end)
-                 (let loop ([next (cdr chunkA)]
-                            [res (list (let ([s (car chunkA)])
-                                         (substring s start (string-length s))))])
-                   (assert (pair? next))
-                   (if (eq? next chunkB)
-                     (string-cat-reverse (cons (substring (car next) 0 end) res))
-                     (loop (cdr next) (cons (car next) res))))))])
-         (make-irregex-chunker get-next get-string get-start get-end
-                               get-substring get-subchunk)))))
-
-  (define (pair-chain-chunking-lose-refs submatch-chunks)
-    (assert (<= 2 (length submatch-chunks)))
-    ;; submatch-chunks ::= (<submatch-0-start-chunk> <submatch-0-end-chunk>
-    ;;                      <submatch-1-start-chunk> <submatch-1-end-chunk>
-    ;;                      ...                      ...)
-    (let ([first (car submatch-chunks)]
-          [last (cadr submatch-chunks)])
-      (assert (let loop ([chain first])
-                (assert (pair? chain))
-                (or (eq? chain last)
-                    (loop (cdr chain)))))
-      (let* ([reversed-chain
-              (let loop ([chain first] [rev '()])
-                (if (eq? chain last)
-                  (cons chain rev)
-                  (loop (cdr chain) (cons chain rev))))]
-             [new-first
-              (let loop ([rev reversed-chain] [nc '()])
-                (if (null? rev)
-                  nc              ;; this cons makes the new chunks chain
-                  (loop (cdr rev) (cons (caar rev) nc))))]
-             [correlated
-              (let loop ([new-chain new-first] [chain first] [alist '()])
-                (if (null? new-chain)
-                  alist
-                  (loop (cdr new-chain) (cdr chain) (cons (cons chain new-chain)
-                                                          alist))))])
-        (map (lambda (c)
-               (and c
-                    (cdr (let ([x (assq c correlated)])
-                           (assert x)
-                           x))))
-             submatch-chunks))))
-
+  (define (make-lose-refs chunker make-chunk)
+    (let ((get-next (chunker-get-next chunker)))
+      (lambda (submatch-chunks)
+        ;; submatch-chunks ::= (<submatch-0-start-chunk> <submatch-0-end-chunk>
+        ;;                      <submatch-1-start-chunk> <submatch-1-end-chunk>
+        ;;                      ...                      ...)
+        (let ([first (car submatch-chunks)]
+              [last (cadr submatch-chunks)])
+          (let* ([reversed-chain
+                  (let loop ([chain first] [rev '()])
+                    (if (eq? chain last)
+                      (cons chain rev)
+                      (loop (get-next chain) (cons chain rev))))]
+                 [new-first
+                  (let loop ([rev reversed-chain] [nc #F])
+                    (if (null? rev)
+                      nc
+                      (loop (cdr rev) (make-chunk (car rev) nc))))]
+                 [correlated
+                  (let loop ([new-chain new-first] [chain first] [alist '()])
+                    (if new-chain
+                      (loop (get-next new-chain)
+                            (get-next chain)
+                            (cons (cons chain new-chain) alist))
+                      alist))])
+            (map (lambda (c) (and c (cdr (assq c correlated))))
+                 submatch-chunks))))))
+ 
   (define list-chunker
-    (make-pair-chain-chunker
+    (make-irregex-chunker
      (letrec ([get-next (lambda (chunk)
                           (let ([r (cdr chunk)])
                             (and (pair? r)
                                  (if (string=? "" (car r))
                                    (get-next r)
                                    r))))])
-       get-next)))
+       get-next)
+     car))
 
-  (define list-chunking-lose-refs pair-chain-chunking-lose-refs)
+  (define list-chunking-lose-refs
+    (make-lose-refs list-chunker
+                    (lambda (old-chunk new-next-chunk)
+                      (cons (car old-chunk)
+                            (or new-next-chunk '())))))
+
+  (define make-port-chunk vector)
+  (define (port-chunk-str pc) (vector-ref pc 0))
+  (define (port-chunk-next pc) (vector-ref pc 1))
+  (define (port-chunk-next-set! pc n) (vector-set! pc 1 n))
 
   (define/? (make-port-chunker [chunk-size exact-positive-integer?])
-    (make-pair-chain-chunker
+    (make-irregex-chunker
      (lambda (chunk)
-       (let ([r (cdr chunk)])
-         (cond [(pair? r) r]
-               [(port? r)
-                (let ([s (get-string-n r chunk-size)])
-                  (if (eof-object? s)
-                    (begin (set-cdr! chunk '())
-                           #f)
-                    (let ([next (cons s r)])
-                      (assert (positive? (string-length s)))
-                      (set-cdr! chunk next)
-                      next)))]
-               [(null? r) #f])))))
-
-  (define port-chunking-lose-refs pair-chain-chunking-lose-refs)
-
-  (define (port-chunking-make-initial-chunk port)
-    (cons "" port))
+       (let ((n (port-chunk-next chunk)))
+         (if (port? n)
+           (let* ((s (get-string-n n chunk-size))
+                  (next (and (string? s) (make-port-chunk s n))))
+             (port-chunk-next-set! chunk next)
+             next)
+           n)))
+     port-chunk-str))
 
   (define port-chunker (make-port-chunker #x400))  ;; good default size?
+
+  (define port-chunking-lose-refs
+    (make-lose-refs port-chunker
+                    (lambda (old-chunk new-next-chunk)
+                      (make-port-chunk (port-chunk-str old-chunk)
+                                       new-next-chunk))))
+
+  (define (port-chunking-make-initial-chunk port)
+    (make-port-chunk "" port))
 )

@@ -65,8 +65,8 @@
 
 ;;----------------------------------------------------------------------------
 
-;;;; pair-chain-chunking-lose-refs 
-;; (currently same procedure as list-chunking-lose-refs and port-chunking-lose-refs)
+;;;; make-lose-refs 
+;; list-chunking-lose-refs uses make-lose-refs
 
 (let* ([chunk (apply list  ;; ensure we have newly allocated pairs and strings
                      (map string-copy
@@ -77,7 +77,7 @@
                               (cddr chunk) (cddddr chunk)
                               #f #f
                               (cddddr chunk) (cddddr chunk))]
-       [replacements (pair-chain-chunking-lose-refs submatch-chunks)])      
+       [replacements (list-chunking-lose-refs submatch-chunks)])      
   (check chunk => '("This" "is" "a" "test" "of" "losing" "refs"))
   (check (for-all eq? chunk saved) => #t)
   (check (length replacements) => (length submatch-chunks))
@@ -281,6 +281,18 @@
                             (or (not (string=? s "stop"))
                                 (values #f s)))))
        => "stop")
+(check (fold/enumerator (irregex-string-enumerator "^.*$" 3)
+                        "abcdefghijklmnopqrstuvwxyz"
+                        (lambda (m a)
+                          (values #T (cons (irregex-match-substring m) a)))
+                        '())
+       => '("defghijklmnopqrstuvwxyz"))
+(check (fold/enumerator (irregex-string-enumerator "^.*$" 3 9)
+                        "abcdefghijklmnopqrstuvwxyz"
+                        (lambda (m a)
+                          (values #T (cons (irregex-match-substring m) a)))
+                        '())
+       => '("defghi"))
 (check (fold/enumerator (irregex-chunk-enumerator "." list-chunker)
                         '("zabbo")
                         (lambda (_) (values #f 'ok)))
