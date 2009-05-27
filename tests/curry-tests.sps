@@ -20,6 +20,10 @@
 (check (list-4-2 5 6) => '(4 2 5 6))
 (check ((((curry vector 3) 2) 4) 5) => '#(2 4 5))
 
+(check ((lambda/curry () 'ok)) => 'ok)
+(check ((lambda/curry r r)) => '())
+(check ((lambda/curry r (reverse r)) 1 2 3) => '(3 2 1))
+
 (define/curry (c1 x) (- x))
 (check (c1 42) => -42)
 (check ((((c1))) 33) => -33)

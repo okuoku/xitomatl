@@ -18,10 +18,11 @@
          (begin form1 ... result))]))
 
   (define (compose . procs)
-    (lambda args
-      (let loop ((procs (reverse procs)) (args args))
-        (if (null? procs)
-          (apply values args)
-          (let-values ((vals (apply (car procs) args)))
-            (loop (cdr procs) vals))))))
+    (let ((procs (reverse procs)))
+      (lambda args
+        (let loop ((procs procs) (args args))
+          (if (null? procs)
+            (apply values args)
+            (let-values ((vals (apply (car procs) args)))
+              (loop (cdr procs) vals)))))))
 )

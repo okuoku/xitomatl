@@ -7,6 +7,7 @@
 (library (xitomatl curry)
   (export
     define/curry
+    lambda/curry
     curry)
   (import
     (rnrs)
@@ -17,13 +18,20 @@
     (lambda (stx)
       (syntax-case stx ()
         [(_ (name a ... . r) . body)
-         (and (identifier? #'name)
-              (positive? (length #'(a ...))))
-         #`(define name
-             (curry 
-               (lambda (a ... . r) . body)
-               #,(length #'(a ...))))])))
+         (identifier? #'name)
+         #'(define name
+             (lambda/curry (a ... . r) . body))])))
   
+  (define-syntax lambda/curry
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ (a a* ... . r) . body)
+         #`(curry 
+            (lambda (a a* ... . r) . body)
+            #,(length #'(a a* ...))))
+        ((_ . r)  ;; zero or "rest"-only arguments
+         #'(lambda . r)))))
+
   (define/? (curry proc [n positive-integer?])
     (lambda args
       (let ([len (length args)])
