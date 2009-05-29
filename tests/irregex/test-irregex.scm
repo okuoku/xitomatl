@@ -203,6 +203,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(test-group "unmatchable patterns"
+  (test-assert (not (irregex-search '(or) "abc")))
+  (test-assert (not (irregex-search '(: "ab" (or)) "abc")))
+  (test-assert (not (irregex-search '(submatch "ab" (or)) "abc")))
+  (test-assert (not (irregex-search '(: "ab" (submatch (or))) "abc")))
+  (test-assert (not (irregex-search '(/) "abc")))
+  (test-assert (not (irregex-search '(: "ab" (/)) "abc")))
+  (test-assert (not (irregex-search '(~ any) "abc")))
+  (test-assert (not (irregex-search '(: "ab" (~ any)) "abc")))
+  (test-assert (not (irregex-search '("") "abc")))
+  (test-assert (not (irregex-search '(: "ab" ("")) "abc")))
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (test-group "API"
   (test-assert (irregex? (irregex "a.*b")))
   (test-assert (irregex? (irregex '(: "a" (* any) "b"))))
@@ -248,5 +263,4 @@
   )
 
 (test-end)
-
 

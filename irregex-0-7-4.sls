@@ -4,13 +4,14 @@
 ;; some other collection, my license must also be included.
 
 #!r6rs
-(library (xitomatl irregex (0 7 3))
+(library (xitomatl irregex (0 7 4))
   (export
     irregex string->irregex sre->irregex irregex? irregex-match-data?
     irregex-new-matches irregex-reset-matches!
     irregex-match-start-source irregex-match-start-index
     irregex-match-end-source irregex-match-end-index
-    irregex-match-num-submatches irregex-match-substring irregex-match-index
+    irregex-match-num-submatches irregex-match-substring
+    irregex-match-index irregex-match-chunker
     irregex-search irregex-search/matches irregex-match
     irregex-replace irregex-replace/all irregex-fold irregex-fold/chunked
     irregex-search/chunked irregex-match/chunked
@@ -34,7 +35,7 @@
     (only (xitomatl common) with-output-to-string))
 
   (define (error . args)
-    (apply assertion-violation "(library (xitomatl irregex (0 7 3)))" args))
+    (apply assertion-violation "(library (xitomatl irregex (0 7 4)))" args))
 
   (define-syntax ->string
     (syntax-rules ()

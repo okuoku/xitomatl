@@ -12,7 +12,7 @@
   (import
     (rnrs)
     (only (xitomatl define) define/?)
-    (only (xitomatl predicates) positive-integer?))
+    (only (xitomatl predicates) non-negative-integer?))
   
   (define-syntax define/curry
     (lambda (stx)
@@ -32,7 +32,7 @@
         ((_ . r)  ;; zero or "rest"-only arguments
          #'(lambda . r)))))
 
-  (define/? (curry proc [n positive-integer?])
+  (define/? (curry proc [n non-negative-integer?])
     (lambda args
       (let ([len (length args)])
         (if (>= len n)

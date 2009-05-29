@@ -6,6 +6,7 @@
 #!r6rs
 (import 
   (rnrs)
+  (only (xitomatl exceptions) catch)
   (xitomatl curry)
   (srfi :78 lightweight-testing))
 
@@ -14,11 +15,23 @@
     [(_ expr => vals ...)
      (check (let-values ([v expr]) v) => (list vals ...))]))
 
+(define-syntax check-AV
+  (syntax-rules ()
+    ((_ expr)
+     (check (catch ex ((else (assertion-violation? ex)))
+              expr
+              'unexpected-return)
+            => #T))))
+
 (define list-4-2
   ((curry list 3) 4 2))
 (check (list-4-2 5) => '(4 2 5))
 (check (list-4-2 5 6) => '(4 2 5 6))
 (check ((((curry vector 3) 2) 4) 5) => '#(2 4 5))
+(check ((curry vector 0)) => '#())
+(check ((curry vector 0) 1 2) => '#(1 2))
+(check-AV (curry vector -1))
+(check-AV (curry vector "oops"))
 
 (check ((lambda/curry () 'ok)) => 'ok)
 (check ((lambda/curry r r)) => '())
