@@ -12,10 +12,10 @@
   (for (only (xitomatl file-system base) current-directory) expand)
   (xitomatl include))
 
-(define-syntax check-include-error
+(define-syntax check-include-ex
   (syntax-rules ()
-    [(_ who msg expr)
-     (check (catch ex ([else (and (error? ex)
+    [(_ main-ex? who msg expr)
+     (check (catch ex ([else (and (main-ex? ex)
                                   (who-condition? ex)
                                   (message-condition? ex)
                                   (list (condition-who ex) 
@@ -23,6 +23,11 @@
               (eval 'expr (environment '(rnrs) '(xitomatl include)))
               'unexpected-return)
             => '(who msg))]))
+
+(define-syntax check-include-error
+  (syntax-rules ()
+    ((_ who msg expr)
+     (check-include-ex error? who msg expr))))
 
 ;; include
 (check (let () 
@@ -63,6 +68,15 @@
          (s "file-a")
          (s "file-b"))
        => 3)
+(check (let ((begin 'different)
+             (x 1)
+             (y 2))
+         (s "file-b"))
+       => 3)
+(check-include-ex syntax-violation? include/lexical-context "not an identifier" 
+  (include/lexical-context "oops" "ignored"))
+(check-include-ex syntax-violation? include/lexical-context "not a path" 
+  (include/lexical-context here oops))
 ;; include/resolve
 (check (let ()
          (define-syntax cd (begin (current-directory "/tmp") (lambda (_) #'(begin))))

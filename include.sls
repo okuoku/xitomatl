@@ -25,7 +25,8 @@
     (lambda (stx)
       (syntax-case stx ()
         [(_ ctxt filename)
-         (and (identifier? #'ctxt)
+         (and (or (identifier? #'ctxt)
+                  (syntax-violation #f "not an identifier" stx #'ctxt))
               (or (path? (syntax->datum #'filename))
                   (syntax-violation #f "not a path" stx #'filename)))
          (let* ([fn (syntax->datum #'filename)]
@@ -43,7 +44,7 @@
                              (if (eof-object? x)
                                (reverse a)
                                (loop (cons x a)))))))))])
-           (datum->syntax #'ctxt `(begin . ,datums)))])))
+           (cons #'begin (datum->syntax #'ctxt datums)))])))
   
   (define-syntax include/resolve
     (lambda (stx)
