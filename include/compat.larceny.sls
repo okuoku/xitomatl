@@ -5,16 +5,24 @@
 
 (library (xitomatl include compat)
   (export
-    search-paths)
+    search-paths stale-when (rename (read read-annotated)))
   (import
     (rnrs base)
-    (primitives current-require-path getenv absolute-path-string?))
+    (only (rnrs io simple) read)
+    (srfi :98 os-environment-variables)
+    (only (xitomatl file-system paths) absolute-path? path-join)
+    (primitives current-require-path))
 
   (define (search-paths)
-    (let ((larceny-root (getenv "LARCENY_ROOT")))
+    (let ((larceny-root (get-environment-variable "LARCENY_ROOT")))
       (map (lambda (crp)
-             (if (absolute-path-string? crp)
+             (if (absolute-path? crp)
                crp
-               (string-append larceny-root "/" crp)))
+               (path-join larceny-root crp)))
            (current-require-path))))
+
+  (define-syntax stale-when
+    (syntax-rules ()
+      ((_ when-expr . r)
+       (begin . r))))
 )

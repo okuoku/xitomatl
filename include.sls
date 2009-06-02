@@ -11,7 +11,9 @@
     include/resolve)
   (import 
     (rnrs)
-    (for (xitomatl include compat) expand)
+    (only (xitomatl include compat) stale-when)
+    (for (only (xitomatl include compat) read-annotated search-paths) expand)
+    (for (only (xitomatl file-system base) file-mtime) run expand)
     (for (only (xitomatl file-system paths) path-join path?) expand)
     (for (only (xitomatl exceptions) error/conditions) expand))
   
@@ -40,11 +42,14 @@
                      (call-with-input-file fn
                        (lambda (fip)
                          (let loop ([a '()])
-                           (let ([x (read fip)])
+                           (let ([x (read-annotated fip)])
                              (if (eof-object? x)
                                (reverse a)
                                (loop (cons x a)))))))))])
-           (cons #'begin (datum->syntax #'ctxt datums)))])))
+           #`(stale-when
+                (or (not (file-exists? #,fn))
+                    (> (file-mtime #,fn) #,(file-mtime fn)))
+              . #,(datum->syntax #'ctxt datums)))])))
   
   (define-syntax include/resolve
     (lambda (stx)

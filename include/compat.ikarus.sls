@@ -5,10 +5,10 @@
 
 (library (xitomatl include compat)
   (export
-    search-paths)
+    search-paths stale-when read-annotated)
   (import
     (rnrs base)
-    (only (ikarus) library-path))
+    (only (ikarus) library-path stale-when read-annotated))
 
   (define (search-paths)
     (library-path))

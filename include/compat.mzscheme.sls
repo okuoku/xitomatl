@@ -6,13 +6,19 @@
 #!r6rs
 (library (xitomatl include compat)
   (export
-    search-paths)
+    search-paths stale-when (rename (read read-annotated)))
   (import
     (rnrs base)
+    (only (rnrs io simple) read)
     (only (scheme base) current-library-collection-paths path->string)
     (only (scheme mpair) list->mlist))
 
   (define (search-paths)
     (map path->string 
          (list->mlist (current-library-collection-paths))))
+
+  (define-syntax stale-when
+    (syntax-rules ()
+      ((_ when-expr . r)
+       (begin . r))))
 )

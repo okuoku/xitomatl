@@ -5,11 +5,17 @@
 
 (library (xitomatl include compat)
   (export
-    search-paths)
+    search-paths stale-when (rename (read read-annotated)))
   (import
     (rnrs base)
+    (only (rnrs io simple) read)
     (only (core) scheme-library-paths))
 
   (define (search-paths)
     (scheme-library-paths))
+
+  (define-syntax stale-when
+    (syntax-rules ()
+      ((_ when-expr . r)
+       (begin . r))))
 )
