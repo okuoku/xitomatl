@@ -12,8 +12,10 @@
     irregex-chunk-enumerator irregex-string-enumerator
     irregex-list-enumerator irregex-port-enumerator irregex-enumerator
     list-chunker list-chunking-lose-refs
+    range-list-chunker range-list-chunking-lose-refs
     port-chunker make-port-chunker port-chunking-lose-refs
-    port-chunking-make-initial-chunk make-lose-refs)
+    port-chunking-make-initial-chunk
+    make-lose-refs chunk-eqv? chunk-equal?)
   (import
     (rename (rnrs) (assert rnrs:assert))
     (only (xitomatl define) define/? define/AV)
@@ -148,18 +150,16 @@
                  (apply values seeds))))))]))
 
   (define irregex-string-enumerator
-    (let ((string-chunker
-           (make-irregex-chunker (lambda (_) #F) car cadr caddr)))
-      (case-lambda
-        [(irx)
-         (irregex-string-enumerator irx 0)]
-        [(irx start)
-         (irregex-string-enumerator irx start #f)]
-        [(irx start end)
-         (let ((ce (irregex-chunk-enumerator irx string-chunker)))
-           (lambda (str proc seeds)
-             (ce (list str start (or end (string-length str)))
-                 proc seeds)))])))
+    (case-lambda
+      [(irx)
+       (irregex-string-enumerator irx 0)]
+      [(irx start)
+       (irregex-string-enumerator irx start #f)]
+      [(irx start end)
+       (let ((ce (irregex-chunk-enumerator irx range-list-chunker)))
+         (lambda (str proc seeds)
+           (ce (list str start (or end (string-length str)))
+               proc seeds)))]))
 
   (define (irregex-list-enumerator irx)
     (let ([ce (irregex-chunk-enumerator irx list-chunker list-chunking-lose-refs)])
@@ -196,32 +196,55 @@
 
   (define (make-lose-refs chunker make-chunk)
     (let ((get-next (chunker-get-next chunker)))
-      (lambda (submatch-chunks)
-        ;; submatch-chunks ::= (<submatch-0-start-chunk> <submatch-0-end-chunk>
-        ;;                      <submatch-1-start-chunk> <submatch-1-end-chunk>
-        ;;                      ...                      ...)
-        (let ([first (car submatch-chunks)]
-              [last (cadr submatch-chunks)])
-          (let* ([reversed-chain
-                  (let loop ([chain first] [rev '()])
-                    (if (eq? chain last)
-                      (cons chain rev)
-                      (loop (get-next chain) (cons chain rev))))]
-                 [new-first
-                  (let loop ([rev reversed-chain] [nc #F])
-                    (if (null? rev)
-                      nc
-                      (loop (cdr rev) (make-chunk (car rev) nc))))]
-                 [correlated
-                  (let loop ([new-chain new-first] [chain first] [alist '()])
-                    (if new-chain
-                      (loop (get-next new-chain)
-                            (get-next chain)
-                            (cons (cons chain new-chain) alist))
-                      alist))])
-            (map (lambda (c) (and c (cdr (assq c correlated))))
-                 submatch-chunks))))))
- 
+      (case-lambda
+        (() (values chunker make-chunk))
+        ((submatch-chunks)
+         ;; submatch-chunks ::= (<submatch-0-start-chunk> <submatch-0-end-chunk>
+         ;;                      <submatch-1-start-chunk> <submatch-1-end-chunk>
+         ;;                      ...                      ...)
+         (let ([first (car submatch-chunks)]
+               [last (cadr submatch-chunks)])
+           (let* ([reversed-chain
+                   (let loop ([chain first] [rev '()])
+                     (if (eq? chain last)
+                       (cons chain rev)
+                       (loop (get-next chain) (cons chain rev))))]
+                  [correlated
+                   (let loop ([rev reversed-chain] [next #F] [alist '()])
+                     (if (null? rev)
+                       alist
+                       (let* ([o (car rev)]
+                              [nc (make-chunk o next)])
+                         (loop (cdr rev) nc (cons (cons o nc) alist)))))])
+             (map (lambda (c) (and c (cdr (assq c correlated))))
+                  submatch-chunks)))))))
+
+  (define (chunk-eqv? chunker)
+    (let ((get-str (chunker-get-str chunker))
+          (get-start (chunker-get-start chunker))
+          (get-end (chunker-get-end chunker)))
+      (lambda (x y)
+        (and (eq? (get-str x) (get-str y))
+             (= (get-start x) (get-start y))
+             (= (get-end x) (get-end y))))))
+
+  (define (chunk-equal? chunker)
+    (let ((get-str (chunker-get-str chunker))
+          (get-start (chunker-get-start chunker))
+          (get-end (chunker-get-end chunker)))
+      (lambda (x y)
+      #;(string=? (substring (get-str x) (get-start x) (get-end x))
+                  (substring (get-str y) (get-start y) (get-end y)))
+        (let ((xstr (get-str x)) (xs (get-start x)) (xe (get-end x))
+              (ystr (get-str y)) (ys (get-start y)) (ye (get-end y)))
+          (and (= (- xe xs) (- ye ys))
+               (let loop ((xi xs) (yi ys))
+                 (or (= xi xe)
+                     (and (char=? (string-ref xstr xi) (string-ref ystr yi))
+                          (loop (+ 1 xi) (+ 1 yi))))))))))
+
+  ;;--------------------------------------------------------------------------
+
   (define list-chunker
     (make-irregex-chunker
      (letrec ([get-next (lambda (chunk)
@@ -239,10 +262,26 @@
                       (cons (car old-chunk)
                             (or new-next-chunk '())))))
 
-  (define make-port-chunk vector)
-  (define (port-chunk-str pc) (vector-ref pc 0))
-  (define (port-chunk-next pc) (vector-ref pc 1))
-  (define (port-chunk-next-set! pc n) (vector-set! pc 1 n))
+  (define range-list-chunker
+    (make-irregex-chunker
+     (letrec ([get-next (lambda (chunk)
+                          (let ([r (cdddr chunk)])
+                            (and (pair? r)
+                                 (if (string=? "" (car r))
+                                   (get-next r)
+                                   r))))])
+       get-next)
+     car cadr caddr))
+
+  (define range-list-chunking-lose-refs
+    (make-lose-refs range-list-chunker
+                    (lambda (old-chunk new-next-chunk)
+                      (cons* (car old-chunk)
+                             (cadr old-chunk)
+                             (caddr old-chunk)
+                             (or new-next-chunk '())))))
+
+  (define-record-type port-chunk (fields str (mutable next)))
 
   (define/? (make-port-chunker [chunk-size exact-positive-integer?])
     (make-irregex-chunker

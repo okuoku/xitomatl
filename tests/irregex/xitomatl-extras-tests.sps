@@ -6,10 +6,11 @@
 #!r6rs
 (import
   (rnrs)
-  (xitomatl irregex)
-  (xitomatl irregex extras)
   (srfi :78 lightweight-testing)
-  (xitomatl enumerators))
+  (only (xitomatl enumerators) fold/enumerator)
+  (only (xitomatl lists) sublist)
+  (xitomatl irregex)
+  (xitomatl irregex extras))
 
 (define-syntax check-ex/not-advancing
   (syntax-rules ()
@@ -65,7 +66,7 @@
 
 ;;----------------------------------------------------------------------------
 
-;;;; make-lose-refs 
+;;;; make-lose-refs chunk-eqv? chunk-equal?
 ;; list-chunking-lose-refs uses make-lose-refs
 
 (let* ([chunk (apply list  ;; ensure we have newly allocated pairs and strings
@@ -84,6 +85,12 @@
   (check (for-all eq? (map (lambda (x) (and x (car x))) replacements) 
                       (map (lambda (x) (and x (car x))) submatch-chunks)) 
          => #t)
+  (check (for-all (lambda (x y) (or (not x) ((chunk-eqv? list-chunker) x y)))
+                  replacements submatch-chunks)
+         => #T)
+  (check (for-all (lambda (x y) (or (not x) ((chunk-equal? list-chunker) x y)))
+                  replacements submatch-chunks)
+         => #T)
   (check (exists (lambda (x y) (and x (eq? x y))) 
                  replacements submatch-chunks)
          => #f)
@@ -96,7 +103,37 @@
   (check (list-ref replacements 6) => #f)
   (check (list-ref replacements 7) => #f)
   (check (list-ref replacements 8) => '("of"))
-  (check (list-ref replacements 9) => '("of")))
+  (check (list-ref replacements 9) => '("of"))
+  (let* ((get-next (chunker-get-next list-chunker))
+         (last-chunk
+          (lambda (ic)
+            (let loop ((c ic))
+              (let ((n (get-next c)))
+                (if n (loop n) c))))))
+    (check (last-chunk (car replacements)) (=> eq?) (cadr replacements)))
+  (let* ((get-next (chunker-get-next list-chunker))
+         (chain-list
+          (lambda (ic)
+            (let loop ((c ic) (a '()))
+              (if c
+                (loop (get-next c) (cons c a))
+                (reverse a)))))
+         (chain-list (chain-list (car replacements))))
+    (check (for-all (lambda (x)
+                      (or (not x)
+                          (and (memq x chain-list) #T)))
+                    replacements)
+           => #T))
+  (check (eq? (list-ref replacements 1) (list-ref replacements 5)) => #T)
+  (check (eq? (list-ref replacements 5) (list-ref replacements 8)) => #T)
+  (check (eq? (list-ref replacements 8) (list-ref replacements 9)) => #T)
+  (let ((except
+         (lambda (l i)
+           (append (sublist l 0 i) (sublist l (+ 1 i))))))
+    (check (memq (list-ref replacements 0) (except replacements 0)) => #F) 
+    (check (memq (list-ref replacements 2) (except replacements 2)) => #F)
+    (check (memq (list-ref replacements 3) (except replacements 3)) => #F)
+    (check (memq (list-ref replacements 4) (except replacements 4)) => #F)))
 
 ;;----------------------------------------------------------------------------
 
@@ -190,6 +227,45 @@
        => '("ere"))
 (check (irregex-search/chunked/all/strings "^.*$" list-chunker chunked-text0)
        => '("Once upon a time...  There was a string used for testing chunks!"))
+
+;;----------------------------------------------------------------------------
+
+;;;; range-list-chunker range-list-chunking-lose-refs
+
+(define chunked-text1
+  '("xAax" 1 3 "Bb" 0 2 "xCc" 1 3 "Ddx" 0 2 "xxEe" 2 4 "Ffxx" 0 2 "Gg" 0 2
+    "xxHhxx" 2 4 "" 0 0 "Ii" 0 2 "Jj" 0 2 "xxxKkx" 3 5 "Ll" 0 2 "Mm" 0 2
+    "Nn" 0 2 "xOoxxx" 1 3 "Pp" 0 2 "Qq" 0 2 "Rr" 0 2 "Ss" 0 2 "Tt" 0 2
+    "Uu" 0 2 "Vv" 0 2 "xxxxxWwxxx" 5 7 "Xx" 0 2 "" 0 0 "Yy" 0 2 "Zz" 0 2))
+
+(check (irregex-search/chunked/all "foobar" range-list-chunker chunked-text1)
+       => '())
+(check (irregex-search/chunked/all "foobar" range-list-chunker chunked-text1
+                                   range-list-chunking-lose-refs)
+       => '())
+(check (map irregex-match-substring
+            (irregex-search/chunked/all "(?i:w+)" range-list-chunker chunked-text1))
+       => '("Ww"))
+(check (map irregex-match-substring
+            (irregex-search/chunked/all "(?i:w+)" range-list-chunker chunked-text1
+                                        range-list-chunking-lose-refs))
+       => '("Ww"))
+(check (map irregex-match-substring
+            (irregex-search/chunked/all "Bb.*Gg" range-list-chunker chunked-text1))
+       => '("BbCcDdEeFfGg"))
+(check (map irregex-match-substring
+            (irregex-search/chunked/all "Bb.*Gg" range-list-chunker chunked-text1
+                                        range-list-chunking-lose-refs))
+       => '("BbCcDdEeFfGg"))
+(check (map irregex-match-substring
+            (irregex-search/chunked/all ".{4}" range-list-chunker chunked-text1))
+       => '("AaBb" "CcDd" "EeFf" "GgHh" "IiJj" "KkLl" "MmNn" "OoPp"
+            "QqRr" "SsTt" "UuVv" "WwXx" "YyZz"))
+(check (map irregex-match-substring
+            (irregex-search/chunked/all ".{4}" range-list-chunker chunked-text1
+                                        range-list-chunking-lose-refs))
+       => '("AaBb" "CcDd" "EeFf" "GgHh" "IiJj" "KkLl" "MmNn" "OoPp"
+            "QqRr" "SsTt" "UuVv" "WwXx" "YyZz"))
 
 ;;----------------------------------------------------------------------------
     

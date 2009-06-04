@@ -48,6 +48,7 @@
   (only (xitomatl include compat))
   (only (xitomatl indexes))
   (only (xitomatl irregex (0 7 4)))
+  (only (xitomatl irregex counting))
   (only (xitomatl irregex extras))
   (only (xitomatl keywords))
   (only (xitomatl keywords other))
