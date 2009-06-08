@@ -13,22 +13,21 @@
 
 #!r6rs
 (import
-  (except (rnrs) file-exists? delete-file)
-  (xitomatl irregex)
-  (xitomatl irregex extras)
+  (rnrs)
+  (srfi :39 parameters)
   (xitomatl match)
-  (xitomatl enumerators)
-  (xitomatl file-system base)
-  (xitomatl file-system paths)
   (xitomatl common)
+  (xitomatl enumerators)
   (xitomatl define)
-  (srfi :39 parameters))
+  (xitomatl irregex)
+  (xitomatl irregex counting)
+  (xitomatl irregex-tool))
 
 (define format-mode (make-parameter 's-expr))
 
 (define port-chunk-size (make-parameter 1024))  ;; good size?
 
-(define interactive 
+(define interactive
   (let ([prompt (lambda (str)
                   (display str)
                   (flush-output-port (current-output-port))
@@ -37,7 +36,8 @@
       [()
        (let ([irx (prompt "\nEnter regex: ")])
          (newline)
-         (interactive irx))]
+         (unless (eof-object? irx)
+           (interactive irx)))]
       [(irx)
        (set! irx (irregex irx 'fast))
        (let loop ()
@@ -46,115 +46,85 @@
              (newline)
              (let ([m (irregex-search irx line)])
                (if m
-                 (let show ([n 0] [max (irregex-match-num-submatches m)])
-                   (when (<= n max)
-                     (printf "~a:\t~s\n" n (irregex-match-substring m n))
-                     (show (+ 1 n) max)))
+                 (let ([max (irregex-match-num-submatches m)])
+                   (let show ([n 0])
+                     (when (<= n max)
+                       (printf "~a:\t~s\n" n (irregex-match-substring m n))
+                       (show (+ 1 n)))))
                  (display "No match.\n"))
                (loop)))))])))
 
 (define (lines irx . files/dirs)
-  ;;--------------------------------------------------------------------------
   (define (print-start/s-expr filename)
     (printf "(~s\n" filename))
   (define (print-end/s-expr _)
     (display ")\n"))
-  (define (print-match/s-expr line line-number m)
-    (printf " (~s ~s" line-number line)
-    (let loop ([n 0] [max (irregex-match-num-submatches m)])
+  (define (print-match/s-expr line line-num m)
+    (define max (irregex-match-num-submatches m))
+    (printf " (~s ~s" line-num line)
+    (let loop ([n 0])
       (if (<= n max)
         (begin (printf "\n  (~s ~s ~s)" (irregex-match-substring m n)
                        (irregex-match-start-index m n) (irregex-match-end-index m n))
-               (loop (+ 1 n) max))
+               (loop (+ 1 n)))
         (printf ")\n"))))
   (define-values (print-start print-end print-match)
     (case (format-mode)
       [(s-expr)
        (values print-start/s-expr print-end/s-expr print-match/s-expr)]))
-  ;;--------------------------------------------------------------------------
-  (define (search port filename)
-    (let loop ([count 0] [found #f])
-      (let ([line (get-line port)])
-        (if (eof-object? line)
-          (when found
-            (print-end filename))
-          (let ([m (irregex-search irx line)])
-            (cond [m
-                   (unless found
-                     (print-start filename))
-                   (print-match line count m)
-                   (loop (+ 1 count) #T)]
-                  [else
-                   (loop (+ 1 count) found)]))))))
-  (define (search-file fn)
-    (call-with-input-file fn (lambda (fip) (search fip fn))))
-  ;;--------------------------------------------------------------------------
-  (set! irx (irregex irx 'fast))
-  (cond 
-    [(null? files/dirs)
-     (search (current-input-port) 'current-input-port)]
-    [else
-     (let-values ([(dirs files) (partition file-directory? files/dirs)])
-       (for-each search-file
-                 files)
-       (for-each
-        (lambda (dir) 
-          (directory-walk (lambda (path dirs files syms)
-                            (for-each (lambda (f)
-                                        (search-file (path-join path f))) 
-                                      files))
-                          dir))
-        dirs))]))
+  (let ((last-file
+         (fold/enumerator
+          (lines-enumerator irx)
+          files/dirs
+          (lambda (file line-num line match-obj last-file)
+            (unless (equal? file last-file)
+              (when last-file
+                (print-end last-file))
+              (print-start file))
+            (print-match line line-num match-obj)
+            (values #T file))
+          #F)))
+    (when last-file
+      (print-end last-file))))
 
 (define (single irx . files/dirs)
-  ;;--------------------------------------------------------------------------
   (define (print-start/s-expr filename)
     (printf "(~s\n" filename))
   (define (print-end/s-expr _)
     (display ")\n"))
   (define (print-match/s-expr m)
-    (let loop ([n 0] [max (irregex-match-num-submatches m)])
+    (define (p fmt n)
+      (let-values ((s (counted-match-start-positions m n))
+                   (e (counted-match-end-positions m n)))
+        (printf fmt (irregex-match-substring m n) s e)))
+    (define max (irregex-match-num-submatches m))
+    (let loop ([n 0])
       (cond [(= n 0)
-             (printf " (~s" (irregex-match-substring m n))
-             (loop (+ 1 n) max)]
+             (p " ((~s\n   ~s\n   ~s)" n)
+             (loop (+ 1 n))]
             [(<= n max)
-             (printf "\n  ~s" (irregex-match-substring m n))
-             (loop (+ 1 n) max)]
+             (p "\n  (~s\n   ~s\n   ~s)" n)
+             (loop (+ 1 n))]
             [else
              (printf ")\n")])))
   (define-values (print-start print-end print-match)
     (case (format-mode)
       [(s-expr)
        (values print-start/s-expr print-end/s-expr print-match/s-expr)]))
-  ;;--------------------------------------------------------------------------
-  (define pe (irregex-port-enumerator (irregex irx 'single-line 'fast)
-                                      (port-chunk-size)))
-  (define (search port filename)
-    (or (fold/enumerator pe port
-                         (lambda (m first) 
-                           (when first (print-start filename))
-                           (print-match m)
-                           (values #t #f))
-                         #t)
-        (print-end filename)))
-  (define (search-file fn) 
-    (call-with-input-file fn (lambda (fip) (search fip fn))))
-  ;;--------------------------------------------------------------------------
-  (cond 
-    [(null? files/dirs)
-     (search (current-input-port) 'current-input-port)]
-    [else
-     (let-values ([(dirs files) (partition file-directory? files/dirs)])
-       (for-each search-file
-                 files)
-       (for-each 
-        (lambda (dir) 
-          (directory-walk (lambda (path dirs files syms)
-                            (for-each (lambda (f)
-                                        (search-file (path-join path f))) 
-                                      files))
-                          dir))
-        dirs))]))
+  (let ((last-file
+         (fold/enumerator
+          (single-enumerator irx (port-chunk-size))
+          files/dirs
+          (lambda (file match-obj last-file)
+            (unless (equal? file last-file)
+              (when last-file
+                (print-end last-file))
+              (print-start file))
+            (print-match match-obj)
+            (values #T file))
+          #F)))
+    (when last-file
+      (print-end last-file))))
 
 (define (print-help/exit)
   (define d display)
@@ -171,9 +141,9 @@
   (d " If no command is supplied, interactive is used.\n")
   (exit #f))
 
-(define (main cmdln)
-  (match cmdln
-    [(_) 
+(define main
+  (match-lambda
+    [(_)
      (main '(#f "--interactive"))]
     [(_ (:or "--interactive" "-i") args (... 0 1))
      (apply interactive args)]
@@ -183,7 +153,7 @@
      (apply single regex args)]
     #;[(_ (:or "replace" "r") regex replacement . args)
      (apply replace args)]
-    [_ 
+    [_
      (print-help/exit)]))
 
 (main (command-line))

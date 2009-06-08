@@ -209,11 +209,14 @@
     (let-values (((u-chunker u-make-chunk) (u-lose-refs)))
       (make-lose-refs helper-chunker
        (lambda (old new-next)
-         (make-counted-chunk/count u-chunker
+         (make-counted-chunk
           (u-make-chunk (counted-chunk-underlying old)
                         (and new-next (counted-chunk-underlying new-next)))
           (counted-chunk-char old) (counted-chunk-line old)
           (counted-chunk-column old) (counted-chunk-offset old)
+          (counted-chunk-line-seps old)
+          (counted-chunk-end-char old) (counted-chunk-end-line old)
+          (counted-chunk-end-column old) (counted-chunk-end-offset old)
           new-next)))))
 
   (define prep-counted-chunking
@@ -368,12 +371,15 @@
         ((m)
          (counted-match-positions m 0))
         ((m n)
-         (let-values (((char line column offset line-seps)
-                       (chunk-counts/counted (irregex-match-chunker m)
-                        (source m n) (index m n))))
-           (if (positive? offset)
-             (values char (- line 1) #F)
-             (values char line column))))))
+         (let ((c (source m n)))
+           (if c
+             (let-values (((char line column offset line-seps)
+                           (chunk-counts/counted
+                            (irregex-match-chunker m) c (index m n))))
+               (if (positive? offset)
+                 (values char (- line 1) #F)
+                 (values char line column)))
+             (values #F #F #F))))))
     counted-match-positions)
 
   (define counted-match-start-positions
