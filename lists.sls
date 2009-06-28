@@ -10,6 +10,7 @@
     sublist
     map/left-right/preserving map/filter
     remp-dups remove-dups remv-dups remq-dups
+    dup? unique?
     intersperse group-by
     alist->plist plist->alist)
   (import
@@ -94,6 +95,20 @@
     (rem-dups remv l 'remv-dups))
   (define (remq-dups l)
     (rem-dups remq l 'remq-dups))
+
+  (define/AV (dup? pred)
+    (lambda (ls)
+      (let loop ((l ls) (i 0))
+        (cond ((pair? l) (let ((h (car l)) (t (cdr l)))
+                           (if (memp (lambda (x) (pred h x)) t)
+                             i
+                             (loop t (+ 1 i)))))
+              ((null? l) #F)
+              (else (AV "not a proper list" ls))))))
+
+  (define (unique? pred)
+    (define f (dup? pred))
+    (lambda (l) (not (f l))))
   
   (define/AV (intersperse l sep)
     (let loop ([l l] [r '()] [sep sep] [orig l])

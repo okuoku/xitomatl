@@ -63,6 +63,7 @@
   (only (xitomatl macro-utils fib ctxt))
   (only (xitomatl macro-utils fib p-ctxt))
   (only (xitomatl match (1 2)))
+  (only (xitomatl numeral-system balanced-nonary))
   (only (xitomatl persistence base))
   (only (xitomatl persistence transcoded-serializing))
   (only (xitomatl ports))

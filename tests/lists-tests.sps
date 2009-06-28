@@ -131,6 +131,20 @@
 (let ([x (string #\s)] [y (vector 'v)] [z (list 1)])
   (check (remq-dups (list "s" y x '(1) x z x z (vector 'v) y (string #\s)))
          => '("s" #(v) "s" (1) (1) #(v) "s")))
+;;;; dup?
+(check ((dup? eq?) '(a b c d e c f g)) => 2)
+(check ((dup? eq?) '(a b c d e f g)) => #F)
+(let* ((x (string-copy "abc"))
+       (y (string-copy "abc"))
+       (l `("zz" ,x "yy" ,y "foo")))
+  (check ((dup? equal?) l) => 1)
+  (check ((dup? eqv?) l) => #F))
+(check-AV ((dup? eq?) 'oops))
+(check-AV ((dup? eq?) '(a b c . oops)))
+;;;; unique?
+(check ((unique? eq?) '(a b c d)) => #T)
+(check ((unique? eq?) '(a b c d b)) => #F)
+(check-AV ((unique? eq?) '(a b . oops)))
 ;;;; intersperse
 (check (intersperse '() 1) => '())
 (check (intersperse '(a) 1) => '(a))
