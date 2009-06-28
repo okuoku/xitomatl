@@ -8,10 +8,12 @@
   (export
     gen-temp syntax->list with-syntax*
     duplicate-id unique-ids? unique-ids?/raise formals-ok?/raise
-    identifier-append name=? identifier?/name=?)
+    identifier-append name=? identifier?/name=?
+    free-identifier-bound?)
   (import
     (rnrs)
-    (only (xitomatl predicates) name=?))
+    (only (xitomatl predicates) name=?)
+    (xitomatl macro-utils fib))
   
   (define (gen-temp)
     (with-syntax ([(t) (generate-temporaries '(1))])
