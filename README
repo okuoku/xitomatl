@@ -12,7 +12,7 @@ have a conflict with me over :-)
 The Xitomatl collection requires SRFI libraries conforming to SRFI-97.  The SRFI
 libraries used by the author can be found at:
 
-  https://code.launchpad.net/~ikarus-libraries-team/ikarus-libraries/srfi
+  https://code.launchpad.net/~scheme-libraries-team/scheme-libraries/srfi
 
 Currently supported Scheme systems are Ikarus, Larceny, PLT, and Ypsilon.  They
 support the *.IMPL.sls convention for implementation-specific libraries.  Some
@@ -24,13 +24,13 @@ libraries.
 
 For the latest development version, go to:
 
-  https://code.launchpad.net/~derick-eddington/ikarus-libraries/xitomatl
+  https://code.launchpad.net/~derick-eddington/scheme-libraries/xitomatl
 
 Bug Reporting:
 --------------
 Submit bug reports at:
 
-  https://bugs.launchpad.net/ikarus-libraries/+filebug
+  https://bugs.launchpad.net/scheme-libraries/+filebug
 
 Disclaimer:  
 -----------
