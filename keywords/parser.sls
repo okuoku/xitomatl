@@ -1,37 +1,73 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl keywords parser)
   (export
-    not-given not-given?
-    keywords-parser--meta
-    keywords-parser--define/kw)
+    keyword-condition?
+    condition-keyword
+    make-keyword-condition
+    missing-value--default
+    missing-keyword--default
+    predicate-false--default
+    not-given
+    not-given?
+    keywords-parser--meta)
   (import
     (rnrs)
-    (for (only (rnrs base) quote) (meta -1))
-    (for (only (xitomatl macro-utils) with-syntax* gen-temp) expand)
-    (for (only (xitomatl indexes) enumerate) expand)
-    (only (xitomatl keywords other) missing-value--default
-                                    missing-keyword--default predicate-false--default)
-    (for (only (xitomatl keywords other) process-options) expand))
+    (only (xitomatl conditions)
+          make-predicate-expression-condition)
+    (for (only (xitomatl macro-utils)
+               with-syntax*
+               gen-temp)
+         expand)
+    (for (only (xitomatl indexes)
+               enumerate)
+         expand)
+    (for (xitomatl keywords expand-time process-options)
+         expand))
 
-  (define not-given (list #T)) ;; unique object
+  (define-condition-type &keyword &condition
+    make-keyword-condition keyword-condition?
+    (keyword condition-keyword))
+
+  (define (AV who msg kw . more)
+    (raise
+     (apply condition
+            (make-assertion-violation)
+            (make-who-condition who)
+            (make-message-condition msg)
+            (make-keyword-condition kw)
+            more)))
+
+  (define (missing-value--default who kw)
+    (AV who "keyword missing value" kw))
+
+  (define (missing-keyword--default who kw)
+    (AV who "missing required keyword" kw))
+
+  (define (predicate-false--default who kw pred-expr value)
+    (AV who "keyword predicate false" kw
+        (make-predicate-expression-condition pred-expr)
+        (make-irritants-condition (list value))))
+
+  (define not-given (list #T))  ;; unique object
   (define (not-given? x) (eq? x not-given))
-  
+
   (define-syntax keywords-parser--meta
     (lambda (stx)
-      (define (gen-stx rt-who kw=? missing-keyword predicate-false
+      (define (gen-stx who kw=? missing-value missing-keyword predicate-false
                        kw-values process-input-list car-id cdr-id additional)
         (lambda (kw-spec index)
           (with-syntax ([(kw-id . _) kw-spec]
                         [v (gen-temp)])
             (define (gen-clause/val)
-              #`((and (#,kw=? #,car-id 'kw-id)
-                      (pair? #,cdr-id))
-                 (vector-set! #,kw-values #,index (car #,cdr-id))
+              #`((#,kw=? #,car-id 'kw-id)
+                 (if (pair? #,cdr-id)
+                   (vector-set! #,kw-values #,index (car #,cdr-id))
+                   (#,missing-value '#,who 'kw-id))
                  (#,process-input-list (cdr #,cdr-id) #,additional)))
             (define (gen-test/val true false)
               #`(let ((v (vector-ref #,kw-values #,index)))
@@ -39,9 +75,9 @@
             (define (gen-pred/val pred)
               #`(if (#,pred v)
                   v
-                  (#,predicate-false '#,rt-who 'kw-id '#,pred v)))
+                  (#,predicate-false '#,who 'kw-id '#,pred v)))
             (define (gen-missing)
-              #`(#,missing-keyword '#,rt-who 'kw-id))
+              #`(#,missing-keyword '#,who 'kw-id))
             (define (gen-clause/bool)
               #`((#,kw=? #,car-id 'kw-id)
                  (vector-set! #,kw-values #,index #T)
@@ -65,18 +101,18 @@
                      (list (gen-clause/val)
                            (gen-test/val #'v (gen-missing)))])))))
       (syntax-case stx ()
-        [(_ rt-who kw=? missing-value missing-keyword predicate-false
+        [(_ who kw=? missing-value missing-keyword predicate-false
             [kw-id options ...] ...)
-         (for-all identifier? 
+         (for-all identifier?
                   #'(kw=? missing-value missing-keyword predicate-false kw-id ...))
          (with-syntax* ([num (length #'(kw-id ...))]
                         [(kw-values process-input-list car-id cdr-id additional)
                          (generate-temporaries '(1 2 3 4 5))]
                         [((cond-clause value-expr) ...)
-                         (map (gen-stx #'rt-who #'kw=?
-                                       #'missing-keyword #'predicate-false
-                                       #'kw-values #'process-input-list
-                                       #'car-id #'cdr-id #'additional) 
+                         (map (gen-stx #'who #'kw=?
+                               #'missing-value #'missing-keyword #'predicate-false
+                               #'kw-values #'process-input-list
+                               #'car-id #'cdr-id #'additional)
                               #'([kw-id options ...] ...)
                               (enumerate #'(kw-id ...)))])
            #'(lambda (input-list)
@@ -85,32 +121,12 @@
                    (cond ((pair? l)
                           (let ((car-id (car l)) (cdr-id (cdr l)))
                             (cond cond-clause ...
-                                  (else (if (exists (lambda (x) (kw=? car-id x))
-                                                    '(kw-id ...))
-                                          (missing-value 'rt-who car-id)
-                                          (process-input-list cdr-id
-                                           (cons car-id additional)))))))
+                                  (else (process-input-list cdr-id
+                                         (cons car-id additional))))))
                          ((null? l)
                           (letrec* ((kw-id value-expr) ...)
                             (values kw-id ... (reverse additional))))
                          (else
-                          (assertion-violation 'rt-who "not a proper list"
+                          (assertion-violation 'who "not a proper list"
                                                input-list)))))))])))
-  
-  (define (missing-value--define/kw who kw-id)
-    (missing-value--default who (syntax-case kw-id (quote)
-                                  [(quote id) (syntax->datum #'id)])))
-    
-  (define (kw-stx=? x y)
-    (syntax-case x (quote)
-      [(quote id) (identifier? #'id)
-       (eq? (syntax->datum #'id) y)]
-      [_ #F]))
-  
-  (define-syntax keywords-parser--define/kw
-    (syntax-rules ()
-      [(_ rt-who . r)
-       (keywords-parser--meta rt-who kw-stx=?
-        missing-value--define/kw missing-keyword--default predicate-false--default
-        . r)]))
 )

@@ -8,6 +8,7 @@
   (export
     catch reraise
     warning warning/conditions assertion-violation/conditions error/conditions
+    syntax-violation/conditions
     print-exception)
   (import
     (rnrs)
@@ -71,6 +72,11 @@
   (define (warning who msg . irrts)
     (warning/conditions who msg irrts))
   
+  (define (syntax-violation/conditions who msg form subform . cndts)
+    (with-exception-handler
+      (lambda (ex) (raise (apply condition ex cndts)))
+      (lambda () (syntax-violation who msg form subform))))
+
   (define print-exception 
     (case-lambda
       [(exn)
