@@ -29,16 +29,12 @@
     cpp-error cpp-warning cpp-stringify cpp-sym-cat
     c-comment c-block-comment)
   (import
-    (rename (except (rnrs) error) (for-all every))
+    (rename (rnrs) (for-all every))
     (only (srfi :13 strings) substring/shared string-index)
-    (prefix (srfi :23 error) ER:)
-    (only (srfi :39 parameters) parameterize)
+    (srfi :23 error tricks)
     (xitomatl include)
     (xitomatl fmt base (0 5)))
 
-  (define (error . args)
-    (parameterize ((ER:error-who "(library (xitomatl fmt c (0 5)))"))
-      (apply ER:error args)))
-
-  (include/resolve ("xitomatl" "fmt") "fmt-c.scm")
+  (SRFI-23-error->R6RS "(library (xitomatl fmt c (0 5)))"
+   (include/resolve ("xitomatl" "fmt") "fmt-c.scm"))
 )

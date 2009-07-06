@@ -18,6 +18,8 @@
        (match-lambda
          [('library _ ('export . _) ('import . _) body ...)
           (for-each (match/print look-for) body)]
+         [('begin expr ...)
+          (for-each (match/print look-for) expr)]
          [(f (n . r) . b) 
           (and (symbol? f) (memq f look-for) (symbol? n))
           (begin (display n) (newline))]

@@ -121,21 +121,16 @@
     wrt
     wrt/unshared)
   (import
-    (except (rnrs) error)
+    (rnrs)
     (rnrs mutable-pairs)
     (only (rnrs r5rs) exact->inexact inexact->exact modulo quotient remainder)
     (srfi :6 basic-string-ports)
     (only (srfi :13 strings) substring/shared string-index string-index-right
                              string-count string-concatenate-reverse)
-    (prefix (srfi :23 error) ER:)
-    (only (srfi :39 parameters) parameterize)
+    (srfi :23 error tricks)
     (xitomatl include)
     (xitomatl fmt let-optionals*)
     (xitomatl fmt srfi-69))
-  
-  (define (error . args)
-    (parameterize ((ER:error-who "(library (xitomatl fmt base (0 5)))"))
-      (apply ER:error args)))
 
   (define (mantissa+exponent num . opt)
     ;; Break a positive real number down to a normalized mantissa and
@@ -151,5 +146,6 @@
               ((< n bot) (lp (* n base) (- e 1)))
               (else (list n e))))))))
   
-  (include/resolve ("xitomatl" "fmt") "fmt.scm")
+  (SRFI-23-error->R6RS "(library (xitomatl fmt base (0 5)))"
+   (include/resolve ("xitomatl" "fmt") "fmt.scm"))
 )
