@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (rnrs eval)
@@ -13,11 +13,11 @@
 
 (define-syntax check-SV
   (syntax-rules ()
-    [(_ expr)
-     (check (catch ex ([else (syntax-violation? ex)])
+    ((_ expr)
+     (check (catch ex ((else (syntax-violation? ex)))
               (eval 'expr (environment '(rnrs) '(xitomatl conditionals)))
               'unexpected-return)
-            => #T)]))
+            => #T))))
 
 ;;;; aif
 
@@ -37,7 +37,7 @@
          (assert #F) 
          (- x))
        => -3.1)
-(let ([a 0] [b 0] [c 0] [d 0])
+(let ((a 0) (b 0) (c 0) (d 0))
   (check (aif x (begin (set! a (+ 1 a)) integer?) (begin (set! b (+ 1 b)) (+ 1.1 2))
               (begin (set! c (+ 1 c)) 'bad) 
               (begin (set! d (+ 1 d)) (- x)))

@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rename (rnrs) (define rnrs:define) (define-syntax rnrs:define-syntax))
   (rnrs eval)
@@ -14,69 +14,69 @@
   
 (rnrs:define-syntax check-syntax-error
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [(syntax-violation? ex) #t]
-                       [else `(dont-know: ,ex)])
+    ((_ expr)
+     (check (guard (ex ((syntax-violation? ex) #T)
+                       (else `(dont-know: ,ex)))
               (eval '(let () expr) 
                     (environment '(except (rnrs) define define-syntax) 
                                  '(xitomatl define) 
                                  '(xitomatl define extras))) 
               '(succeeded: expr))
-            => #t)]))
+            => #T))))
 
 (rnrs:define-syntax check-AV
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [(assertion-violation? ex) #t]
-                       [else `(dont-know: ,ex)])
+    ((_ expr)
+     (check (guard (ex ((assertion-violation? ex) #T)
+                       (else `(dont-know: ,ex)))
               (let () expr '(succeeded: expr)))
-            => #t)]))
+            => #T))))
 
 (rnrs:define-syntax check-AV/msg
   (lambda (stx)
     (syntax-case stx ()
-      [(_ msg expr)
+      ((_ msg expr)
        (string? (syntax->datum #'msg))
-       #'(check (guard (ex [(and (assertion-violation? ex)
+       #'(check (guard (ex ((and (assertion-violation? ex)
                                  (message-condition? ex))
-                            (condition-message ex)]
-                           [else `(dont-know: ,ex)])
+                            (condition-message ex))
+                           (else `(dont-know: ,ex)))
                   (let () expr '(succeeded: expr)))
-                => msg)])))
+                => msg)))))
 
 (rnrs:define-syntax check-AV/who
   (lambda (stx)
     (syntax-case stx ()
-      [(_ who expr)
+      ((_ who expr)
        (symbol? (syntax->datum #'who))
-       #'(check (guard (ex [(and (assertion-violation? ex)
+       #'(check (guard (ex ((and (assertion-violation? ex)
                                  (who-condition? ex))
-                            (condition-who ex)]
-                           [else `(dont-know: ,ex)])
+                            (condition-who ex))
+                           (else `(dont-know: ,ex)))
                   (let () expr '(succeeded: expr)))
-                => 'who)])))
+                => 'who)))))
 
 (rnrs:define-syntax check-AV/msg/AN
   (lambda (stx)
     (syntax-case stx ()
-      [(_ msg an expr)
+      ((_ msg an expr)
        (and (string? (syntax->datum #'msg))
             (identifier? #'an))
-       #'(check (guard (ex [(and (assertion-violation? ex)
+       #'(check (guard (ex ((and (assertion-violation? ex)
                                  (message-condition? ex)
                                  (argument-name-condition? ex))
                             (list (condition-message ex)
-                                  (condition-argument-name ex))]
-                           [else `(dont-know: ,ex)])
+                                  (condition-argument-name ex)))
+                           (else `(dont-know: ,ex)))
                   (let () expr '(succeeded: expr)))
-                => '(msg an))])))
+                => '(msg an))))))
 
 (rnrs:define-syntax check-no-error
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [#t #f])
-              (let () expr #t))
-            => #t)]))
+    ((_ expr)
+     (check (guard (ex (#T #F))
+              (let () expr #T))
+            => #T))))
 
 ;;;; define-values
 
@@ -134,26 +134,26 @@
 
 (define-syntax M
   (lambda (stx)
-    (syntax-case stx () [(_ x) #'(reverse x)])))
+    (syntax-case stx () ((_ x) #'(reverse x)))))
 (check (M '(a b c)) => '(c b a))
 (define-syntax (M2 stx)
-  (syntax-case stx () [(_ x) #'(list x)]))
+  (syntax-case stx () ((_ x) #'(list x))))
 (check (M2 'zzz) => '(zzz))
 
 ;;;; define/who
 
 (define/who (w0 x y . a) (list x y a who))
 (check (w0 1 2 3 4) => '(1 2 (3 4) w0))
-(define/who w1 (case-lambda [() 'bad] [(a) (list a who)]))
+(define/who w1 (case-lambda (() 'bad) ((a) (list a who))))
 (check (w1 1) => '(1 w1))
 (define/who w2 (list who who))
 (check w2 => '(w2 w2))
 
 ;;;; define/AV
 
-(define/AV f0 (case-lambda [() (AV "oops")] [r r]))
+(define/AV f0 (case-lambda (() (AV "oops")) (r r)))
 (check (f0 1 2 3) => '(1 2 3))
-(define/AV f1 (case-lambda [() (AV "oops1" 'ign)] [ign #f]))
+(define/AV f1 (case-lambda (() (AV "oops1" 'ign)) (ign #F)))
 (check-AV/msg "oops1" (f1))
 (define/AV f2 (lambda (a) (list->string (reverse (string->list a)))))
 (check (f2 "asdf") => "fdsa")
@@ -175,85 +175,85 @@
 
 ;;;; define/?
 
-(define/? f4 (case-lambda/? [() 'a] [(x) 'b]))
+(define/? f4 (case-lambda/? (() 'a) ((x) 'b)))
 (check (f4) => 'a)
-(define/? f5 (case-lambda/? [() 'a] [(x) 'b]))
+(define/? f5 (case-lambda/? (() 'a) ((x) 'b)))
 (check (f5 1) => 'b)
-(define/? f6 (case-lambda/? [() 'a] [([x integer?]) 'b]))
+(define/? f6 (case-lambda/? (() 'a) (((x integer?)) 'b)))
 (check (f6 1) => 'b)
-(define/? f7 (case-lambda/? [() 'a] [r 'b]))
+(define/? f7 (case-lambda/? (() 'a) (r 'b)))
 (check (f7 1) => 'b)
-(define/? f8 (case-lambda/? [rest (reverse rest)] [([x integer?]) 'b]))
+(define/? f8 (case-lambda/? (rest (reverse rest)) (((x integer?)) 'b)))
 (check (f8 1 2 3) => '(3 2 1))
-(define/? f9 (case-lambda/? [#(rest list?) (reverse rest)] [([x integer?]) 'b]))
+(define/? f9 (case-lambda/? (#(rest list?) (reverse rest)) (((x integer?)) 'b)))
 (check (f9 1 2 3) => '(3 2 1))
 (define/? f10 (case-lambda/? 
-                [(x [y string?] z . #(r (lambda (r) (for-all number? r)))) 
-                 (cons* x y z r)] 
-                [(x) 'b]))
+                ((x (y string?) z . #(r (lambda (r) (for-all number? r)))) 
+                 (cons* x y z r)) 
+                ((x) 'b)))
 (check (f10 'x "yy" #\z 1 -56.3 67/902) => '(x "yy" #\z 1 -56.3 67/902))
 (define/? f11 (case-lambda/? 
-                [([x symbol?] [y string?] [z char?] 
+                (((x symbol?) (y string?) (z char?) 
                   . #(r (lambda (r) (for-all number? r)))) 
-                 (cons* x y z r)] 
-                [(x) 'b]))
+                 (cons* x y z r)) 
+                ((x) 'b)))
 (check (f11 'x "yy" #\z 1 -56.3 67/902) => '(x "yy" #\z 1 -56.3 67/902))
-(check-syntax-error (define/? f (case-lambda/? [() 'a] [([x]) 'b])))
-(check-syntax-error (define/? f (case-lambda/? [() 'a] [([x integer? oops]) 'b])))
-(check-syntax-error (define/? f (case-lambda/? [#() (reverse rest)] [([x integer?]) 'b])))
+(check-syntax-error (define/? f (case-lambda/? (() 'a) (((x)) 'b))))
+(check-syntax-error (define/? f (case-lambda/? (() 'a) (((x integer? oops)) 'b))))
+(check-syntax-error (define/? f (case-lambda/? (#() (reverse rest)) (((x integer?)) 'b))))
 (check-syntax-error 
- (define/? f (case-lambda/? [#([rest oops]) (reverse rest)] [([x integer?]) 'b])))
+ (define/? f (case-lambda/? (#((rest oops)) (reverse rest)) (((x integer?)) 'b))))
 (check-syntax-error 
- (define/? f (case-lambda/? [#(rest list? oops) (reverse rest)] [([x integer?]) 'b])))
+ (define/? f (case-lambda/? (#(rest list? oops) (reverse rest)) (((x integer?)) 'b))))
 (check-syntax-error 
  (define/? f (case-lambda/?
-               [(x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
-                (cons* x y z r)] 
-               [(x) 'b])))
-(define/? f12 (case-lambda/? [() 'a] [([x string?]) 'b]))
+               ((x (y string?) z . #((r (lambda (r) (for-all number? r))))) 
+                (cons* x y z r)) 
+               ((x) 'b))))
+(define/? f12 (case-lambda/? (() 'a) (((x string?)) 'b)))
 (check-AV/msg/AN "argument check failed" x (f12 1))
-(define/? f13 (case-lambda/? [() 'a] [([x string?] [y char?]) (values x y)]))
+(define/? f13 (case-lambda/? (() 'a) (((x string?) (y char?)) (values x y))))
 (check-AV/msg/AN "argument check failed" y (f13 "" 'oops))
-(define/? f14 (case-lambda/? [#(rest char?) (reverse rest)] [() 'b]))
+(define/? f14 (case-lambda/? (#(rest char?) (reverse rest)) (() 'b)))
 (check-AV/msg/AN "argument check failed" rest (f14 1 2 3))
 (define/? f15 (case-lambda/? 
-                [(x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
-                 (cons* x y z r)] 
-                [(x) 'b]))
+                ((x (y string?) z . #(r (lambda (r) (for-all negative? r)))) 
+                 (cons* x y z r)) 
+                ((x) 'b)))
 (check-AV/msg/AN "argument check failed" r (f15 'x "yy" #\z 1 -56.3 67/902))
 
 (define/? f16 (lambda/? () 'a))
 (check (f16) => 'a)
 (define/? f17 (lambda/? (x) 'b))
 (check (f17 1) => 'b)
-(define/? f18 (lambda/? ([x integer?]) 'b))
+(define/? f18 (lambda/? ((x integer?)) 'b))
 (check (f18 1) => 'b)
 (define/? f19 (lambda/? rest (reverse rest)))
 (check (f19 1 2 3) => '(3 2 1))
 (define/? f20 (lambda/? #(rest list?) (reverse rest)))
 (check (f20 1 2 3) => '(3 2 1))
-(define/? f21 (lambda/? (x [y string?] z . #(r (lambda (r) (for-all number? r)))) 
+(define/? f21 (lambda/? (x (y string?) z . #(r (lambda (r) (for-all number? r)))) 
                 (cons* x y z r)))
 (check (f21 'x "yy" #\z 1 -56.3 67/902) => '(x "yy" #\z 1 -56.3 67/902))
-(define/? f22 (lambda/? ([x symbol?] [y string?] [z char?]
+(define/? f22 (lambda/? ((x symbol?) (y string?) (z char?)
                          . #(r (lambda (r) (for-all number? r)))) 
                 (cons* x y z r)))
 (check (f22 'x "yy" #\z 1 -56.3 67/902) => '(x "yy" #\z 1 -56.3 67/902))
-(check-syntax-error (define/? f (lambda/? ([x]) 'b)))
-(check-syntax-error (define/? f (lambda/? ([x integer? oops]) 'b)))
+(check-syntax-error (define/? f (lambda/? ((x)) 'b)))
+(check-syntax-error (define/? f (lambda/? ((x integer? oops)) 'b)))
 (check-syntax-error (define/? f (lambda/? #() 'a)))
-(check-syntax-error (define/? f (lambda/? #([rest oops]) (reverse rest))))
+(check-syntax-error (define/? f (lambda/? #((rest oops)) (reverse rest))))
 (check-syntax-error (define/? f (lambda/? #(rest list? oops) (reverse rest))))
 (check-syntax-error
- (define/? f (lambda/? (x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+ (define/? f (lambda/? (x (y string?) z . #((r (lambda (r) (for-all number? r))))) 
                (cons* x y z r))))
-(define/? f23 (lambda/? ([x string?]) 'b))
+(define/? f23 (lambda/? ((x string?)) 'b))
 (check-AV/msg/AN "argument check failed" x (f23 1))
-(define/? f24 (lambda/? ([x string?] [y char?]) (values x y)))
+(define/? f24 (lambda/? ((x string?) (y char?)) (values x y)))
 (check-AV/msg/AN "argument check failed" y (f24 "" 'oops))
 (define/? f25 (lambda/? #(rest char?) (reverse rest)))
 (check-AV/msg/AN "argument check failed" rest (f25 1 2 3))
-(define/? f26 (lambda/? (x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+(define/? f26 (lambda/? (x (y string?) z . #(r (lambda (r) (for-all negative? r)))) 
                 (cons* x y z r)))
 (check-AV/msg/AN "argument check failed" r (f26 'x "yy" #\z 1 -56.3 67/902))
 
@@ -266,7 +266,7 @@
          (f 1))
        => 'b)
 (check (let ()
-         (define/? (f [x integer?]) 'b)
+         (define/? (f (x integer?)) 'b)
          (f 1))
        => 'b)
 (check (let ()
@@ -278,14 +278,14 @@
          (f 1 2 3))
        => '(3 2 1))
 (check (let ()
-         (define/? (f x [y string?] z . #(r (lambda (r) (for-all number? r)))) 
+         (define/? (f x (y string?) z . #(r (lambda (r) (for-all number? r)))) 
            (cons* x y z r))
          (f 'x "yy" #\z 1 -56.3 67/902))
        => '(x "yy" #\z 1 -56.3 67/902))
 (let ((a 0) (b 0) (c 0) (d 0))
-  (define/? (f [x (begin (set! a (+ 1 a)) symbol?)]
-               [y (begin (set! b (+ 1 b)) string?)]
-               [z (begin (set! c (+ 1 c)) char?)] 
+  (define/? (f (x (begin (set! a (+ 1 a)) symbol?))
+               (y (begin (set! b (+ 1 b)) string?))
+               (z (begin (set! c (+ 1 c)) char?)) 
                . #(r (begin (set! d (+ 1 d))
                             (lambda (r) (for-all number? r))))) 
     (cons* x y z r))
@@ -295,7 +295,7 @@
          => '(foo "bar" #\c 3 2 1))
   (check (list a b c d) => '(2 2 2 2)))
 (let ()
-  (define/? (f [x (if (negative? y) string? list?)] y)
+  (define/? (f (x (if (negative? y) string? list?)) y)
     'ok)
   (check (f '(foo) 1) => 'ok)
   (check (f "foo" -1) => 'ok)
@@ -305,19 +305,19 @@
     (f '(foo) -1)))
 (check-AV/who foo
   (let ()
-    (define/? foo (lambda/? ([x char?]) x))
+    (define/? foo (lambda/? ((x char?)) x))
     (foo 1)))
 (check-AV/who bar
   (let ()
-    (define/? bar (case-lambda/? [([x char?]) x]))
+    (define/? bar (case-lambda/? (((x char?)) x)))
     (bar 1)))
 (check-syntax-error
  (let ()
-   (define/? (f [x]) 'b) 
+   (define/? (f (x)) 'b) 
    (f 1)))
 (check-syntax-error
  (let ()
-   (define/? (f [x integer? oops]) 'b)
+   (define/? (f (x integer? oops)) 'b)
    (f 1)))
 (check-syntax-error
  (let ()
@@ -325,7 +325,7 @@
    (f)))
 (check-syntax-error
  (let ()
-   (define/? (f . #([rest oops])) (reverse rest))
+   (define/? (f . #((rest oops))) (reverse rest))
    (f 1 2 3)))
 (check-syntax-error
  (let ()
@@ -333,16 +333,16 @@
    (f 1 2 3)))
 (check-syntax-error
  (let ()
-   (define/? (f x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+   (define/? (f x (y string?) z . #((r (lambda (r) (for-all number? r))))) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
 (check-AV/msg/AN "argument check failed" x
  (let ()
-   (define/? (f [x string?]) 'b)
+   (define/? (f (x string?)) 'b)
    (f 1)))
 (check-AV/msg/AN "argument check failed" y
  (let ()
-   (define/? (f [x string?] [y char?]) (values x y))
+   (define/? (f (x string?) (y char?)) (values x y))
    (f "" 'oops)))
 (check-AV/msg/AN "argument check failed" rest
  (let ()
@@ -350,55 +350,55 @@
    (f 1 2 3)))
 (check-AV/msg/AN "argument check failed" r
  (let ()
-   (define/? (f x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+   (define/? (f x (y string?) z . #(r (lambda (r) (for-all negative? r)))) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
 
 ;;;; define/?/AV
 
-(define/?/AV f27 (case-lambda/? [() 'a] [(x) 'b]))
+(define/?/AV f27 (case-lambda/? (() 'a) ((x) 'b)))
 (check (f27) => 'a)
 (define/?/AV f28 
   (case-lambda/?
-    [([x symbol?] [y string?] [z char?] . #(r (lambda (r) (for-all number? r)))) 
-     (cons* x y z r)] 
-    [(x) 'b]))
+    (((x symbol?) (y string?) (z char?) . #(r (lambda (r) (for-all number? r)))) 
+     (cons* x y z r)) 
+    ((x) 'b)))
 (check (f28 'x "yy" #\z 1 -56.3 67/902) => '(x "yy" #\z 1 -56.3 67/902))
-(define/?/AV f29 (case-lambda/? [() 'a] [r 'b]))
+(define/?/AV f29 (case-lambda/? (() 'a) (r 'b)))
 (check (f29 1) => 'b)
 (check-syntax-error
  (define/?/AV f 
    (case-lambda/? 
-     [(x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
-      (cons* x y z r)] 
-     [(x) 'b])))
+     ((x (y string?) z . #((r (lambda (r) (for-all number? r))))) 
+      (cons* x y z r)) 
+     ((x) 'b))))
 (define/?/AV f30 
   (case-lambda/?
-    [(x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
-     (cons* x y z r)] 
-    [(x) 'b]))
+    ((x (y string?) z . #(r (lambda (r) (for-all negative? r)))) 
+     (cons* x y z r)) 
+    ((x) 'b)))
 (check-AV/msg/AN "argument check failed" r (f30 'x "yy" #\z 1 -56.3 67/902))
 (define/?/AV f31 
-  (case-lambda/? [() (AV "oops")] [#(r (lambda (x) (for-all integer? x))) r]))
+  (case-lambda/? (() (AV "oops")) (#(r (lambda (x) (for-all integer? x))) r)))
 (check (f31 1 2 3) => '(1 2 3))
-(define/?/AV f32 (case-lambda/? [([s symbol?]) (AV "oops1" 'ign)] [ign #f]))
+(define/?/AV f32 (case-lambda/? (((s symbol?)) (AV "oops1" 'ign)) (ign #F)))
 (check-AV/msg "oops1" (f32 'blah))
 
 (define/?/AV f33 (lambda/? () 'a))
 (check (f33) => 'a)
 (define/?/AV f34 
-  (lambda/? ([x symbol?] [y string?] [z char?] . #(r (lambda (r) (for-all number? r)))) 
+  (lambda/? ((x symbol?) (y string?) (z char?) . #(r (lambda (r) (for-all number? r)))) 
     (cons* x y z r)))
 (check (f34 'x "yy" #\z 1 -56.3 67/902) => '(x "yy" #\z 1 -56.3 67/902))
 (define/?/AV f35 (lambda/? r r))
 (check (f35 1) => '(1))
 (check-syntax-error
- (define f (lambda/? (x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+ (define f (lambda/? (x (y string?) z . #((r (lambda (r) (for-all number? r))))) 
              (cons* x y z r))))
-(define/?/AV f36 (lambda/? (x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+(define/?/AV f36 (lambda/? (x (y string?) z . #(r (lambda (r) (for-all negative? r)))) 
                    (cons* x y z r)))
 (check-AV/msg/AN "argument check failed" r (f36 'x "yy" #\z 1 -56.3 67/902))
-(define/?/AV f37 (lambda/? ([a string?]) (list->string (reverse (string->list a)))))
+(define/?/AV f37 (lambda/? ((a string?)) (list->string (reverse (string->list a)))))
 (check (f37 "asdf") => "fdsa")
 (define/?/AV f38 (lambda/? #(r null?) (AV "oops2")))
 (check-AV/msg "oops2" (f38))
@@ -408,7 +408,7 @@
          (f))
        => 'a)
 (check (let ()
-         (define/?/AV (f [x symbol?] [y string?] [z char?] 
+         (define/?/AV (f (x symbol?) (y string?) (z char?) 
                          . #(r (lambda (r) (for-all number? r)))) 
            (cons* x y z r))
          (f 'x "yy" #\z 1 -56.3 67/902))
@@ -419,29 +419,29 @@
    (f 1))
  => 'b)
 (let ()
-  (define/?/AV asdf (lambda/? ([x char?]) (AV "oops")))
+  (define/?/AV asdf (lambda/? ((x char?)) (AV "oops")))
   (check-AV/who asdf
     (asdf 1))
   (check-AV/who asdf
     (asdf #\c)))
 (let ()
-  (define/?/AV asdf (case-lambda/? [([x char?]) x] [() (AV "oops")]))
+  (define/?/AV asdf (case-lambda/? (((x char?)) x) (() (AV "oops"))))
   (check-AV/who asdf
     (asdf 1))
   (check-AV/who asdf
     (asdf)))
 (check-syntax-error
  (let ()
-   (define/?/AV (f x [y string?] z . #([r (lambda (r) (for-all number? r))])) 
+   (define/?/AV (f x (y string?) z . #((r (lambda (r) (for-all number? r))))) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
 (check-AV/msg/AN "argument check failed" r
  (let ()
-   (define/?/AV (f x [y string?] z . #(r (lambda (r) (for-all negative? r)))) 
+   (define/?/AV (f x (y string?) z . #(r (lambda (r) (for-all negative? r)))) 
      (cons* x y z r))
    (f 'x "yy" #\z 1 -56.3 67/902)))
 (let ()
-  (define/?/AV (f x [y integer?] . zs) 
+  (define/?/AV (f x (y integer?) . zs) 
     (when (null? zs) (AV "zs null" zs))
     (apply * x y zs))
   (check (f 1 2 3 4 5) => 120))

@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -30,11 +31,11 @@
   
   (define pretty-print
     (case-lambda
-      [(x)
-       (pretty-print x (current-output-port))]
-      [(x p)
+      ((x)
+       (pretty-print x (current-output-port)))
+      ((x p)
        (ypsilon:pretty-print x p)
-       (newline p)]))
+       (newline p))))
 
   (define gensym
     (case-lambda
@@ -58,7 +59,7 @@
                                (open-string-input-port str) thunk))
 
   (define (with-output-to-string thunk)
-    (let-values ([(sop get) (open-string-output-port)])
+    (let-values (((sop get) (open-string-output-port)))
       (parameterize-current-port current-output-port set-current-output-port!
                                  sop thunk)
       (get)))

@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (srfi :78 lightweight-testing)
@@ -12,23 +12,23 @@
 
 (define-syntax check-AV
   (syntax-rules ()
-    [(_ expr)
-     (check (catch ex ([else (assertion-violation? ex)])
+    ((_ expr)
+     (check (catch ex ((else (assertion-violation? ex)))
               expr
               'unexpected-return)
-            => #T)]))
+            => #T))))
 
 (define-syntax check-SV
   (syntax-rules ()
-    [(_ msg form subform expr)
-     (check (catch ex ([else (and (syntax-violation? ex)
+    ((_ msg form subform expr)
+     (check (catch ex ((else (and (syntax-violation? ex)
                                   (message-condition? ex)
                                   (list (condition-message ex)
                                         (syntax->datum (syntax-violation-form ex))
-                                        (syntax->datum (syntax-violation-subform ex))))])
+                                        (syntax->datum (syntax-violation-subform ex))))))
               expr
               'unexpected-return)
-            => '(msg form subform))]))
+            => '(msg form subform)))))
 
 ;; gen-temp
 (check (identifier? (gen-temp)) => #T)
@@ -40,9 +40,9 @@
 (check-AV (syntax->list #'a))
 (check-AV (syntax->list #'(a b c . d)))
 ;; with-syntax*
-(let ([stx (with-syntax* ([x (gen-temp)]
-                          [y #'(foo x)]) 
-             #'(x y))])
+(let ((stx (with-syntax* ((x (gen-temp))
+                          (y #'(foo x))) 
+             #'(x y))))
   (check (eq? (car (syntax->list stx))
               (cadr (syntax->list (cadr (syntax->list stx))))) 
          => #T))

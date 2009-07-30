@@ -24,20 +24,20 @@
           make-keyword-condition))
 
   (define (parse-kw-formals full-stx kw-formals)
-    (let parse ([kwf kw-formals] [pos-ids '()])
+    (let parse ((kwf kw-formals) (pos-ids '()))
       (syntax-case kwf ()
-        [([kw-id . opts] ... . additional-id)
-         (let ([pos-ids (reverse pos-ids)])
+        (((kw-id . opts) ... . additional-id)
+         (let ((pos-ids (reverse pos-ids)))
            (and (formals-ok?/raise
                  (append pos-ids #'(kw-id ... . additional-id))
                  full-stx)
                 (cons* pos-ids
-                       #'([kw-id . opts] ...)
+                       #'((kw-id . opts) ...)
                        (if (identifier? #'additional-id)
                          (list #'additional-id)
-                         '()))))]
-        [(pos . r)
-         (parse #'r (cons #'pos pos-ids))])))
+                         '())))))
+        ((pos . r)
+         (parse #'r (cons #'pos pos-ids))))))
 
   (define (missing-value--define/kw stx)
     (lambda (who kw)
@@ -54,16 +54,16 @@
 
   (define (kw-stx=? x y)
     (syntax-case x (quote)
-      [(quote id) (identifier? #'id)
-       (eq? (syntax->datum #'id) y)]
-      [_ #F]))
+      ((quote id) (identifier? #'id)
+       (eq? (syntax->datum #'id) y))
+      (_ #F)))
 
   (define-syntax keywords-parser--define/kw
     (syntax-rules ()
-      [(_  stx who . r)
+      ((_  stx who . r)
        (let ((mv (missing-value--define/kw stx))
              (mk (missing-keyword--define/kw stx)))
          (keywords-parser--meta who kw-stx=?
           mv mk predicate-false--dummy
-          . r))]))
+          . r)))))
 )

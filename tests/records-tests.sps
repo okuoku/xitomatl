@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl records)
@@ -26,13 +26,13 @@
 (define C-accessors (record-type-accessors (record-rtd c)))
 (define D-accessors (record-type-accessors (record-rtd d)))
 (check (length A-accessors) => 3)
-(check (for-all procedure? A-accessors) => #t)
+(check (for-all procedure? A-accessors) => #T)
 (check (length B-accessors) => 5)
-(check (for-all procedure? B-accessors) => #t)
+(check (for-all procedure? B-accessors) => #T)
 (check (length C-accessors) => 5)
-(check (for-all procedure? C-accessors) => #t)
+(check (for-all procedure? C-accessors) => #T)
 (check (length D-accessors) => 8)
-(check (for-all procedure? D-accessors) => #t)
+(check (for-all procedure? D-accessors) => #T)
 (check (map (lambda (get) (get a)) A-accessors) => '(1 2 3))
 (check (map (lambda (get) (get b)) B-accessors) => '(1 2 3 4 5))
 (check (map (lambda (get) (get c)) C-accessors) => '(1 2 3 4 5))
@@ -45,14 +45,14 @@
 (check (length B-mutators) => 5)
 (check (length C-mutators) => 5)
 (check (length D-mutators) => 8)
-(let ([what (lambda (m) 
-              (cond [(procedure? m) 'p] 
-                    [(not m) #f]
-                    [else 'bad]))])
-  (check (map what A-mutators) => '(#f p #f))
-  (check (map what B-mutators) => '(#f p #f p #f))
-  (check (map what C-mutators) => '(#f p #f p #f))
-  (check (map what D-mutators) => '(#f p #f p #f #f p p)))
+(let ((what (lambda (m) 
+              (cond ((procedure? m) 'p) 
+                    ((not m) #F)
+                    (else 'bad)))))
+  (check (map what A-mutators) => '(#F p #F))
+  (check (map what B-mutators) => '(#F p #F p #F))
+  (check (map what C-mutators) => '(#F p #F p #F))
+  (check (map what D-mutators) => '(#F p #F p #F #F p p)))
 (for-each (lambda (setter!) (setter! a 'new)) (filter values A-mutators))
 (check (map (lambda (get) (get a)) A-accessors) => '(1 new 3))
 (for-each (lambda (setter!) (setter! b 'new)) (filter values B-mutators))

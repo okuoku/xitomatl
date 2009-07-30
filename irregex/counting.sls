@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl irregex counting)
   (export
     line-separators chunk-counts chunk-counts/counted
@@ -39,8 +39,8 @@
 
   (define-syntax assert
     (syntax-rules ()
-      [(_ expr) (rnrs:assert expr)]
-      #;[(_ expr) #f]))
+      ((_ expr) (rnrs:assert expr))
+      #;((_ expr) #F)))
 
   (define newline-rx)
 

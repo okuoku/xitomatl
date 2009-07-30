@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -5,7 +6,6 @@
 
 ;; NOTE: The compound-input-port uses of coroutines are known to fail on PLT Scheme.
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl ports)
@@ -17,21 +17,21 @@
 
 (define-syntax check-AV-msg
   (syntax-rules ()
-    [(_ msg expr)
-     (check (guard (ex [else (and (assertion-violation? ex)
+    ((_ msg expr)
+     (check (guard (ex (else (and (assertion-violation? ex)
                                   (message-condition? ex)
-                                  (condition-message ex))])
+                                  (condition-message ex))))
               expr
               'unexpected-return)
-            => msg)]))
+            => msg))))
 
 (define-syntax check-ex
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else 'caught])
+    ((_ expr)
+     (check (guard (ex (else 'caught))
               expr
               'unexpected-return)
-            => 'caught)]))
+            => 'caught))))
 
 
 ;;;; Predicates
@@ -82,7 +82,7 @@
 \"another\" #\\l #(i n) #\\e\n\
 a n d ((()))")
 
-(let ([x 0])
+(let ((x 0))
   (call-with-port (open-string-input-port text)
     (lambda (sip)
       (port-for-each 
@@ -147,12 +147,12 @@ a n d ((()))")
       (open-binary-compound-input-port (lambda () 'oops))
     get-u8))
 ;;;; initially empty
-(let ([bcip (open-binary-compound-input-port '())])
-  (check (eof-object? (get-u8 bcip)) => #t)
+(let ((bcip (open-binary-compound-input-port '())))
+  (check (eof-object? (get-u8 bcip)) => #T)
   (close-port bcip)
   (check-ex (get-u8 bcip)))
-(let ([bcip (open-binary-compound-input-port (lambda () #f))])
-  (check (eof-object? (get-u8 bcip)) => #t)
+(let ((bcip (open-binary-compound-input-port (lambda () #F))))
+  (check (eof-object? (get-u8 bcip)) => #T)
   (close-port bcip)
   (check-ex (get-u8 bcip)))
 ;;;; single component
@@ -165,9 +165,9 @@ a n d ((()))")
             (open-binary-compound-input-port 
               (coroutine ()
                 (yield b1-bv)
-                (yield #f)))
+                (yield #F)))
           get-bytevector-all))
-       => #t)
+       => #T)
 (call-with-port (open-file-input-port b2-fn)
   (lambda (p)
     (check (call-with-port
@@ -178,11 +178,11 @@ a n d ((()))")
   (lambda (p)
     (check (call-with-port
                (open-binary-compound-input-port 
-                 (let ([v p]) 
+                 (let ((v p)) 
                    (lambda ()
                      (begin0
                        v
-                       (set! v #f)))))
+                       (set! v #F)))))
              get-bytevector-all)
            => b3-bv)))
 ;;;; two components
@@ -195,7 +195,7 @@ a n d ((()))")
              (coroutine ()
                (yield b1-bv)
                (yield b0-bv)
-               (yield #f)))
+               (yield #F)))
          get-bytevector-all)
        => (bytevector-append b1-bv b0-bv))
 (call-with-port (open-file-input-port b2-fn)
@@ -212,7 +212,7 @@ a n d ((()))")
       (lambda (pb)
         (check (call-with-port
                    (open-binary-compound-input-port 
-                    (let ([v (list pa pb #f)])
+                    (let ((v (list pa pb #F)))
                       (lambda ()
                         (begin0
                           (car v)
@@ -234,21 +234,21 @@ a n d ((()))")
                (yield b4-bv)
                (yield b3-bv)
                (yield b2-bv)
-               (yield #f)))
+               (yield #F)))
          get-bytevector-all)
        => (bytevector-append b1-bv b0-bv b0-bv b1-bv b4-bv b3-bv b2-bv))
-(let ([ps (map open-file-input-port 
-               (list b4-fn b2-fn b3-fn b1-fn b0-fn b5-fn b5-fn b3-fn))])
+(let ((ps (map open-file-input-port 
+               (list b4-fn b2-fn b3-fn b1-fn b0-fn b5-fn b5-fn b3-fn))))
   (check (call-with-port
              (open-binary-compound-input-port ps)
            get-bytevector-all)
          => (bytevector-append b4-bv b2-bv b3-bv b1-bv b0-bv b5-bv b5-bv b3-bv))
   (for-each close-port ps))
-(let ([ps (map open-file-input-port 
-               (list b3-fn b3-fn b5-fn b1-fn b0-fn b3-fn b4-fn b2-fn))])
+(let ((ps (map open-file-input-port 
+               (list b3-fn b3-fn b5-fn b1-fn b0-fn b3-fn b4-fn b2-fn))))
   (check (call-with-port
              (open-binary-compound-input-port
-              (let ([v (append ps '(#f))])
+              (let ((v (append ps '(#F))))
                 (lambda ()
                   (begin0 
                     (car v)
@@ -257,17 +257,17 @@ a n d ((()))")
          => (bytevector-append b3-bv b3-bv b5-bv b1-bv b0-bv b3-bv b4-bv b2-bv))
   (for-each close-port ps))
 ;;;; mixed bytevectors and binary input ports
-(let ([pa (open-file-input-port b5-fn)]
-      [pb (open-file-input-port b0-fn)]
-      [pc (open-file-input-port b2-fn)])
+(let ((pa (open-file-input-port b5-fn))
+      (pb (open-file-input-port b0-fn))
+      (pc (open-file-input-port b2-fn)))
   (check (call-with-port
              (open-binary-compound-input-port (list pa b1-bv pb pc b4-bv b5-bv))
            get-bytevector-all)
          => (bytevector-append b5-bv b1-bv b0-bv b2-bv b4-bv b5-bv))
   (for-each close-port (list pa pb pc)))
-(let ([pa (open-file-input-port b1-fn)]
-      [pb (open-file-input-port b2-fn)]
-      [pc (open-file-input-port b3-fn)])
+(let ((pa (open-file-input-port b1-fn))
+      (pb (open-file-input-port b2-fn))
+      (pc (open-file-input-port b3-fn)))
   (check (call-with-port
              (open-binary-compound-input-port 
               (coroutine ()
@@ -278,19 +278,19 @@ a n d ((()))")
                 (yield pb)
                 (yield b3-bv)
                 (yield pc)
-                (yield #f)))
+                (yield #F)))
            get-bytevector-all)
          => (bytevector-append b1-bv b0-bv b1-bv b1-bv b2-bv b3-bv b3-bv))
   (for-each close-port (list pa pb pc)))
 ;;;; closing before finished closes all component ports
-(let ([pa (open-file-input-port b5-fn)]
-      [pb (open-file-input-port b0-fn)]
-      [pc (open-file-input-port b2-fn)]
-      [pd (open-file-input-port b3-fn)])
+(let ((pa (open-file-input-port b5-fn))
+      (pb (open-file-input-port b0-fn))
+      (pc (open-file-input-port b2-fn))
+      (pd (open-file-input-port b3-fn)))
   (check (call-with-port
              (open-binary-compound-input-port 
                (coroutine () 
-                 (for-each yield (list pa b1-bv pb pc b4-bv b5-bv pd #f))))
+                 (for-each yield (list pa b1-bv pb pc b4-bv b5-bv pd #F))))
            (lambda (bcip)
              (begin0
                (get-u8 bcip)
@@ -347,12 +347,12 @@ a n d ((()))")
       (open-textual-compound-input-port (lambda () 'oops))
     get-char))
 ;;;; initially empty
-(let ([tcip (open-textual-compound-input-port '())])
-  (check (eof-object? (get-char tcip)) => #t)
+(let ((tcip (open-textual-compound-input-port '())))
+  (check (eof-object? (get-char tcip)) => #T)
   (close-port tcip)
   (check-ex (get-char tcip)))
-(let ([tcip (open-textual-compound-input-port (lambda () #f))])
-  (check (eof-object? (get-char tcip)) => #t)
+(let ((tcip (open-textual-compound-input-port (lambda () #F))))
+  (check (eof-object? (get-char tcip)) => #T)
   (close-port tcip)
   (check-ex (get-char tcip)))
 ;;;; single component
@@ -369,24 +369,24 @@ a n d ((()))")
             (open-textual-compound-input-port 
               (coroutine ()
                 (yield t2-str)
-                (yield #f)))
+                (yield #F)))
           get-string-all))
-       => #t)
+       => #T)
 (check (eof-object?
         (call-with-port
             (open-textual-compound-input-port 
               (coroutine ()
                 (yield b1-bv)
-                (yield #f)))
+                (yield #F)))
           get-string-all))
-       => #t)
+       => #T)
 (call-with-port (open-input-file t2-fn)
   (lambda (p)
     (check (eof-object?
             (call-with-port
                 (open-textual-compound-input-port (list p))
               get-string-all))
-           => #t)))
+           => #T)))
 (call-with-port (open-file-input-port b2-fn)
   (lambda (p)
     (check (call-with-port
@@ -397,22 +397,22 @@ a n d ((()))")
   (lambda (p)
     (check (call-with-port
                (open-textual-compound-input-port 
-                 (let ([v p]) 
+                 (let ((v p)) 
                    (lambda ()
                      (begin0
                        v
-                       (set! v #f)))))
+                       (set! v #F)))))
              get-string-all)
            => t3-str)))
 (call-with-port (open-file-input-port b3-fn)
   (lambda (p)
     (check (call-with-port
                (open-textual-compound-input-port 
-                 (let ([v p]) 
+                 (let ((v p)) 
                    (lambda ()
                      (begin0
                        v
-                       (set! v #f)))))
+                       (set! v #F)))))
              get-string-all)
            => b3-str)))
 ;;;; two components
@@ -429,7 +429,7 @@ a n d ((()))")
              (coroutine ()
                (yield t1-str)
                (yield b0-bv)
-               (yield #f)))
+               (yield #F)))
          get-string-all)
        => (string-append t1-str b0-str))
 (check (call-with-port
@@ -437,7 +437,7 @@ a n d ((()))")
              (coroutine ()
                (yield b1-bv)
                (yield t0-str)
-               (yield #f)))
+               (yield #F)))
          get-string-all)
        => (string-append b1-str t0-str))
 (call-with-port (open-input-file t2-fn)
@@ -462,7 +462,7 @@ a n d ((()))")
       (lambda (pb)
         (check (call-with-port
                    (open-textual-compound-input-port 
-                    (let ([v (list pa pb #f)])
+                    (let ((v (list pa pb #F)))
                       (lambda ()
                         (begin0
                           (car v)
@@ -475,7 +475,7 @@ a n d ((()))")
       (lambda (pb)
         (check (call-with-port
                    (open-textual-compound-input-port 
-                    (let ([v (list pa pb #f)])
+                    (let ((v (list pa pb #F)))
                       (lambda ()
                         (begin0
                           (car v)
@@ -497,25 +497,25 @@ a n d ((()))")
                (yield b4-bv)
                (yield b3-bv)
                (yield t2-str)
-               (yield #f)))
+               (yield #F)))
          get-string-all)
        => (string-append t1-str b0-str t0-str b1-str b4-str b3-str t2-str))
-(let ([ps (map (lambda (fn t)
+(let ((ps (map (lambda (fn t)
                  ((if t open-input-file open-file-input-port) fn)) 
                (list t4-fn t2-fn b3-fn t1-fn b0-fn b5-fn t5-fn b3-fn)
-               '(    #t    #t    #f    #t    #f    #f    #t    #f))])
+               '(    #T    #T    #F    #T    #F    #F    #T    #F))))
   (check (call-with-port
              (open-textual-compound-input-port ps)
            get-string-all)
          => (string-append t4-str t2-str b3-str t1-str b0-str b5-str t5-str b3-str))
   (for-each close-port ps))
-(let ([ps (map (lambda (fn t)
+(let ((ps (map (lambda (fn t)
                  ((if t open-input-file open-file-input-port) fn)) 
                (list b3-fn b3-fn t5-fn b1-fn b0-fn t3-fn t4-fn t2-fn)
-               '(    #f    #f    #t    #f    #f    #t    #t    #t))])
+               '(    #F    #F    #T    #F    #F    #T    #T    #T))))
   (check (call-with-port
              (open-textual-compound-input-port
-              (let ([v (append ps '(#f))])
+              (let ((v (append ps '(#F))))
                 (lambda ()
                   (begin0 
                     (car v)
@@ -524,17 +524,17 @@ a n d ((()))")
          => (string-append b3-str b3-str t5-str b1-str b0-str t3-str t4-str t2-str))
   (for-each close-port ps))
 ;;;; mixed strings, bytevectors, textual input ports, and binary input ports
-(let ([pa (open-input-file t5-fn)]
-      [pb (open-file-input-port b0-fn)]
-      [pc (open-input-file t2-fn)])
+(let ((pa (open-input-file t5-fn))
+      (pb (open-file-input-port b0-fn))
+      (pc (open-input-file t2-fn)))
   (check (call-with-port
              (open-textual-compound-input-port (list pa b1-bv pb pc t4-str b5-bv))
            get-string-all)
          => (string-append t5-str b1-str b0-str t2-str t4-str b5-str))
   (for-each close-port (list pa pb pc)))
-(let ([pa (open-file-input-port b1-fn)]
-      [pb (open-input-file t2-fn)]
-      [pc (open-file-input-port b3-fn)])
+(let ((pa (open-file-input-port b1-fn))
+      (pb (open-input-file t2-fn))
+      (pc (open-file-input-port b3-fn)))
   (check (call-with-port
              (open-textual-compound-input-port 
               (coroutine ()
@@ -545,19 +545,19 @@ a n d ((()))")
                 (yield pb)
                 (yield t3-str)
                 (yield pc)
-                (yield #f)))
+                (yield #F)))
            get-string-all)
          => (string-append b1-str b0-str b1-str t1-str t2-str t3-str b3-str))
   (for-each close-port (list pa pb pc)))
 ;;;; closing before finished closes all component ports
-(let ([pa (open-input-file t5-fn)]
-      [pb (open-file-input-port b0-fn)]
-      [pc (open-input-file t2-fn)]
-      [pd (open-file-input-port b3-fn)])
+(let ((pa (open-input-file t5-fn))
+      (pb (open-file-input-port b0-fn))
+      (pc (open-input-file t2-fn))
+      (pd (open-file-input-port b3-fn)))
   (check (call-with-port
              (open-textual-compound-input-port 
                (coroutine () 
-                 (for-each yield (list pa b1-bv pb pc t4-str t5-str pd #f))))
+                 (for-each yield (list pa b1-bv pb pc t4-str t5-str pd #F))))
            (lambda (tcip)
              (begin0
                (get-char tcip)

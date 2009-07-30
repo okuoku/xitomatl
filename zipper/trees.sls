@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl zipper trees)
   (export 
     zip-iterate/df 
@@ -22,20 +22,20 @@
   
   
   (define (depth-first proc tree)
-    (let ([x (proc tree)])
+    (let ((x (proc tree)))
       (cond
-        [(not (eq? x :zip-keep-val:)) x]
+        ((not (eq? x :zip-keep-val:)) x)
         ; the node was not handled -- descend
-        [(null? tree) '()]
-        [(not (pair? tree)) tree] ; an atom
-        [else
-         (let ([t (map/left-right/preserving (lambda (kid) (depth-first proc kid)) 
-                                             tree)])
-           (if (eq? t tree) tree t))])))
+        ((null? tree) '())
+        ((not (pair? tree)) tree) ; an atom
+        (else
+         (let ((t (map/left-right/preserving (lambda (kid) (depth-first proc kid)) 
+                                             tree)))
+           (if (eq? t tree) tree t))))))
   
   (define _zip-iterate/df (make-zip-iterator depth-first))
-  (define/? (zip-iterate/df [l list?]) (_zip-iterate/df l))
+  (define/? (zip-iterate/df (l list?)) (_zip-iterate/df l))
   
-  (define/? (zip-to-nth/df [l list?] [n exact-non-negative-integer?]) 
+  (define/? (zip-to-nth/df (l list?) (n exact-non-negative-integer?)) 
     (zip-n (_zip-iterate/df l) n))  
 )

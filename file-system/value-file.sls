@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl file-system value-file)
   (export
     value-file? value-file-path make-value-file value-file=?
@@ -51,58 +51,58 @@
   
   (define delete-value-file 
     (case-lambda
-      [(vf)
-       (delete-file (value-file-path vf))]
-      [(vd vf)
-       (delete-file (path-join (value-directory-path vd) (value-file-path vf)))]))
+      ((vf)
+       (delete-file (value-file-path vf)))
+      ((vd vf)
+       (delete-file (path-join (value-directory-path vd) (value-file-path vf))))))
   
   (define (delete-value-directory vd)
     (delete-any (value-directory-path vd)))
   
   (define value-file-ref 
     (case-lambda
-      [(vf) 
-       (call-with-input-file (value-file-path vf) read)]
-      [(vd vf) 
+      ((vf) 
+       (call-with-input-file (value-file-path vf) read))
+      ((vd vf) 
        (call-with-input-file 
          (path-join (value-directory-path vd) (value-file-path vf))
-         read)]))
+         read))))
   
   #;(define/AV (value-directory-ref vd)
-    (let ([d (value-directory-path vd)])
+    (let ((d (value-directory-path vd)))
       (map (lambda (p)
-             (let ([fp (path-join d p)])
-               (cond [(file-regular? fp #f)
+             (let ((fp (path-join d p)))
+               (cond ((file-regular? fp #F)
                       (cons (make-value-file p) 
-                            (call-with-input-file fp read))]
-                     [(file-directory? fp #f)
+                            (call-with-input-file fp read)))
+                     ((file-directory? fp #F)
                       (cons (make-value-directory p) 
-                            (value-directory-ref fp))]
-                     [else (AV "not a file or directory" fp)])))
+                            (value-directory-ref fp)))
+                     (else (AV "not a file or directory" fp)))))
            (directory-list d))))
   
   (define/AV (value-directory-list vd)
-    (let ([d (value-directory-path vd)])
+    (let ((d (value-directory-path vd)))
       (map (lambda (p)
-             (let ([fp (path-join d p)])
-               (cond [(file-regular? fp #f) (make-value-file p)]
-                     [(file-directory? fp #f) (make-value-directory p)]
-                     [else (AV "not a file or directory" fp)])))
+             (let ((fp (path-join d p)))
+               (cond ((file-regular? fp #F) (make-value-file p))
+                     ((file-directory? fp #F) (make-value-directory p))
+                     (else (AV "not a file or directory" fp)))))
            (directory-list d))))
   
   (define value-file-set! 
-    (let ([%value-file-set! (lambda (fn v)
-                              (when (file-exists? fn #f)
+    (let ((%value-file-set! (lambda (fn v)
+                              (when (file-exists? fn #F)
                                 (delete-any fn))
                               (call-with-port (OFOP fn)
-                                (lambda (fop) (write v fop))))])
+                                (lambda (fop) (write v fop))))))
       (case-lambda
-        [(vf v) 
-         (%value-file-set! (value-file-path vf) v)]
-        [(vd vf v)
+        ((vf v) 
+         (%value-file-set! (value-file-path vf) v))
+        ((vd vf v)
          (%value-file-set! 
           (path-join (value-directory-path vd) (value-file-path vf))
-          v)])))
+          v)))))
 
   (define/AV (value-directory-set! vd l)
     ;; Any duplicate path-names in l will overwrite each other, 
@@ -111,20 +111,20 @@
       (make-directory d)
       (for-each 
         (lambda (x)
-          (let ([v (car x)])
+          (let ((v (car x)))
             (cond 
-              [(value-file? v)
-               (value-file-set! (path-join d (value-file-path v)) (cdr x))]
-              [(value-directory? v)
+              ((value-file? v)
+               (value-file-set! (path-join d (value-file-path v)) (cdr x)))
+              ((value-directory? v)
                (%value-directory-set! (path-join d (value-directory-path v))
-                                      (cdr x))])))
+                                      (cdr x))))))
         l))
     (define (check l)
       (and (list? l)
            (for-all 
             (lambda (x)
               (and (pair? x)
-                   (let ([v (car x)])
+                   (let ((v (car x)))
                      (or (and (value-file? v)
                               #;(relative-path? (_value-file-path v)))
                          (and (value-directory? v)
@@ -135,8 +135,8 @@
       (AV "not a valid association list of value-file or value-directory" l))
     ;; The above check of l must happen first to ensure no modification of the
     ;; file-system happens if l is invalid.
-    (let ([d (value-directory-path vd)])
-      (when (file-exists? d #f)
+    (let ((d (value-directory-path vd)))
+      (when (file-exists? d #F)
         (delete-any d))
       (%value-directory-set! d l)))
     

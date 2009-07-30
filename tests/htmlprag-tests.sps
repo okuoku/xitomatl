@@ -1,3 +1,4 @@
+#!r6rs
 ;;; @Package     HtmlPrag
 ;;; @Subtitle    Pragmatic Parsing and Emitting of HTML using SXML and SHTML
 ;;; @HomePage    http://www.neilvandyke.org/htmlprag/
@@ -20,7 +21,6 @@
 ;;; other license options and consulting, contact the author.
 ;;; @end legal
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl htmlprag (0 16))

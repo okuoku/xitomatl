@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl common)
   (export
     add1 sub1
@@ -24,8 +24,8 @@
       (thunk)))
   
   (define (with-output-to-string thunk)
-    (let-values ([(sop get) (open-string-output-port)])
-      (parameterize ([current-output-port sop])
+    (let-values (((sop get) (open-string-output-port)))
+      (parameterize ((current-output-port sop))
         (thunk))
       (get)))
 )

@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (except (rnrs) file-exists? delete-file)
   (srfi :78 lightweight-testing)
@@ -15,59 +15,59 @@
 
 (define-syntax check-values
   (syntax-rules (=>)
-    [(_ expr => vals ...)
-     (check (let-values ([v expr]) v) => (list vals ...))]))
+    ((_ expr => vals ...)
+     (check (let-values ((v expr)) v) => (list vals ...)))))
 
 ;; datum-find-enumerator -- ports
 
 (check (fold/enumerator
-        (datum-find-enumerator (lambda _ (assert #f)))
+        (datum-find-enumerator (lambda _ (assert #F)))
         (open-string-input-port "")
-        (lambda _ (assert #f))
+        (lambda _ (assert #F))
         'nothing)
        => 'nothing)
 (check-values (fold/enumerator
-               (datum-find-enumerator (lambda (_) #t))
+               (datum-find-enumerator (lambda (_) #T))
                (open-string-input-port "symbol\"string\"#\\c 123")
                (lambda (d a i) 
-                 (values #t (cons d a) (+ 1 i)))
+                 (values #T (cons d a) (+ 1 i)))
                '() 0)
               => '(123 #\c "string" symbol) 4)
 (check-values (fold/enumerator
                (datum-find-enumerator char?)
                (open-string-input-port "symbol\"string\"#\\c 123")
                (lambda (d a i) 
-                 (values #t (cons d a) (+ 1 i)))
+                 (values #T (cons d a) (+ 1 i)))
                '() 0)
               => '(#\c) 1)
 (check (fold/enumerator
-        (datum-find-enumerator (lambda (_) #t))
+        (datum-find-enumerator (lambda (_) #T))
         (open-string-input-port "symbol\"string\"#\\c 123")
         (lambda (d i) 
           (if (< i 2)
-            (values #t (+ 1 i))
-            (values #f d)))
+            (values #T (+ 1 i))
+            (values #F d)))
         0)
        => #\c)
 (check (fold/enumerator
         (datum-find-enumerator (matches? (_ _ ...)))
         (open-string-input-port "(foo () (bar (baz)) 1 zab)")
         (lambda (d a) 
-          (values #t (cons d a)))
+          (values #T (cons d a)))
         '())
        => '((baz) (bar (baz)) (foo () (bar (baz)) 1 zab)))
 (check (fold/enumerator
         (datum-find-enumerator (matches? ()))
         (open-string-input-port "(foo () (bar (baz)) 1 zab)")
         (lambda (d a) 
-          (values #t (cons d a)))
+          (values #T (cons d a)))
         '())
        => '(()))
 (check (fold/enumerator
         (datum-find-enumerator (matches? (_ (... 1) . (:not (:or (_ . _) ())))))
         (open-string-input-port "(foo (oof . 3) (bar (baz) . 2) 1 zab)")
         (lambda (d a) 
-          (values #t (cons d a)))
+          (values #T (cons d a)))
         '())
        => '((bar (baz) . 2) (oof . 3)))
 (check (fold/enumerator
@@ -75,19 +75,19 @@
         (open-string-input-port 
          "#((\"foooo\") \"foobar\" #(1 (2 . #(#(#(\"fozab\") 3)))))")
         (lambda (d a) 
-          (values #t (cons d a)))
+          (values #T (cons d a)))
         '())
        => '("fozab" "foobar"))
-(check (let ([raised 0])
+(check (let ((raised 0))
          (check (with-exception-handler
                   (lambda (ex) 
                     (set! raised (+ 1 raised))
                     (reraise ex))
                   (lambda ()
                     (fold/enumerator
-                     (datum-find-enumerator (lambda (_) #t) #t)
+                     (datum-find-enumerator (lambda (_) #T) #T)
                      (open-string-input-port "foo bar b\\az 1 2zab)")
-                     (lambda (d a) (values #t (cons d a)))
+                     (lambda (d a) (values #T (cons d a)))
                      '())))
                 => '(bar foo))
          raised)
@@ -108,7 +108,7 @@
 (change-mode "./d0/d2/f4" #o000) ;; cause open/read error
 (call-with-output-file "./d0/d2/f5" (lambda (fop) (write 'b fop)))
 (check
- (let ([raised 0])
+ (let ((raised 0))
    (check-values (with-exception-handler
                    (lambda (ex)
                      (when (and (who-condition? ex)
@@ -117,10 +117,10 @@
                      (reraise ex))
                    (lambda ()
                      (fold/enumerator
-                      (datum-find-enumerator (lambda (_) #t) #t)
+                      (datum-find-enumerator (lambda (_) #T) #T)
                       "./"
                       (lambda (d f all thises)
-                        (values #t (list-sort string<? (cons f all)) 
+                        (values #T (list-sort string<? (cons f all)) 
                                 (if (equal? d "this") (+ 1 thises) thises)))
                       '() 0)))
                  => '("./d0/d1/f3" "./d0/d2/f5" "./d0/f2" "./d0/f2" "./d0/f2"
@@ -132,12 +132,12 @@
 
 ;; datum-find 
 
-(let ([count 0])
+(let ((count 0))
   ((datum-find number?)
    (lambda (d) (set! count (+ 1 count)))
    (open-string-input-port "1 (#\\2 3) #(\"4\")"))
   (check count => 2))
-(let ([found '()])
+(let ((found '()))
   ((datum-find symbol?)
    (lambda (d f) (set! found (cons (list d f) found)))
    ".")
@@ -152,9 +152,9 @@
 
 ;; clean-up
 (change-mode "./d0/d2/f4" #o600)
-(let ([tests-dir (current-directory)])
+(let ((tests-dir (current-directory)))
   (current-directory "/tmp")
   (delete-any tests-dir)
-  (check (file-exists? tests-dir) => #f))
+  (check (file-exists? tests-dir) => #F))
 
 (check-report)

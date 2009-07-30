@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl IU-match macro-helpers)
   (export
     find-ids/prevent-auto-recur
@@ -13,8 +13,8 @@
     (rnrs))
   
   (define (problem form-stx kw-name-stx msg subform)
-    (syntax-violation #f msg
-      (syntax-case form-stx () [(_ ctxt . rest) #`(#,kw-name-stx . rest)])
+    (syntax-violation #F msg
+      (syntax-case form-stx () ((_ ctxt . rest) #`(#,kw-name-stx . rest)))
       subform))  
   
   (define (find-ids/prevent-auto-recur form-stx kw-name-stx pat)
@@ -24,41 +24,41 @@
     ;; Returns a list of the extracted syntax-object identifiers.
     (define-syntax self-recur
       (syntax-rules ()
-        [(_ x) (find-ids/prevent-auto-recur form-stx kw-name-stx x)]))
+        ((_ x) (find-ids/prevent-auto-recur form-stx kw-name-stx x))))
     (define (not-an-id x) 
       (problem form-stx kw-name-stx "not an identifier" x))
     (syntax-case pat (unquote)
-      [(unquote id/recur)
+      ((unquote id/recur)
        (if (identifier? #'id/recur)
          (list #'id/recur)
-         (not-an-id #'id/recur))]
-      [((unquote id/recur) . rest)
+         (not-an-id #'id/recur)))
+      (((unquote id/recur) . rest)
        (if (identifier? #'id/recur)
          (cons #'id/recur (self-recur #'rest))
-         (not-an-id #'id/recur))]
-      [(any . rest)
-       (append (self-recur #'any) (self-recur #'rest))]
-      [#((unquote id/recur) rest ...)
+         (not-an-id #'id/recur)))
+      ((any . rest)
+       (append (self-recur #'any) (self-recur #'rest)))
+      (#((unquote id/recur) rest ...)
        (if (identifier? #'id/recur)
          (cons #'id/recur (self-recur #'(rest ...)))
-         (not-an-id #'id/recur))]
-      [#(any rest ...)
-       (append (self-recur #'any) (self-recur #'(rest ...)))]
-      [atom '()]))
+         (not-an-id #'id/recur)))
+      (#(any rest ...)
+       (append (self-recur #'any) (self-recur #'(rest ...))))
+      (atom '())))
   
   (define (check-ids/prevent-dups-across form-stx kw-name-stx pat*)
     ;; Extracts all pattern variable identifiers in the supplied pattern syntaxes and
     ;; prevents attempted uses of match's auto-recursion, using find-ids/prevent-auto-recur,
     ;; and prevents duplicate identifiers accross the patterns, while allowing 
     ;; duplicate identifiers in a single pattern.
-    ;; Returns #t if all checks pass.
+    ;; Returns #T if all checks pass.
     (define pat*-ids 
       (map (lambda (pat) (find-ids/prevent-auto-recur form-stx kw-name-stx pat)) pat*))
     (if (null? pat*-ids)
-      #t
-      (let loop ([first (car pat*-ids)] [others (cdr pat*-ids)])
+      #T
+      (let loop ((first (car pat*-ids)) (others (cdr pat*-ids)))
         (if (null? others)
-          #t
+          #T
           (begin
             (for-each 
               (lambda (fid)
@@ -77,9 +77,9 @@
     ;; Uses find-ids/prevent-auto-recur to prevent attempted use of match's 
     ;; auto-recursion, and allows duplicate pattern variable identifiers
     ;; across patterns.
-    ;; Returns #t if the checks pass.
+    ;; Returns #T if the checks pass.
     (for-each 
       (lambda (pat) (find-ids/prevent-auto-recur form-stx kw-name-stx pat))
       pat*)
-    #t)   
+    #T)   
 )

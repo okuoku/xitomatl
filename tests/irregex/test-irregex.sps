@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import 
   (rnrs)
   (only (rnrs r5rs) quotient)
@@ -28,7 +28,7 @@
 
 (define (sprintf fmt-str . args)
   (define (convert x)
-    (let loop ([l (string->list x)] [a '()])
+    (let loop ((l (string->list x)) (a '()))
       (if (null? l)
         (list->string (reverse a))
         (if (and (pair? (cdr l)) (char=? (car l) #\~))

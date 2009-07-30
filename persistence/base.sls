@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl persistence base)
   (export
     serialize-object-field deserialize-object-field
@@ -32,14 +32,14 @@
                  '(xitomatl persistence transcoded-serializing)))
   
   (define (serialize-object-field bd serializer id field x)
-    (let ([p (open-file-output-port (path-join bd objects-dir id field) (file-options no-fail))])
+    (let ((p (open-file-output-port (path-join bd objects-dir id field) (file-options no-fail))))
       (dynamic-wind
         values
         (lambda () (serializer x p) (values))
         (lambda () (close-port p)))))
   
   (define (deserialize-object-field bd deserializer id field)
-    (let ([p (open-file-input-port (path-join bd objects-dir id field))])
+    (let ((p (open-file-input-port (path-join bd objects-dir id field))))
       (dynamic-wind
         values
         (lambda () (deserializer p))
@@ -53,20 +53,20 @@
   
   (define (store-object-field bd id field x)
     ;; TODO: probably cache the serializer
-    (let* ([type-id (call-with-input-file (path-join bd objects-dir id type-field) read)]
-           [code (call-with-input-file (path-join bd objects-dir type-id
+    (let* ((type-id (call-with-input-file (path-join bd objects-dir id type-field) read))
+           (code (call-with-input-file (path-join bd objects-dir type-id
                                                   (string-append field serializer-postfix))
-                   read)]
-           [serializer (eval code serializing-source-code-environment)])
+                   read))
+           (serializer (eval code serializing-source-code-environment)))
       (serialize-object-field bd serializer id field x)))
   
   (define (load-object-field bd id field)
     ;; TODO: probably cache the deserializer
-    (let* ([type-id (call-with-input-file (path-join bd objects-dir id type-field) read)]
-           [code (call-with-input-file (path-join bd objects-dir type-id 
+    (let* ((type-id (call-with-input-file (path-join bd objects-dir id type-field) read))
+           (code (call-with-input-file (path-join bd objects-dir type-id 
                                                   (string-append field deserializer-postfix))
-                   read)]
-           [deserializer (eval code serializing-source-code-environment)])
+                   read))
+           (deserializer (eval code serializing-source-code-environment)))
       (deserialize-object-field bd deserializer id field)))
   
   (define (store-object bd id x)
@@ -76,16 +76,16 @@
     (load-object-field bd id all-field))
   
   (define (new-persistent-type bd fields/serializing-code)
-    (let* ([id (next-id bd)]
-           [td (path-join bd objects-dir id)])
+    (let* ((id (next-id bd))
+           (td (path-join bd objects-dir id)))
       (make-directory td)
       (call-with-output-file (path-join td type-field)
         (lambda (fop) (write type-of-types-id fop)))
       (for-each 
         (lambda (f.sc)
-          (let ([field (car f.sc)]
-                [serializer-code (cadr f.sc)]
-                [deserializer-code (caddr f.sc)])
+          (let ((field (car f.sc))
+                (serializer-code (cadr f.sc))
+                (deserializer-code (caddr f.sc)))
             (call-with-output-file (path-join td (string-append field serializer-postfix))
               (lambda (fop) (write serializer-code fop)))
             (call-with-output-file (path-join td (string-append field deserializer-postfix))
@@ -94,8 +94,8 @@
       id))
   
   (define (next-id bd)
-    (let* ([fn (path-join bd next-id-file)]
-           [nid (call-with-input-file fn read)])
+    (let* ((fn (path-join bd next-id-file))
+           (nid (call-with-input-file fn read)))
       (call-with-port (open-file-output-port fn (file-options no-create) 
                                              (buffer-mode block) (native-transcoder)) 
         (lambda (fop) (write (+ 1 nid) fop)))
@@ -109,8 +109,8 @@
       (lambda (fop) (write first-id fop))))
   
   (define (new-persistent-object bd type-id)
-    (let* ([id (next-id bd)]
-           [od (path-join bd objects-dir id)])
+    (let* ((id (next-id bd))
+           (od (path-join bd objects-dir id)))
       (make-directory od)
       (call-with-output-file (path-join od type-field)
         (lambda (fop) (write type-id fop)))

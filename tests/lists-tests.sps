@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl lists)
@@ -11,16 +11,16 @@
 
 (define-syntax check-AV
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else (assertion-violation? ex)])
+    ((_ expr)
+     (check (guard (ex (else (assertion-violation? ex)))
               expr
               'unexpected-return)
-            => #t)]))
+            => #T))))
 
 (define (make-L s e)
-  (do ([i (- e 1) (- i 1)]
-       [l '() (cons i l)]) 
-      [(< i s) l]))
+  (do ((i (- e 1) (- i 1))
+       (l '() (cons i l))) 
+      ((< i s) l)))
 
 (define L (make-L 0 #e1e5))
 (define L-len (length L))
@@ -102,11 +102,11 @@
 (check (last-pair '(1 2 3 4 5 6 7 8)) => '(8))
 (check-AV (last-pair '#(oops)))
 ;;;; map/left-right/preserving
-(let ([a '()] [l L])
+(let ((a '()) (l L))
   (map/left-right/preserving (lambda (i) (set! a (cons i a))) l)
   (check (reverse a) => l))
-(let ([x (string #\a)] [y (vector 'b)] [z (list 1)])
-  (let ([l (list x y z)])
+(let ((x (string #\a)) (y (vector 'b)) (z (list 1)))
+  (let ((l (list x y z)))
     (check (map/left-right/preserving values l) (=> eq?) l)))
 ;;;; map/filter
 (check (map/filter odd? L) => (filter values (map odd? L)))
@@ -128,7 +128,7 @@
 (check (remv-dups (list (list 1) 2 (list 1) 2 2 3 (list 1) #\c #\a #\c)) 
        => '((1) 2 (1) 3 (1) #\c #\a))
 ;;;; remq-dups
-(let ([x (string #\s)] [y (vector 'v)] [z (list 1)])
+(let ((x (string #\s)) (y (vector 'v)) (z (list 1)))
   (check (remq-dups (list "s" y x '(1) x z x z (vector 'v) y (string #\s)))
          => '("s" #(v) "s" (1) (1) #(v) "s")))
 ;;;; dup?

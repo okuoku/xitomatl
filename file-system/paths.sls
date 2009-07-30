@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -9,7 +10,6 @@
 ;;       Remove dir-sep-char and root-dir-str.
 ;;       Maybe more clean-up.
 
-#!r6rs
 (library (xitomatl file-system paths)
   (export
     dir-sep-char dir-sep-str root-dir-str
@@ -56,10 +56,10 @@
         r)))
   
   (define (_path-split p)
-    (string-split p dir-sep-str #f))
+    (string-split p dir-sep-str #F))
   
   (define (path-split p)
-    (let ([r (_path-split p)])
+    (let ((r (_path-split p)))
       (if (absolute-path? p)  ;; Windows version wouldn't do this, just return r
         (cons dir-sep-str r)
         r)))
@@ -70,8 +70,8 @@
   ;;--------------------------------------------------------------------------
 
   (cond-expand 
-    [posix]  ;; OK
-    [else (error "(library (xitomatl file-system paths))"
-                 "Only POSIX currently supported.")])
+    (posix)  ;; OK
+    (else (error "(library (xitomatl file-system paths))"
+                 "Only POSIX currently supported.")))
   
 )

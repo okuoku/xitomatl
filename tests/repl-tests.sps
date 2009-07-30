@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (only (rnrs eval) environment)
@@ -13,31 +13,31 @@
   (xitomatl repl))
 
 (define (string-repl in-str env)
-  (let ([in (open-string-input-port in-str)])
-    (let-values ([(out out-get) (open-string-output-port)]
-                 [(err err-get) (open-string-output-port)])
+  (let ((in (open-string-input-port in-str)))
+    (let-values (((out out-get) (open-string-output-port))
+                 ((err err-get) (open-string-output-port)))
       (repl in out err env)
       (values (out-get) (err-get)))))
 
 (define env (environment '(rnrs)))
 
 (define (_check-repl in out err)
-  (let-values ([(o e) (string-repl in env)])
-    (cond [(and (string? out) (string? err))
-           (check (list o e) => (list out err))]
-          [(and (string? out) (procedure? err))
-           (check (list o (err e)) => (list out #T))]          
-          [(and (procedure? out) (string? err))
-           (check (list (out o) e) => (list #T err))]                    
-          [(and (procedure? out) (procedure? err))
-           (check (list (out o) (err e)) => '(#T #T))]
-          [else (assert #F)])))
+  (let-values (((o e) (string-repl in env)))
+    (cond ((and (string? out) (string? err))
+           (check (list o e) => (list out err)))
+          ((and (string? out) (procedure? err))
+           (check (list o (err e)) => (list out #T)))          
+          ((and (procedure? out) (string? err))
+           (check (list (out o) e) => (list #T err)))                    
+          ((and (procedure? out) (procedure? err))
+           (check (list (out o) (err e)) => '(#T #T)))
+          (else (assert #F)))))
 
 (define-syntax check-repl
   (lambda (stx)
     (syntax-case stx (=>)
-      [(_ in => out err)
-       #'(_check-repl in out err)])))
+      ((_ in => out err)
+       #'(_check-repl in out err)))))
 
 (check-repl "(+ 1 2)"
             => "> 3\n> \n" "")
@@ -50,7 +50,7 @@
 (check-repl "'foo -oops 'bar"
             => "> foo\n> \n" (lambda (es) (string-end=? es "\nQuiting REPL.\n")))
 (check 
- (catch ex ([(assertion-violation? ex)])
+ (catch ex (((assertion-violation? ex)))
    (_check-repl "(begin (close-port (current-error-port)) (raise 'try-to-print))" "" ""))
  => #T)
 

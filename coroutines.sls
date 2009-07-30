@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl coroutines)
   (export
     make-coroutine
@@ -38,18 +38,18 @@
     make-coroutine-finished-condition coroutine-finished-condition?
     (coroutine condition-finished-coroutine))
   
-  (define/?/AV (make-coroutine [make-proc procedure?])
+  (define/?/AV (make-coroutine (make-proc procedure?))
     (letrec* 
-        ([yield 
+        ((yield 
           (lambda args
             (call/cc
               (lambda (k)
                 (set! resume k)
                 (return (lambda () 
-                          (set! return #f)
-                          (apply values args))))))]
-         [resume 
-          (let ([proc (make-proc yield)])
+                          (set! return #F)
+                          (apply values args)))))))
+         (resume 
+          (let ((proc (make-proc yield)))
             (unless (procedure? proc)
               (AV "make-proc did not return a procedure" proc))
             ;; The initial `resume' isn't actually resuming.  It's what starts
@@ -70,86 +70,86 @@
                   (call/cc
                    (lambda (k)
                      (return (lambda ()
-                               (let ([saved return])
-                                 (set! return #f)
-                                 (let-values ([vals (reraise ex)])
+                               (let ((saved return))
+                                 (set! return #F)
+                                 (let-values ((vals (reraise ex)))
                                    (set! return saved)
                                    (apply k vals))))))))
                 (lambda () (apply proc args)))
-              (let* ([cf (make-coroutine-finished-condition coroutine)]
-                     [rp/cf (lambda ()
-                              (set! return #f)
-                              (raise cf))])
+              (let* ((cf (make-coroutine-finished-condition coroutine))
+                     (rp/cf (lambda ()
+                              (set! return #F)
+                              (raise cf))))
                 ;; Set resume to this so that proc is not re-entered if the
                 ;; coroutine is invoked again after proc has returned.
                 (set! resume (lambda args (return rp/cf)))
                 ;; Raise in the dynamic environment of the current
                 ;; invocation of the coroutine.
-                (return rp/cf))))]
-         [return #f]
-         [coroutine
+                (return rp/cf)))))
+         (return #F)
+         (coroutine
           (lambda args
             (when return
               (assertion-violation 'coroutine 
                 "illegal recursive or concurrent call" coroutine))
-            (let ([return-proc (call/cc
+            (let ((return-proc (call/cc
                                  (lambda (k)
                                    (set! return k)
-                                   (apply resume args)))])
-              (return-proc)))])
+                                   (apply resume args)))))
+              (return-proc)))))
       coroutine))
   
   (define-syntax case-coroutine/lexical-context
     (lambda (stx)
       (syntax-case stx ()
-        [(_ ctxt [frmls b0 b ...] ...)
-         (with-syntax ([yield (datum->syntax #'ctxt 'yield)])
+        ((_ ctxt (frmls b0 b ...) ...)
+         (with-syntax ((yield (datum->syntax #'ctxt 'yield)))
            #'(make-coroutine
                (lambda (yield)
-                 (case-lambda [frmls b0 b ...] ...))))])))
+                 (case-lambda (frmls b0 b ...) ...))))))))
   
   ;; NOTE: Matching arguments and selecting a clause only happens
   ;;       the first time the coroutine is called.
   (define-syntax case-coroutine
     (lambda (stx)
       (syntax-case stx ()
-        [(ctxt [frmls b0 b ...] ...)
-         #'(case-coroutine/lexical-context ctxt [frmls b0 b ...] ...)])))
+        ((ctxt (frmls b0 b ...) ...)
+         #'(case-coroutine/lexical-context ctxt (frmls b0 b ...) ...)))))
   
   (define-syntax coroutine
     (lambda (stx)
       (syntax-case stx ()
-        [(ctxt frmls b0 b ...)
-         #'(case-coroutine/lexical-context ctxt [frmls b0 b ...])])))
+        ((ctxt frmls b0 b ...)
+         #'(case-coroutine/lexical-context ctxt (frmls b0 b ...))))))
   
   (define-syntax define-coroutine
     (lambda (stx)
       (syntax-case stx ()
-        [(_ (name . frmls) b0 b ...)
+        ((_ (name . frmls) b0 b ...)
          (identifier? #'name)
          #'(define name
-             (case-coroutine/lexical-context name [frmls b0 b ...]))])))
+             (case-coroutine/lexical-context name (frmls b0 b ...)))))))
 
 )
 
 #|
 (define-coroutine (g n)
-  (do ([i 0 (+ 1 i)])
-    [(= i n)
-     (display "g finished\n")]
+  (do ((i 0 (+ 1 i)))
+    ((= i n)
+     (display "g finished\n"))
     (set! i (apply yield (make-list i 'x)))))
 
 (define-syntax python-generator
   (lambda (stx)
     (syntax-case stx ()
-      [(ctxt frmls b0 b ...)
+      ((ctxt frmls b0 b ...)
        #'(lambda frmls
-           (case-coroutine/lexical-context ctxt [() b0 b ...]))])))
+           (case-coroutine/lexical-context ctxt (() b0 b ...)))))))
 
 (define-syntax define-python-generator
   (lambda (stx)
     (syntax-case stx ()
-      [(ctxt (name . frmls) b0 b...)
+      ((ctxt (name . frmls) b0 b...)
        #'(define (name . frmls)
-           (case-coroutine/lexical-context ctxt [() b0 b ...]))])))
+           (case-coroutine/lexical-context ctxt (() b0 b ...)))))))
 |#

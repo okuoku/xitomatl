@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl queue)  
   (export 
     queue?
@@ -27,16 +27,16 @@
     (make-queue '() '()))
   
   (define (enqueue! q e)
-    (let ([el (cons e '())])
-      (let ([qe (queue-end q)])
+    (let ((el (cons e '())))
+      (let ((qe (queue-end q)))
         (unless (null? qe) (set-cdr! qe el))
         (queue-end-set! q el)
         (when (null? (queue-head q)) (queue-head-set! q el)))))
   
   (define/AV (dequeue! q)
-    (let ([h (queue-head q)])
+    (let ((h (queue-head q)))
       (when (null? h) (AV "empty queue"))
-      (let ([rest (cdr h)])
+      (let ((rest (cdr h)))
         (queue-head-set! q rest)
         (when (null? rest) (queue-end-set! q '())))
       (car h)))
@@ -51,14 +51,14 @@
     (apply list (queue-head q)))
   
   (define (queue->list/reset q)
-    (let ([h (queue-head q)])
+    (let ((h (queue-head q)))
       (queue-head-set! q '())
       (queue-end-set! q '())
       h))
   
   (define/AV (check-queue q)
-    (let ([head (queue-head q)]
-          [end (queue-end q)])
+    (let ((head (queue-head q))
+          (end (queue-end q)))
       (if (null? head)
         (unless (null? end)
           (AV "head is null but end is not"))

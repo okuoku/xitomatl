@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl profiler meta)
   (export
     def--case-lambda/profiled def--lambda/profiled def--define/profiled
@@ -28,49 +28,49 @@
   
   (define-syntax def--case-lambda/profiled
     (syntax-rules ()
-      [(_ name make-profiled-proxy)
+      ((_ name make-profiled-proxy)
        (define-syntax name
          (syntax-rules ()
-           [(_ [formals . body] (... ...))
+           ((_ (formals . body) (... ...))
             (case-lambda/profiled--meta 
-             '(case-lambda [formals . body] (... ...))
+             '(case-lambda (formals . body) (... ...))
              make-profiled-proxy
-             [formals . body] (... ...))]))]))
+             (formals . body) (... ...))))))))
   
   (define-syntax def--lambda/profiled
     (syntax-rules ()
-      [(_ name make-profiled-proxy)
+      ((_ name make-profiled-proxy)
        (define-syntax name
          (syntax-rules ()
-           [(_ formals . body)
+           ((_ formals . body)
             (case-lambda/profiled--meta 
              '(lambda formals . body)
              make-profiled-proxy
-             [formals . body])]))]))
+             (formals . body))))))))
   
   (define-syntax def--define/profiled
     (syntax-rules ()
-      [(_ name make-profiled-proxy)
+      ((_ name make-profiled-proxy)
        (define-syntax name
          (lambda (stx)
            (syntax-case stx ()
-             [(_ (n . formals) . body)
+             ((_ (n . formals) . body)
               (identifier? #'n)
               #'(define n 
                   (case-lambda/profiled--meta 
                    '(define (n . formals) . body)
                    make-profiled-proxy
-                   [formals . body]))]
-             [(_ n expr)
+                   (formals . body))))
+             ((_ n expr)
               (identifier? #'n)
-              #'(define n expr)])))]))
+              #'(define n expr))))))))
   
   (define (make-make-profiled-proxy current-info info-add info-sub)
     (lambda (proc)
       (define (profiled-proxy . args)
-        (let ([enter-info-adj #f] [enter-info #f] [exit-info #f]
-              [call-info-adj #f] [call-info #f] [return-info #f]
-              [called (length args)] [returned #f])
+        (let ((enter-info-adj #F) (enter-info #F) (exit-info #F)
+              (call-info-adj #F) (call-info #F) (return-info #F)
+              (called (length args)) (returned #F))
           (dynamic-wind
            (lambda () 
              (set! enter-info-adj (current-info))
@@ -87,12 +87,12 @@
                 (apply values rv))))
            (lambda ()
              (set! exit-info (current-info))
-             (let-values ([(i adj) 
+             (let-values (((i adj) 
                            (if called 
                              (values call-info (info-sub call-info call-info-adj))
-                             (values enter-info (info-sub enter-info enter-info-adj)))])
-               (let ([start (info-add i adj)]
-                     [stop (info-sub (if returned return-info exit-info) adj)])
+                             (values enter-info (info-sub enter-info enter-info-adj)))))
+               (let ((start (info-add i adj))
+                     (stop (info-sub (if returned return-info exit-info) adj)))
                  (record-procedure-use profiled-proxy start stop called returned)))
              ;; Clean-up in case a continuation in proc was captured.
              (set! enter-info-adj #F)
@@ -107,11 +107,11 @@
   
   (define-syntax case-lambda/profiled--meta
     (syntax-rules ()
-      [(_ source-code make-profiled-proxy [formals . body] ...)
-       (let ([profiled-proxy
-              (make-profiled-proxy (case-lambda [formals . body] ...))])
+      ((_ source-code make-profiled-proxy (formals . body) ...)
+       (let ((profiled-proxy
+              (make-profiled-proxy (case-lambda (formals . body) ...))))
          (register-procedure profiled-proxy source-code)
-         profiled-proxy)]))
+         profiled-proxy))))
     
   (define-record-type profiled-procedure
     (fields proc-obj source-code (mutable uses)))
@@ -132,13 +132,13 @@
       (make-profiled-procedure proc source-code '())))
   
   (define (record-procedure-use proc start stop called returned)
-    (let ([pp (hashtable-ref (profiled-procedures-HT) proc #f)])
+    (let ((pp (hashtable-ref (profiled-procedures-HT) proc #F)))
       (profiled-procedure-uses-set! pp 
         (cons (make-procedure-use start stop called returned) 
               (profiled-procedure-uses pp)))))  
   
   (define (reset-recorded-uses)
-    (let-values ([(keys vals) (hashtable-entries (profiled-procedures-HT))])
+    (let-values (((keys vals) (hashtable-entries (profiled-procedures-HT))))
       (vector-for-each 
         (lambda (pp)
           (profiled-procedure-uses-set! pp '())) 

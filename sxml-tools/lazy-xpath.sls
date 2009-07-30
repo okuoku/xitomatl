@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl sxml-tools lazy-xpath (2008 06 27))
   (export
     lazy:or
@@ -122,8 +122,8 @@
 
   (define-syntax delay
     (syntax-rules ()
-      [(_ expr)
-       (make-lazy:promise (r5rs:delay expr))]))
+      ((_ expr)
+       (make-lazy:promise (r5rs:delay expr)))))
 
   (define (force p)
     (r5rs:force (lazy:promise-p p)))

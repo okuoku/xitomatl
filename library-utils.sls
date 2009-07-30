@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl library-utils)
   (export
     library-name-without-version
@@ -19,18 +19,18 @@
     (only (xitomatl predicates) list-of? exact-non-negative-integer?
                                 pairwise? symbol<?))
   
-  (define/? (library-name-without-version [name library-name?])
+  (define/? (library-name-without-version (name library-name?))
     (filter symbol? name))
 
-  (define/? (library-name-version [name library-name?])
-    (let ([last (list-ref name (- (length name) 1))])
+  (define/? (library-name-version (name library-name?))
+    (let ((last (list-ref name (- (length name) 1))))
       (and (list? last)
            last)))
  
   (define (library-name? x)
     (and (pair? x)
          (library-name-symbol? (car x))
-         (let loop ([x (cdr x)])
+         (let loop ((x (cdr x)))
            (if (pair? x)
              (if (library-name-symbol? (car x))
                (loop (cdr x))
@@ -46,7 +46,7 @@
 
   (define library-name<?
     (pairwise?
-     (letrec ([name<?
+     (letrec ((name<?
                (lambda (x y)
                  (if (pair? x)
                    (and (pair? y)
@@ -57,7 +57,7 @@
                                         (name<? (cdr x) (cdr y)))))
                           (or (symbol? (car y))
                               (library-version<? (car x) (car y)))))
-                   (pair? y)))])
+                   (pair? y)))))
        name<?)
      (lambda (x)
        (if (library-name? x)
@@ -66,14 +66,14 @@
 
   (define library-version<?
     (pairwise?
-     (letrec ([version<?
+     (letrec ((version<?
                (lambda (x y)
                  (if (pair? x)
                    (and (pair? y)
                         (or (< (car x) (car y))
                             (and (= (car x) (car y))
                                  (version<? (cdr x) (cdr y)))))
-                   (pair? y)))])
+                   (pair? y)))))
        version<?)
      (lambda (x)
        (if (library-version? x)

@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (srfi :78 lightweight-testing)
@@ -13,13 +13,13 @@
 
 (define-syntax check-values
   (syntax-rules (=>)
-    [(_ expr => vals ...)
-     (check (let-values ([v expr]) v) => (list vals ...))]))
+    ((_ expr => vals ...)
+     (check (let-values ((v expr)) v) => (list vals ...)))))
 
 (define clp0 
   (case-lambda/profiled
-     [(x) (values (+ x x) (- x))]
-     [(x y) (* x y)]))
+     ((x) (values (+ x x) (- x)))
+     ((x y) (* x y))))
 (define lp0
   (lambda/profiled a 
     (apply values (reverse a))))
@@ -40,7 +40,7 @@
 (check (dp0 'x 'y) => 'R)
 (check (call/cc dp0-k) => 'C)
 
-(let ([keys (vector->list (hashtable-keys (profiled-procedures-HT)))])
+(let ((keys (vector->list (hashtable-keys (profiled-procedures-HT)))))
   (check (and (memq clp0 keys) #T) => #T)
   (check (and (memq lp0 keys) #T) => #T)
   (check (and (memq dp0 keys) #T) => #T)
@@ -50,27 +50,27 @@
 
 (define-syntax check-pp
   (syntax-rules ()
-    [(_ p sc u cs rs)
-     (let ([pp (hashtable-ref (profiled-procedures-HT) p #F)])
-       (let ([proc-obj (profiled-procedure-proc-obj pp)]
-             [source-code (profiled-procedure-source-code pp)]
-             [uses (profiled-procedure-uses pp)])
+    ((_ p sc u cs rs)
+     (let ((pp (hashtable-ref (profiled-procedures-HT) p #F)))
+       (let ((proc-obj (profiled-procedure-proc-obj pp))
+             (source-code (profiled-procedure-source-code pp))
+             (uses (profiled-procedure-uses pp)))
          (check proc-obj (=> eq?) p)
          (check source-code => sc)
          (check (length uses) => u)
          (check (for-all procedure-use? uses) => #T)
-         (let ([starts (map procedure-use-start uses)]
-               [stops (map procedure-use-stop uses)]
-               [calleds (map procedure-use-called uses)]
-               [returneds (map procedure-use-returned uses)])
+         (let ((starts (map procedure-use-start uses))
+               (stops (map procedure-use-stop uses))
+               (calleds (map procedure-use-called uses))
+               (returneds (map procedure-use-returned uses)))
            (check (for-all time? starts) => #T)
            (check (for-all time? stops) => #T)
            (check calleds => cs)
-           (check returneds => rs))))]))
+           (check returneds => rs)))))))
 
 (check-pp clp0 '(case-lambda
-                  [(x) (values (+ x x) (- x))]
-                  [(x y) (* x y)])
+                  ((x) (values (+ x x) (- x)))
+                  ((x y) (* x y)))
           2 '(2 1) '(1 2))
 (check-pp lp0 '(lambda a 
                  (apply values (reverse a)))

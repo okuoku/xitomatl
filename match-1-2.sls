@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -38,8 +39,8 @@
 ;; (match-lambda* <clause> <clause> ...)
 ;; (match <expr> <clause> <clause> ...)
 ;; (matches? <pat>)
-;; (match-let ([<pat> <expr>] ...) <body>)
-;; (match-let* ([<pat> <expr>] ...) <body>)
+;; (match-let ((<pat> <expr>) ...) <body>)
+;; (match-let* ((<pat> <expr>) ...) <body>)
 ;; 
 ;; <clause> ::= (<pat> <expr>)
 ;;            | (<pat> <fender> <expr>)
@@ -83,7 +84,6 @@
 ;;                record type descriptor
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-#!r6rs
 (library (xitomatl match (1 2))
   (export
     match matches?
@@ -114,34 +114,34 @@
                        :regex :symbol :record :predicate ...))))
       (define (ooo-range-valid? ooo-stx)
         (syntax-case ooo-stx ()
-          [(min max)
-           (let ([min (syntax->datum #'min)]
-                 [max (syntax->datum #'max)])
+          ((min max)
+           (let ((min (syntax->datum #'min))
+                 (max (syntax->datum #'max)))
              (and (exact-non-negative-integer? min)
                   (or (not max)
                       (and (exact-positive-integer? max)
-                           (<= min max)))))]))
+                           (<= min max))))))))
       (define (ooo? ooo-stx)
         (syntax-case ooo-stx ()
-          [(ooo min)
+          ((ooo min)
            (and (identifier?/name=? #'ooo '...)
-                (ooo-range-valid? #'(min #f)))]
-          [(ooo min max)
+                (ooo-range-valid? #'(min #F))))
+          ((ooo min max)
            (and (identifier?/name=? #'ooo '...)
-                (ooo-range-valid? #'(min max)))]
-          [ooo
-           (identifier?/name=? #'ooo '...)]
-          [_ #f]))
+                (ooo-range-valid? #'(min max))))
+          (ooo
+           (identifier?/name=? #'ooo '...))
+          (_ #F)))
       (define (ooo-range ooo-stx)
         (syntax-case ooo-stx ()
-          [(_ min)     #'(min #f)]
-          [(_ min max) #'(min max)]
-          [_           #'(0 #f)]))
+          ((_ min)     #'(min #F))
+          ((_ min max) #'(min max))
+          (_           #'(0 #F))))
       ;; Used for :regex and :symbol
       (define (P-regex M-obj who irx pats make-indexer)
-        (with-syntax ([num-pats (length pats)]
-                      [(indexers ...) (map make-indexer (enumerate pats))]
-                      [((M V ...) ...) (map P pats)])
+        (with-syntax ((num-pats (length pats))
+                      ((indexers ...) (map make-indexer (enumerate pats)))
+                      (((M V ...) ...) (map P pats)))
           #`((let ((irx-c (irregex #,irx))
                    (l-idxrs (list indexers ...))
                    (l-m (list M ...)))
@@ -158,157 +158,157 @@
       (define (P pat-stx)
         (syntax-case pat-stx ()
           ;; empty list
-          [()
-           #'(M-null)]
+          (()
+           #'(M-null))
           ;; anything, ignore, don't bind
-          [underscore
+          (underscore
            (identifier?/name=? #'underscore '_)
-           #'(M-ignore)]
+           #'(M-ignore))
           ;; prevent misuse of pattern syntax keywords
-          [invalid
+          (invalid
            (keyword? #'invalid)
-           (syntax-violation 'match "misuse of pattern syntax" in-stx pat-stx)]
+           (syntax-violation 'match "misuse of pattern syntax" in-stx pat-stx))
           ;; anything, do bind
-          [var
+          (var
            (identifier? #'var)
            #'(M-variable
-              var)]
+              var))
           ;; quote'd datum
-          [(q datum)
+          ((q datum)
            (identifier?/name=? #'q 'quote)
-           #'((make-matcher M-datum (quote datum)))]
+           #'((make-matcher M-datum (quote datum))))
           ;; quasiquote'd datum
-          [(qq datum)
+          ((qq datum)
            (identifier?/name=? #'qq 'quasiquote)
            #'((let ((d (quasiquote datum)))
-                (make-matcher M-datum d)))]
+                (make-matcher M-datum d))))
           ;; and
-          [(:and pat ...)
+          ((:and pat ...)
            (identifier?/name=? #':and ':and)
-           (with-syntax ([((M V ...) ...) (map P #'(pat ...))])
+           (with-syntax ((((M V ...) ...) (map P #'(pat ...))))
              #'((let ((l-m (list M ...)))
                   (make-matcher M-and l-m))
-                V ... ...))]
+                V ... ...)))
           ;; or
-          [(:or pat ...)
+          ((:or pat ...)
            (identifier?/name=? #':or ':or)
-           (with-syntax ([((M V ...) ...) (map P #'(pat ...))])
-             (let ([Vs #'((V ...) ...)])
+           (with-syntax ((((M V ...) ...) (map P #'(pat ...))))
+             (let ((Vs #'((V ...) ...)))
                (when (positive? (length Vs))
-                 (unless (let ([syms (map syntax->datum (car Vs))])
+                 (unless (let ((syms (map syntax->datum (car Vs))))
                            (for-all (lambda (x)
                                       (equal? syms (map syntax->datum x)))
                                     (cdr Vs)))
                    (syntax-violation 'match ":or pattern variables mismatch"
                                      in-stx pat-stx)))
-               (with-syntax ([(V ...) (if (positive? (length Vs))
+               (with-syntax (((V ...) (if (positive? (length Vs))
                                         (car Vs)
-                                        '())])
+                                        '())))
                  #'((let ((l-m (list M ...)))
                       (make-matcher M-or l-m))
-                    V ...))))]
+                    V ...)))))
           ;; not
-          [(:not pat)
+          ((:not pat)
            (identifier?/name=? #':not ':not)
-           (with-syntax ([(M V ...) (P #'pat)])
+           (with-syntax (((M V ...) (P #'pat)))
              (when (positive? (length #'(V ...)))
                (syntax-violation 'match ":not pattern contains variables"
                                  in-stx pat-stx))
              #'((let ((m M))
-                  (make-matcher M-not m))))]
+                  (make-matcher M-not m)))))
           ;; string, according to IrRegex regular expression
-          [(:regex irx pat ...)
+          ((:regex irx pat ...)
            (identifier?/name=? #':regex ':regex)
            (P-regex #'M-irregex ":regex"
                     #'irx #'(pat ...)
                     (lambda (i)
-                      #`(lambda (m) (irregex-match-substring m #,(+ 1 i)))))]
+                      #`(lambda (m) (irregex-match-substring m #,(+ 1 i))))))
           ;; symbol, according to IrRegex regular expression
-          [(:symbol irx pat ...)
+          ((:symbol irx pat ...)
            (identifier?/name=? #':symbol ':symbol)
            (P-regex #'M-symbol ":symbol"
                     #'irx #'(pat ...)
                     (lambda (i)
                       #`(lambda (m)
                           (let ((s (irregex-match-substring m #,(+ 1 i))))
-                            (and s (string->symbol s))))))]
+                            (and s (string->symbol s)))))))
           ;; record
-          [(:record rtype pat ...)
+          ((:record rtype pat ...)
            (and (identifier?/name=? #':record ':record)
                 (or (identifier? #'rtype)
                     (syntax-case #'rtype () 
-                      [(RTD _) (identifier?/name=? #'RTD 'RTD) #t]
-                      [_ #f])))
-           (with-syntax ([rtd-expr 
+                      ((RTD _) (identifier?/name=? #'RTD 'RTD) #T)
+                      (_ #F))))
+           (with-syntax ((rtd-expr 
                           (syntax-case #'rtype () 
-                            [(_ x) #'x]
-                            [x #'(record-type-descriptor x)])]
-                         [num-pats (length #'(pat ...))]
-                         [((M V ...) ...) (map P #'(pat ...))])
+                            ((_ x) #'x)
+                            (x #'(record-type-descriptor x))))
+                         (num-pats (length #'(pat ...)))
+                         (((M V ...) ...) (map P #'(pat ...))))
              #'((let ((rtd rtd-expr)
                       (l-m (list M ...)))
                   (let ((pred (record-predicate rtd))
                         (accessors (record-type-accessors rtd)))
                     (check-record-patterns num-pats accessors)
                     (make-matcher M-record pred accessors l-m)))
-                V ... ...))]
+                V ... ...)))
           ;; arbitrary predicate
-          [(:predicate pred)
+          ((:predicate pred)
            (identifier?/name=? #':predicate ':predicate)
            #'((let ((p pred))
-                (make-matcher M-predicate p)))]
+                (make-matcher M-predicate p))))
           ;; multiple elements of, possibly empty, chain of pairs
-          [(pat ooo . pat-rest)
+          ((pat ooo . pat-rest)
            (ooo? #'ooo)
            (with-syntax 
-               ([(ooo-M ooo-V ...) (P #'pat)]
-                [(min max) (ooo-range #'ooo)]
-                [(rest-M rest-V ...) (P #'pat-rest)])
+               (((ooo-M ooo-V ...) (P #'pat))
+                ((min max) (ooo-range #'ooo))
+                ((rest-M rest-V ...) (P #'pat-rest)))
              #`((let ((m-ooo ooo-M)
                       (m-rest rest-M))
                   (make-matcher M-pair-chain 
                                 m-ooo min max 
                                 (quote #,(map (lambda (_) '()) #'(ooo-V ...)))
                                 m-rest))
-                ooo-V ... rest-V ...))]
+                ooo-V ... rest-V ...)))
           ;; prevent misuse of pattern syntax keywords
-          [(invalid . _)
+          ((invalid . _)
            (keyword? #'invalid)
-           (syntax-violation 'match "misuse of pattern syntax" in-stx pat-stx)]
+           (syntax-violation 'match "misuse of pattern syntax" in-stx pat-stx))
           ;; pair / list / improper list
-          [(pat-car . pat-cdr)
-           (with-syntax ([(car-M car-V ...) (P #'pat-car)]
-                         [(cdr-M cdr-V ...) (P #'pat-cdr)])
+          ((pat-car . pat-cdr)
+           (with-syntax (((car-M car-V ...) (P #'pat-car))
+                         ((cdr-M cdr-V ...) (P #'pat-cdr)))
              #'((let ((m-car car-M)
                       (m-cdr cdr-M))
                   (make-matcher M-pair m-car m-cdr))
-                car-V ... cdr-V ...))]
+                car-V ... cdr-V ...)))
           ;; multiple elements of vector
-          [#(pat ...)
-           (let scan ([pats #'(pat ...)] [preceded #f])
+          (#(pat ...)
+           (let scan ((pats #'(pat ...)) (preceded #F))
              (and (pair? pats)
                   (if (ooo? (car pats))
                     preceded
-                    (scan (cdr pats) #t))))
+                    (scan (cdr pats) #T))))
            (let-values 
-               ([(pats-preceding pat-ooo min max pats-rest)
-                 (let scan ([pats #'(pat ...)] 
-                            [preceding '()])
-                   (let ([x (car pats)])
+               (((pats-preceding pat-ooo min max pats-rest)
+                 (let scan ((pats #'(pat ...)) 
+                            (preceding '()))
+                   (let ((x (car pats)))
                      (if (ooo? x)
-                       (with-syntax ([(min max) (ooo-range x)])
+                       (with-syntax (((min max) (ooo-range x)))
                          (values (reverse (cdr preceding))
                                  (car preceding) #'min #'max
                                  (cdr pats)))
                        (scan (cdr pats)
-                             (cons x preceding)))))])
+                             (cons x preceding)))))))
              (with-syntax 
-                 ([p-len (length pats-preceding)]
-                  [((preceding-M preceding-V ...) ...) (map P pats-preceding)]
-                  [(ooo-M ooo-V ...) (P pat-ooo)]
-                  [(min max) (list min max)]
+                 ((p-len (length pats-preceding))
+                  (((preceding-M preceding-V ...) ...) (map P pats-preceding))
+                  ((ooo-M ooo-V ...) (P pat-ooo))
+                  ((min max) (list min max))
                   ;; NOTE: the rest is matched as a list
-                  [(rest-M rest-V ...) (P pats-rest)])
+                  ((rest-M rest-V ...) (P pats-rest)))
                #`((let ((l-m-preceding (list preceding-M ...))
                         (m-ooo ooo-M)
                         (m-rest rest-M))
@@ -317,56 +317,56 @@
                                   m-ooo min max 
                                   (quote #,(map (lambda (_) '()) #'(ooo-V ...)))
                                   m-rest))
-                  preceding-V ... ... ooo-V ... rest-V ...)))]
+                  preceding-V ... ... ooo-V ... rest-V ...))))
           ;; vector
-          [#(pat ...)
-           (with-syntax ([len (length #'(pat ...))]
-                         [((M V ...) ...) (map P #'(pat ...))])
+          (#(pat ...)
+           (with-syntax ((len (length #'(pat ...)))
+                         (((M V ...) ...) (map P #'(pat ...))))
              #'((let ((l-m (list M ...)))
                   (make-matcher M-vector len l-m))
-                V ... ...))]
+                V ... ...)))
           ;; self-quoting datum
-          [const
-           #'((make-matcher M-datum const))])) 
+          (const
+           #'((make-matcher M-datum const))))) 
       ;; start transforming
       (syntax-case in-stx () 
-        [(_ clause0 clause ...)
+        ((_ clause0 clause ...)
          (with-syntax 
-             ([((matcher fender-proc ... true-expr-proc) ...)
+             ((((matcher fender-proc ... true-expr-proc) ...)
                (map (lambda (c) 
                       (syntax-case c ()
-                        [(pattern fender ... true-expr)
+                        ((pattern fender ... true-expr)
                          (<= (length #'(fender ...)) 1)
                          (with-syntax 
-                             ([(M V ...) (P #'pattern)])
+                             (((M V ...) (P #'pattern)))
                            (unique-ids?/raise #'(V ...) in-stx)
                            #'(M 
                               (lambda (V ...) fender) ...
-                              (lambda (V ...) true-expr)))]
-                        [_ (syntax-violation 'match "invalid clause" in-stx c)]))
-                    #'(clause0 clause ...))]
-              [(m ...) (generate-temporaries #'(clause0 clause ...))])
+                              (lambda (V ...) true-expr))))
+                        (_ (syntax-violation 'match "invalid clause" in-stx c))))
+                    #'(clause0 clause ...)))
+              ((m ...) (generate-temporaries #'(clause0 clause ...))))
            ;; macro output
            #'(let ((m matcher) ...)
                (lambda (obj)
                  (cond
-                   [(do-matching m obj fender-proc ...)
-                    => (lambda (vars) (apply true-expr-proc vars))]
+                   ((do-matching m obj fender-proc ...)
+                    => (lambda (vars) (apply true-expr-proc vars)))
                    ...
-                   [else (failed-to-match obj)]))))])))
+                   (else (failed-to-match obj))))))))))
   
   (define-syntax do-matching
     (syntax-rules ()
-      [(_ matcher obj)
-       (let ([vars (matcher obj '())])
+      ((_ matcher obj)
+       (let ((vars (matcher obj '())))
          (and vars
-              (reverse vars)))]
-      [(_ matcher obj fender)
-       (let ([vars (matcher obj '())])
+              (reverse vars))))
+      ((_ matcher obj fender)
+       (let ((vars (matcher obj '())))
          (and vars
-              (let ([vars (reverse vars)])
+              (let ((vars (reverse vars)))
                 (and (apply fender vars)
-                     vars))))]))
+                     vars)))))))
 
   (define (AV msg . irrts)
     (apply assertion-violation 'match msg irrts))
@@ -389,9 +389,9 @@
   
   (define-syntax make-matcher
     (syntax-rules ()
-      [(_ M args ...)
+      ((_ M args ...)
        (lambda (obj vars)
-         (M obj vars args ...))]))
+         (M obj vars args ...)))))
   
   ;; `vars' in the below matchers is a list of the pattern variables' values,
   ;; in the reverse order the values are extracted when destructuring, i.e.,
@@ -429,7 +429,7 @@
   
   (define (M-not obj vars matcher)
     (if (matcher obj '())
-      #f
+      #F
       vars))
   
   (define (do-sub-matching obj procs matchers vars)
@@ -441,7 +441,7 @@
   
   (define (M-irregex obj vars irx indexers matchers)
     (and (string? obj)
-         (let ([m (irregex-match irx obj)])
+         (let ((m (irregex-match irx obj)))
            (and m
                 (do-sub-matching m indexers matchers vars)))))
   
@@ -461,7 +461,7 @@
   
   (define (M-pair obj vars car-matcher cdr-matcher)
     (and (pair? obj)
-         (let ([vars (car-matcher (car obj) vars)])
+         (let ((vars (car-matcher (car obj) vars)))
            (and vars
                 (cdr-matcher (cdr obj) vars)))))
 
@@ -491,20 +491,20 @@
     ;; space used by the reversed chain list, and that solution does not 
     ;; return as a tail-return because it must test each recursive call's 
     ;; return value, which costs significantly more time.
-    (let match-last ([rev (let reverse-chain ([obj obj] [rev '()])
+    (let match-last ((rev (let reverse-chain ((obj obj) (rev '()))
                             (if (pair? obj)
                               (reverse-chain (cdr obj) (cons obj rev))
-                              (cons obj rev)))])
+                              (cons obj rev)))))
       (and (pair? rev)
-           (let ([rest-vars (rest-matcher (car rev) '())])
+           (let ((rest-vars (rest-matcher (car rev) '())))
              (if rest-vars
-               (let match-ooo ([rev (cdr rev)]
-                               [accum-ooo-vars empty-ooo-vars]
-                               [count 0])
+               (let match-ooo ((rev (cdr rev))
+                               (accum-ooo-vars empty-ooo-vars)
+                               (count 0))
                  (if (pair? rev)
                    (and (or (not max) 
                             (< count max))
-                        (let ([ooo-vars (ooo-matcher (caar rev) '())])
+                        (let ((ooo-vars (ooo-matcher (caar rev) '())))
                           (and ooo-vars
                                (match-ooo (cdr rev)
                                           (map cons ooo-vars accum-ooo-vars)
@@ -521,22 +521,22 @@
                         empty-ooo-vars
                         rest-matcher)
     (and (vector? obj)
-         (let ([obj-len (vector-length obj)])
+         (let ((obj-len (vector-length obj)))
            (and (>= obj-len p-len)
-                (let ([vars (do-match-vector obj 0 preceding-matchers vars)])
+                (let ((vars (do-match-vector obj 0 preceding-matchers vars)))
                   (and vars
-                       (let match-last ([last '()] 
-                                        [y (- obj-len 1)])
-                         (let ([rest-vars (rest-matcher last '())])
+                       (let match-last ((last '()) 
+                                        (y (- obj-len 1)))
+                         (let ((rest-vars (rest-matcher last '())))
                            (if rest-vars
-                             (let match-ooo ([x y]
-                                             [accum-ooo-vars empty-ooo-vars]
-                                             [count 0])
+                             (let match-ooo ((x y)
+                                             (accum-ooo-vars empty-ooo-vars)
+                                             (count 0))
                                (if (>= x p-len)
                                  (and (or (not max) 
                                           (< count max))
-                                      (let ([ooo-vars
-                                             (ooo-matcher (vector-ref obj x) '())])
+                                      (let ((ooo-vars
+                                             (ooo-matcher (vector-ref obj x) '())))
                                         (and ooo-vars
                                              (match-ooo (- x 1)
                                                         (map cons ooo-vars accum-ooo-vars)
@@ -558,35 +558,35 @@
   
   (define-syntax matches?
     (syntax-rules ()
-      [(_ pattern)
-       (match-lambda [pattern #t] [_ #f])]))
+      ((_ pattern)
+       (match-lambda (pattern #T) (_ #F)))))
   
   (define-syntax match-lambda*
     (syntax-rules ()
-      [(_ clause ...)
+      ((_ clause ...)
        (let ((m (match-lambda clause ...)))
-         (lambda x (m x)))]))
+         (lambda x (m x))))))
   
   (define-syntax match-let
     (syntax-rules ()
-      [(_ () body0 body ...)
-       (let () body0 body ...)]
-      [(_ ([pat expr]) body0 body ...) 
+      ((_ () body0 body ...)
+       (let () body0 body ...))
+      ((_ ((pat expr)) body0 body ...) 
        (match expr
-         [pat
-          (let () body0 body ...)])]
-      [(_ ([pat expr] ...) body0 body ...) 
+         (pat
+          (let () body0 body ...))))
+      ((_ ((pat expr) ...) body0 body ...) 
        (match (vector expr ...) 
-         [#(pat ...) 
-          (let () body0 body ...)])]))
+         (#(pat ...) 
+          (let () body0 body ...))))))
   
   (define-syntax match-let*
     (syntax-rules ()
-      [(_ () body0 body ...)
-       (let () body0 body ...)]
-      [(_ ([pat0 expr0] [pat expr] ...) body0 body ...)
+      ((_ () body0 body ...)
+       (let () body0 body ...))
+      ((_ ((pat0 expr0) (pat expr) ...) body0 body ...)
        (match expr0 
-         [pat0 
-          (match-let* ([pat expr] ...) body0 body ...)])]))
+         (pat0 
+          (match-let* ((pat expr) ...) body0 body ...))))))
 
 )

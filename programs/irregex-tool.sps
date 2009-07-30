@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -9,7 +10,6 @@
 
 ;; TODO: Detect binary-type files and have option to skip.
 
-#!r6rs
 (import
   (rnrs)
   (srfi :39 parameters)
@@ -26,31 +26,31 @@
 (define port-chunk-size (make-parameter 1024))  ;; good size?
 
 (define interactive
-  (let ([prompt (lambda (str)
+  (let ((prompt (lambda (str)
                   (display str)
                   (flush-output-port (current-output-port))
-                  (get-line (current-input-port)))])
+                  (get-line (current-input-port)))))
     (case-lambda
-      [()
-       (let ([irx (prompt "\nEnter regex: ")])
+      (()
+       (let ((irx (prompt "\nEnter regex: ")))
          (newline)
          (unless (eof-object? irx)
-           (interactive irx)))]
-      [(irx)
+           (interactive irx))))
+      ((irx)
        (set! irx (irregex irx 'fast))
        (let loop ()
-         (let ([line (prompt "Enter line: ")])
+         (let ((line (prompt "Enter line: ")))
            (if (eof-object? line)
              (newline)
-             (let ([m (irregex-search irx line)])
+             (let ((m (irregex-search irx line)))
                (if m
-                 (let ([max (irregex-match-num-submatches m)])
-                   (let show ([n 0])
+                 (let ((max (irregex-match-num-submatches m)))
+                   (let show ((n 0))
                      (when (<= n max)
                        (printf "~a:\t~s\n" n (irregex-match-substring m n))
                        (show (+ 1 n)))))
                  (display "No match.\n"))
-               (loop)))))])))
+               (loop)))))))))
 
 (define (lines irx . files/dirs)
   (define (print-start/s-expr filename)
@@ -60,7 +60,7 @@
   (define (print-match/s-expr line line-num m)
     (define max (irregex-match-num-submatches m))
     (printf " (~s ~s" line-num line)
-    (let loop ([n 0])
+    (let loop ((n 0))
       (if (<= n max)
         (begin (printf "\n  (~s ~s ~s)" (irregex-match-substring m n)
                        (irregex-match-start-index m n) (irregex-match-end-index m n))
@@ -68,8 +68,8 @@
         (printf ")\n"))))
   (define-values (print-start print-end print-match)
     (case (format-mode)
-      [(s-expr)
-       (values print-start/s-expr print-end/s-expr print-match/s-expr)]))
+      ((s-expr)
+       (values print-start/s-expr print-end/s-expr print-match/s-expr))))
   (let ((last-file
          (fold/enumerator
           (lines-enumerator irx)
@@ -96,19 +96,19 @@
                    (e (counted-match-end-positions m n)))
         (printf fmt (irregex-match-substring m n) s e)))
     (define max (irregex-match-num-submatches m))
-    (let loop ([n 0])
-      (cond [(= n 0)
+    (let loop ((n 0))
+      (cond ((= n 0)
              (p " ((~s\n   ~s\n   ~s)" n)
-             (loop (+ 1 n))]
-            [(<= n max)
+             (loop (+ 1 n)))
+            ((<= n max)
              (p "\n  (~s\n   ~s\n   ~s)" n)
-             (loop (+ 1 n))]
-            [else
-             (printf ")\n")])))
+             (loop (+ 1 n)))
+            (else
+             (printf ")\n")))))
   (define-values (print-start print-end print-match)
     (case (format-mode)
-      [(s-expr)
-       (values print-start/s-expr print-end/s-expr print-match/s-expr)]))
+      ((s-expr)
+       (values print-start/s-expr print-end/s-expr print-match/s-expr))))
   (let ((last-file
          (fold/enumerator
           (single-enumerator irx (port-chunk-size))
@@ -137,21 +137,21 @@
   (d "                                    directories, or (current-input-port),\n")
   (d "                                    across lines, with . matching newline.\n")
   (d " If no command is supplied, interactive is used.\n")
-  (exit #f))
+  (exit #F))
 
 (define main
   (match-lambda
-    [(_)
-     (main '(#f "--interactive"))]
-    [(_ (:or "--interactive" "-i") args (... 0 1))
-     (apply interactive args)]
-    [(_ (:or "--lines" "-l") regex . args)
-     (apply lines regex args)]
-    [(_ (:or "--single" "-s") regex . args)
-     (apply single regex args)]
-    #;[(_ (:or "replace" "r") regex replacement . args)
-     (apply replace args)]
-    [_
-     (print-help/exit)]))
+    ((_)
+     (main '(#F "--interactive")))
+    ((_ (:or "--interactive" "-i") args (... 0 1))
+     (apply interactive args))
+    ((_ (:or "--lines" "-l") regex . args)
+     (apply lines regex args))
+    ((_ (:or "--single" "-s") regex . args)
+     (apply single regex args))
+    #;((_ (:or "replace" "r") regex replacement . args)
+     (apply replace args))
+    (_
+     (print-help/exit))))
 
 (main (command-line))

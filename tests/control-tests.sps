@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (rnrs eval)
@@ -18,15 +18,15 @@
 
 (define-syntax check-SV
   (syntax-rules ()
-    [(_ expr)
-     (check (catch ex ([else (syntax-violation? ex)])
+    ((_ expr)
+     (check (catch ex ((else (syntax-violation? ex)))
               (eval 'expr (environment '(rnrs) '(xitomatl control)))
               'unexpected-return)
-            => #T)]))
+            => #T))))
 
 ;;;; begin0
 
-(let ([x 1] [n 0])
+(let ((x 1) (n 0))
   (check (begin0 
            (begin (set! n (+ 1 n))
                   (- x))

@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl irregex extras)
   (export
     irregex-search/all irregex-search/all/strings
@@ -28,89 +28,89 @@
 
   (define-syntax assert
     (syntax-rules ()
-      [(_ expr) (rnrs:assert expr)]
-      #;[(_ expr) #f]))
+      ((_ expr) (rnrs:assert expr))
+      #;((_ expr) #F)))
 
   (define irregex-search/all
     (case-lambda
-      [(irx str)
-       (irregex-search/all irx str 0)]
-      [(irx str start)
-       (irregex-search/all irx str start (string-length str))]
-      [(irx str start end)
-       (irregex-search/all irx str start end values)]
-      [(irx str start end proc)
+      ((irx str)
+       (irregex-search/all irx str 0))
+      ((irx str start)
+       (irregex-search/all irx str start (string-length str)))
+      ((irx str start end)
+       (irregex-search/all irx str start end values))
+      ((irx str start end proc)
        (reverse
         (fold/enumerator (irregex-string-enumerator irx start end)
                          str
-                         (lambda (m a) (values #t (cons (proc m) a)))
-                         '()))]))
+                         (lambda (m a) (values #T (cons (proc m) a)))
+                         '())))))
 
   (define irregex-search/all/strings
     (case-lambda
-      [(irx str)
-       (irregex-search/all/strings irx str 0)]
-      [(irx str start)
-       (irregex-search/all/strings irx str start (string-length str))]
-      [(irx str start end)
-       (irregex-search/all irx str start end irregex-match-substring)]))
+      ((irx str)
+       (irregex-search/all/strings irx str 0))
+      ((irx str start)
+       (irregex-search/all/strings irx str start (string-length str)))
+      ((irx str start end)
+       (irregex-search/all irx str start end irregex-match-substring))))
 
   (define irregex-search/chunked/all
     (case-lambda
-      [(irx chunker chunk)
-       (irregex-search/chunked/all irx chunker chunk #f)]
-      [(irx chunker chunk lose-refs)
-       (irregex-search/chunked/all irx chunker chunk lose-refs values)]
-      [(irx chunker chunk lose-refs proc)
+      ((irx chunker chunk)
+       (irregex-search/chunked/all irx chunker chunk #F))
+      ((irx chunker chunk lose-refs)
+       (irregex-search/chunked/all irx chunker chunk lose-refs values))
+      ((irx chunker chunk lose-refs proc)
        (reverse
         (fold/enumerator (irregex-chunk-enumerator irx chunker lose-refs)
                          chunk
-                         (lambda (m a) (values #t (cons (proc m) a)))
-                         '()))]))
+                         (lambda (m a) (values #T (cons (proc m) a)))
+                         '())))))
 
   (define (irregex-search/chunked/all/strings irx chunker chunk)
     ;; NOTE: Don't need to supply a lose-refs because the match objects
     ;;       are immediately lost after given to irregex-match-substring.
-    (irregex-search/chunked/all irx chunker chunk #f irregex-match-substring))
+    (irregex-search/chunked/all irx chunker chunk #F irregex-match-substring))
 
   (define irregex-search-port/all
     (case-lambda
-      [(irx port)
-       (irregex-search-port/all irx port values)]
-      [(irx port proc)
-       (irregex-search-port/all irx port proc #f)]
-      [(irx port proc chunk-size)
+      ((irx port)
+       (irregex-search-port/all irx port values))
+      ((irx port proc)
+       (irregex-search-port/all irx port proc #F))
+      ((irx port proc chunk-size)
        (irregex-search/chunked/all irx (if chunk-size
                                          (make-port-chunker chunk-size)
                                          port-chunker)
                                    (port-chunking-make-initial-chunk port)
-                                   port-chunking-lose-refs proc)]))
+                                   port-chunking-lose-refs proc))))
 
   (define irregex-search-port/all/strings
     (case-lambda
-      [(irx port)
-       (irregex-search-port/all/strings irx port #f)]
-      [(irx port chunk-size)
+      ((irx port)
+       (irregex-search-port/all/strings irx port #F))
+      ((irx port chunk-size)
        (irregex-search/chunked/all/strings irx (if chunk-size
                                                  (make-port-chunker chunk-size)
                                                  port-chunker)
-                                           (port-chunking-make-initial-chunk port))]))
+                                           (port-chunking-make-initial-chunk port)))))
 
   ;;--------------------------------------------------------------------------
 
   (define/AV irregex-chunk-enumerator
     (case-lambda
-      [(irx chunker)
-       (irregex-chunk-enumerator irx chunker #f)]
-      [(irx chunker lose-refs)
-       (let ([irx-c (irregex irx)]
-             [get-start (chunker-get-start chunker)])
+      ((irx chunker)
+       (irregex-chunk-enumerator irx chunker #F))
+      ((irx chunker lose-refs)
+       (let ((irx-c (irregex irx))
+             (get-start (chunker-get-start chunker)))
          (lambda (chunk proc seeds)
-           (let loop ([chk chunk] [i (get-start chunk)] [seeds seeds])
-             (let ([m (irregex-search/chunked irx-c chunker chk i)])
+           (let loop ((chk chunk) (i (get-start chunk)) (seeds seeds))
+             (let ((m (irregex-search/chunked irx-c chunker chk i)))
                (if m
-                 (let ([end-chunk (irregex-match-end-source m 0)]
-                       [end-index (irregex-match-end-index m 0)])
+                 (let ((end-chunk (irregex-match-end-source m 0))
+                       (end-index (irregex-match-end-index m 0)))
                    (when lose-refs
                      ;; Losing possible reference(s) reachable from the match
                      ;; object to chunk(s) outside the match chunks is done to
@@ -123,46 +123,46 @@
                      ;; string pieces but not referring to chunks outside the
                      ;; match range.  The only thing mutated is the new match
                      ;; object which was made just for us.
-                     (let ([replacements
-                            (let loop ([n (irregex-match-num-submatches m)]
-                                       [submatch-chunks '()])
+                     (let ((replacements
+                            (let loop ((n (irregex-match-num-submatches m))
+                                       (submatch-chunks '()))
                               (if (negative? n)
                                 (lose-refs submatch-chunks)
                                 (loop (- n 1)
                                       (cons* (irregex-match-start-source m n)
                                              (irregex-match-end-source m n)
-                                             submatch-chunks))))])
+                                             submatch-chunks))))))
                        (assert (and (list? replacements)
-                                    (let ([l (length replacements)])
+                                    (let ((l (length replacements)))
                                       (and (>= l 2) (even? l)))))
-                       (let loop ([r replacements] [n 0])
+                       (let loop ((r replacements) (n 0))
                          (unless (null? r)
                            (irregex-match-start-source-set! m n (car r))
                            (irregex-match-end-source-set! m n (cadr r))
                            (loop (cddr r) (+ 1 n))))))
-                   (let-values ([(continue . next-seeds) (apply proc m seeds)])
+                   (let-values (((continue . next-seeds) (apply proc m seeds)))
                      (if continue
                        (if (or (not (eq? chk end-chunk))
                                (< i end-index))
                          (loop end-chunk end-index next-seeds)
                          (AV "pattern not advancing search" irx))
                        (apply values next-seeds))))
-                 (apply values seeds))))))]))
+                 (apply values seeds)))))))))
 
   (define irregex-string-enumerator
     (case-lambda
-      [(irx)
-       (irregex-string-enumerator irx 0)]
-      [(irx start)
-       (irregex-string-enumerator irx start #f)]
-      [(irx start end)
+      ((irx)
+       (irregex-string-enumerator irx 0))
+      ((irx start)
+       (irregex-string-enumerator irx start #F))
+      ((irx start end)
        (let ((ce (irregex-chunk-enumerator irx range-list-chunker)))
          (lambda (str proc seeds)
            (ce (list str start (or end (string-length str)))
-               proc seeds)))]))
+               proc seeds))))))
 
   (define (irregex-list-enumerator irx)
-    (let ([ce (irregex-chunk-enumerator irx list-chunker list-chunking-lose-refs)])
+    (let ((ce (irregex-chunk-enumerator irx list-chunker list-chunking-lose-refs)))
       (lambda (l proc seeds)
         (if (null? l)
           (apply values seeds)
@@ -170,27 +170,27 @@
 
   (define irregex-port-enumerator
     (case-lambda
-      [(irx)
-       (irregex-port-enumerator irx #f)]
-      [(irx chunk-size)
-       (let ([ce (irregex-chunk-enumerator irx (if chunk-size
+      ((irx)
+       (irregex-port-enumerator irx #F))
+      ((irx chunk-size)
+       (let ((ce (irregex-chunk-enumerator irx (if chunk-size
                                                  (make-port-chunker chunk-size)
                                                  port-chunker)
-                                           port-chunking-lose-refs)])
+                                           port-chunking-lose-refs)))
          (lambda (port proc seeds)
-           (ce (port-chunking-make-initial-chunk port) proc seeds)))]))
+           (ce (port-chunking-make-initial-chunk port) proc seeds))))))
 
   (define/AV (irregex-enumerator irx)
     (lambda (coll proc seeds)
       (cond
-        [(string? coll)
-         ((irregex-string-enumerator irx) coll proc seeds)]
-        [(list? coll)
-         ((irregex-list-enumerator irx) coll proc seeds)]
-        [(textual-input-port? coll)
-         ((irregex-port-enumerator irx) coll proc seeds)]
-        [else
-         (AV "invalid collection type" coll)])))
+        ((string? coll)
+         ((irregex-string-enumerator irx) coll proc seeds))
+        ((list? coll)
+         ((irregex-list-enumerator irx) coll proc seeds))
+        ((textual-input-port? coll)
+         ((irregex-port-enumerator irx) coll proc seeds))
+        (else
+         (AV "invalid collection type" coll)))))
 
   ;;--------------------------------------------------------------------------
 
@@ -202,20 +202,20 @@
          ;; submatch-chunks ::= (<submatch-0-start-chunk> <submatch-0-end-chunk>
          ;;                      <submatch-1-start-chunk> <submatch-1-end-chunk>
          ;;                      ...                      ...)
-         (let ([first (car submatch-chunks)]
-               [last (cadr submatch-chunks)])
-           (let* ([reversed-chain
-                   (let loop ([chain first] [rev '()])
+         (let ((first (car submatch-chunks))
+               (last (cadr submatch-chunks)))
+           (let* ((reversed-chain
+                   (let loop ((chain first) (rev '()))
                      (if (eq? chain last)
                        (cons chain rev)
-                       (loop (get-next chain) (cons chain rev))))]
-                  [correlated
-                   (let loop ([rev reversed-chain] [next #F] [alist '()])
+                       (loop (get-next chain) (cons chain rev)))))
+                  (correlated
+                   (let loop ((rev reversed-chain) (next #F) (alist '()))
                      (if (null? rev)
                        alist
-                       (let* ([o (car rev)]
-                              [nc (make-chunk o next)])
-                         (loop (cdr rev) nc (cons (cons o nc) alist)))))])
+                       (let* ((o (car rev))
+                              (nc (make-chunk o next)))
+                         (loop (cdr rev) nc (cons (cons o nc) alist)))))))
              (map (lambda (c) (and c (cdr (assq c correlated))))
                   submatch-chunks)))))))
 
@@ -247,12 +247,12 @@
 
   (define list-chunker
     (make-irregex-chunker
-     (letrec ([get-next (lambda (chunk)
-                          (let ([r (cdr chunk)])
+     (letrec ((get-next (lambda (chunk)
+                          (let ((r (cdr chunk)))
                             (and (pair? r)
                                  (if (string=? "" (car r))
                                    (get-next r)
-                                   r))))])
+                                   r))))))
        get-next)
      car))
 
@@ -264,12 +264,12 @@
 
   (define range-list-chunker
     (make-irregex-chunker
-     (letrec ([get-next (lambda (chunk)
-                          (let ([r (cdddr chunk)])
+     (letrec ((get-next (lambda (chunk)
+                          (let ((r (cdddr chunk)))
                             (and (pair? r)
                                  (if (string=? "" (car r))
                                    (get-next r)
-                                   r))))])
+                                   r))))))
        get-next)
      car cadr caddr))
 
@@ -283,7 +283,7 @@
 
   (define-record-type port-chunk (fields str (mutable next)))
 
-  (define/? (make-port-chunker [chunk-size exact-positive-integer?])
+  (define/? (make-port-chunker (chunk-size exact-positive-integer?))
     (make-irregex-chunker
      (lambda (chunk)
        (let ((n (port-chunk-next chunk)))

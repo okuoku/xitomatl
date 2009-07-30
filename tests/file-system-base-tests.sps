@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (except (rnrs) file-exists? delete-file)
   (srfi :78 lightweight-testing)
@@ -16,14 +16,14 @@
 
 (define-syntax check-io-f-error
   (syntax-rules ()
-    [(_ who fn expr)
-     (check (guard (ex [else (and (i/o-filename-error? ex)
+    ((_ who fn expr)
+     (check (guard (ex (else (and (i/o-filename-error? ex)
                                   (who-condition? ex)
                                   (list (condition-who ex)
-                                        (cleanse-path (i/o-error-filename ex))))])
+                                        (cleanse-path (i/o-error-filename ex))))))
               expr
               'unexpected-return)
-            => '(who fn))]))
+            => '(who fn)))))
 
 (define (make-test-tree)
   (define tree 
@@ -44,10 +44,10 @@
         ("dab" z x
          ("daba" y))))
       ("e")))
-  (let make ([t tree] [p "/tmp"])
-    (let ([d (path-join p (car t))])
+  (let make ((t tree) (p "/tmp"))
+    (let ((d (path-join p (car t))))
       (make-directory d)
-      (let-values ([(files dirs) (partition symbol? (cdr t))])
+      (let-values (((files dirs) (partition symbol? (cdr t))))
         (for-each (lambda (x) 
                     (call-with-output-file (path-join d (symbol->string x))
                       (lambda (fop) (write (list x x) fop))))
@@ -87,31 +87,31 @@
 (check-io-f-error directory-list "z"
   (directory-list "z"))
 ;; file-exists?
-(check (file-exists? "a") => #t)
-(check (file-exists? "a/x") => #t)
+(check (file-exists? "a") => #T)
+(check (file-exists? "a/x") => #T)
 (check (file-exists? "doesnt-exist") => #F)
 ;; delete-directory
-(check (delete-directory "c") => #t)
-(check (file-exists? "c") => #f)
-(check (delete-directory "c") => #f)
+(check (delete-directory "c") => #T)
+(check (file-exists? "c") => #F)
+(check (delete-directory "c") => #F)
 (check-io-f-error delete-directory "c"
-  (delete-directory "c" #t))
-(delete-directory "e" #t)  ;; returns unspecified value(s)
-(check (file-exists? "e") => #f)
+  (delete-directory "c" #T))
+(delete-directory "e" #T)  ;; returns unspecified value(s)
+(check (file-exists? "e") => #F)
 (assert (file-regular? "z" #F))
-(check (delete-directory "z") => #f)
+(check (delete-directory "z") => #F)
 (check-io-f-error delete-directory "z"
-  (delete-directory "z" #t))
+  (delete-directory "z" #T))
 ;; delete-file
 (delete-file "z")  ;; returns unspecified value(s)
-(check (file-exists? "z") => #f)
+(check (file-exists? "z") => #F)
 (check-io-f-error delete-file "z"
   (delete-file "z"))
 (check-io-f-error delete-file "d"
   (delete-file "d"))
 ;; change-mode
 (change-mode "a/ab/abb" #o500)
-(check (file-exists? "a/ab/abb") => #t)
+(check (file-exists? "a/ab/abb") => #T)
 (check-io-f-error call-with-output-file "a/ab/abb/nope"
   (call-with-output-file "a/ab/abb/nope"
     (lambda (fop) (display "nope" fop))))
@@ -128,7 +128,7 @@
   (file-ctime "doesnt-exist"))
 ;; make-directory
 (make-directory "new" #o200)  ;; returns unspecified value(s)
-(check (file-exists? "new") => #t)
+(check (file-exists? "new") => #T)
 (check-io-f-error make-directory "new"
   (make-directory "new"))
 (check-io-f-error directory-list "new"
@@ -154,51 +154,51 @@
 (check (file-executable? "new") => #T)
 ;; make-symbolic-link and file-exists? "follow" arg
 (make-symbolic-link "../a/ab/aba" "b/sym")
-(check (file-exists? "b/sym") => #t)
-(check (file-exists? "b/sym" #f) => #t)
-(check (delete-directory "a/ab/aba") => #t)
-(check (file-exists? "b/sym") => #f)
-(check (file-exists? "b/sym" #f) => #t)
+(check (file-exists? "b/sym") => #T)
+(check (file-exists? "b/sym" #F) => #T)
+(check (delete-directory "a/ab/aba") => #T)
+(check (file-exists? "b/sym") => #F)
+(check (file-exists? "b/sym" #F) => #T)
 (change-mode "d" #o000)
 (check-io-f-error make-symbolic-link "d/nope"
   (make-symbolic-link "blah" "d/nope"))
 (change-mode "d" #o755)
 ;; file-regular? 
-(check (file-regular? "d/da/y") => #t)
-(check (file-regular? "d/da/y" #f) => #t)
-(check (file-regular? "d/da") => #f)
-(check (file-regular? "d/da" #f) => #f)
-(check (file-regular? "b/sym") => #f)
+(check (file-regular? "d/da/y") => #T)
+(check (file-regular? "d/da/y" #F) => #T)
+(check (file-regular? "d/da") => #F)
+(check (file-regular? "d/da" #F) => #F)
+(check (file-regular? "b/sym") => #F)
 (make-symbolic-link "y" "d/da/sym")
-(check (file-regular? "d/da/sym") => #t)
-(check (file-regular? "d/da/sym" #f) => #f)
+(check (file-regular? "d/da/sym") => #T)
+(check (file-regular? "d/da/sym" #F) => #F)
 (make-symbolic-link ".." "d/sym")
-(check (file-regular? "d/sym") => #f)
-(check (file-regular? "d/sym" #f) => #f)
+(check (file-regular? "d/sym") => #F)
+(check (file-regular? "d/sym" #F) => #F)
 (check (file-regular? "doesnt-exist") => #F)
 ;; file-directory? 
-(check (file-directory? "d") => #t)
-(check (file-directory? "d" #f) => #t)
-(check (file-directory? "d/da/y") => #f)
-(check (file-directory? "d/da/y" #f) => #f)
-(check (file-directory? "d/da/sym") => #f)
-(check (file-directory? "d/da/sym" #f) => #f)
-(check (file-directory? "d/sym") => #t)
-(check (file-directory? "d/sym" #f) => #f)
+(check (file-directory? "d") => #T)
+(check (file-directory? "d" #F) => #T)
+(check (file-directory? "d/da/y") => #F)
+(check (file-directory? "d/da/y" #F) => #F)
+(check (file-directory? "d/da/sym") => #F)
+(check (file-directory? "d/da/sym" #F) => #F)
+(check (file-directory? "d/sym") => #T)
+(check (file-directory? "d/sym" #F) => #F)
 (check (file-directory? "doesnt-exist") => #F)
 ;; file-symbolic-link?
-(check (file-symbolic-link? "d/da/sym") => #t)
-(check (file-symbolic-link? "d/sym") => #t)
-(check (file-symbolic-link? "b/sym") => #t)
-(check (file-symbolic-link? "d/da") => #f)
-(check (file-symbolic-link? "d/da/y") => #f)
-(check (file-symbolic-link? ".") => #f)
+(check (file-symbolic-link? "d/da/sym") => #T)
+(check (file-symbolic-link? "d/sym") => #T)
+(check (file-symbolic-link? "b/sym") => #T)
+(check (file-symbolic-link? "d/da") => #F)
+(check (file-symbolic-link? "d/da/y") => #F)
+(check (file-symbolic-link? ".") => #F)
 (check (file-symbolic-link? "doesnt-exist") => #F)
 ;; deleting symbolic link
 (delete-file "d/da/sym")
-(check (file-symbolic-link? "d/da/sym") => #f)
-(check (file-exists? "d/da/sym") => #f)
-(check (file-exists? "d/da/sym" #f) => #f)
+(check (file-symbolic-link? "d/da/sym") => #F)
+(check (file-exists? "d/da/sym") => #F)
+(check (file-exists? "d/da/sym" #F) => #F)
 ;; rename-file
 (rename-file "d/da/y" "d/da/yayaya")
 (check (file-exists? "d/da/y" #F) => #F)
@@ -271,32 +271,32 @@
         "."
         (lambda (path dirs files syms i)
           (if (string=? path "./d/da/daa/daaa")
-            (values #f i)
+            (values #F i)
             (values (list-sort string<? dirs) (+ 1 i))))
         0)
        => 8)
-(let ([r (fold/enumerator
+(let ((r (fold/enumerator
           (directory-walk-enumerator 'bottom-up)
           "."
           (lambda (path dirs files syms accum)
-            (values #t (cons path accum)))
-          '())])
+            (values #T (cons path accum)))
+          '())))
   (define (li x)
     (list-index (lambda (y) (string=? x y)) r))
   (check (li ".") => 0)
-  (check (< (li ".") (li "./a")) => #t)
-  (check (< (li ".") (li "./b")) => #t)
-  (check (< (li ".") (li "./d")) => #t)
-  (check (< (li ".") (li "./new")) => #t)
-  (check (< (li "./a") (li "./a/ab") (li "./a/ab/abb")) => #t)
-  (check (< (li "./d") (li "./d/da") (li "./d/da/daa")) => #t)
-  (check (< (li "./d/da/daa") (li "./d/da/daa/daaa") (li "./d/da/daa/daaa/daaaa")) => #t)
-  (check (< (li "./d/da/daa/daaa") (li "./d/da/daa/daaa/daaab")) => #t)
-  (check (< (li "./d/da/daa") (li "./d/da/daa/daab")) => #t)
-  (check (< (li "./d/da") (li "./d/da/dab") (li "./d/da/dab/daba")) => #t))
+  (check (< (li ".") (li "./a")) => #T)
+  (check (< (li ".") (li "./b")) => #T)
+  (check (< (li ".") (li "./d")) => #T)
+  (check (< (li ".") (li "./new")) => #T)
+  (check (< (li "./a") (li "./a/ab") (li "./a/ab/abb")) => #T)
+  (check (< (li "./d") (li "./d/da") (li "./d/da/daa")) => #T)
+  (check (< (li "./d/da/daa") (li "./d/da/daa/daaa") (li "./d/da/daa/daaa/daaaa")) => #T)
+  (check (< (li "./d/da/daa/daaa") (li "./d/da/daa/daaa/daaab")) => #T)
+  (check (< (li "./d/da/daa") (li "./d/da/daa/daab")) => #T)
+  (check (< (li "./d/da") (li "./d/da/dab") (li "./d/da/dab/daba")) => #T))
 (change-mode "./d/da/daa/daaa" #o000)
 (check 
- (guard (ex [else (and (warning? ex)
+ (guard (ex (else (and (warning? ex)
                        (not (serious-condition? ex))
                        (who-condition? ex)
                        (message-condition? ex)
@@ -304,7 +304,7 @@
                        (= 2 (length (condition-irritants ex)))
                        (list (condition-who ex)
                              (condition-message ex)
-                             (cadr (condition-irritants ex))))])
+                             (cadr (condition-irritants ex))))))
    (fold/enumerator
     (directory-walk-enumerator)
     "."
@@ -313,10 +313,10 @@
  => '(directory-walk-enumerator 
       "Exception raised from directory walking" 
       "./d/da/daa/daaa"))
-(check (let ([raised #f]) 
+(check (let ((raised #F)) 
          (with-exception-handler
            (lambda (ex)
-             (set! raised #t)
+             (set! raised #T)
              (reraise ex))
            (lambda ()
              (fold/enumerator
@@ -324,10 +324,10 @@
               "."
               (lambda (p d f s) d))))
          (list 'continued raised))
-       => '(continued #t))
+       => '(continued #T))
 (change-mode "./d/da/daa/daaa" #o755)
 ;; directory-walk -- uses directory-walk-enumerator
-(let ([x 0] [y 0])
+(let ((x 0) (y 0))
   (directory-walk
    (lambda (p d f s)
      (set! x (apply + x (map length (list d f s))))
@@ -335,7 +335,7 @@
    ".")
   (check x => 32)
   (check y => 15))
-(let ([x 0] [y 0])
+(let ((x 0) (y 0))
   (directory-walk
    (lambda (p d f s)
      (set! x (apply + x (map length (list d f s))))
@@ -345,7 +345,7 @@
   (check x => 32)
   (check y => 15))
 ;; directory-walk/choice -- always top-down -- uses directory-walk-enumerator
-(let ([x 0] [y 0])
+(let ((x 0) (y 0))
   (directory-walk/choice
    (lambda (p d f s)
      (set! x (apply + x (map length (list d f s))))
@@ -357,23 +357,23 @@
 ;; delete-any -- uses directory-walk bottom-up
 (change-mode "./a/ab" #o500)
 (check-io-f-error delete-directory "./a/ab/abb"
-  (delete-any "./a/ab/abb" #t))
+  (delete-any "./a/ab/abb" #T))
 (change-mode "./a/ab" #o700)
-(check (delete-any "d/da/daa/daaa") => #t)
-(check (file-exists? "d/da/daa/daaa") => #f)
-(check (delete-any "d/da/daa/daaa") => #f)
+(check (delete-any "d/da/daa/daaa") => #T)
+(check (file-exists? "d/da/daa/daaa") => #F)
+(check (delete-any "d/da/daa/daaa") => #F)
 (check-io-f-error delete-file "d/da/daa/daaa"
-  (delete-any "d/da/daa/daaa" #t))
-(delete-any "d/da/dab/x" #t)  ;; unspecified return value(s)
-(check (file-exists? "d/da/dab/x") => #f)
-(check (delete-any "d/da/dab/x") => #f)
+  (delete-any "d/da/daa/daaa" #T))
+(delete-any "d/da/dab/x" #T)  ;; unspecified return value(s)
+(check (file-exists? "d/da/dab/x") => #F)
+(check (delete-any "d/da/dab/x") => #F)
 (check-io-f-error delete-file "d/da/dab/x"
-  (delete-any "d/da/dab/x" #t))
-(check (delete-any "b/sym") => #t)
-(check (file-exists? "b/sym" #F) => #f)
-(check (delete-any "b/sym") => #f)
+  (delete-any "d/da/dab/x" #T))
+(check (delete-any "b/sym") => #T)
+(check (file-exists? "b/sym" #F) => #F)
+(check (delete-any "b/sym") => #F)
 (check-io-f-error delete-file "b/sym"
-  (delete-any "b/sym" #t))
+  (delete-any "b/sym" #T))
 ;; make-path-to
 (make-path-to "no-path-to-me")
 (check (file-exists? "no-path-to-me" #F) => #F)
@@ -402,9 +402,9 @@
   (make-path-to "path/to/file/oops/oops"))
 
 ;; clean-up
-(let ([tests-dir (current-directory)])
+(let ((tests-dir (current-directory)))
   (current-directory "/tmp")
   (delete-any tests-dir)
-  (check (file-exists? tests-dir) => #f))
+  (check (file-exists? tests-dir) => #F))
 
 (check-report)

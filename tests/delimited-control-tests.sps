@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl delimited-control)
@@ -30,15 +30,15 @@
 
 (define (p x) (if (eq? x p) '(p p) `(p ,x)))
 (define (shift* p) (shift f (p f)))
-(check (reset (let ([x 'abcde]) (eq? x ((shift* shift*) x))))
-       => #t)
+(check (reset (let ((x 'abcde)) (eq? x ((shift* shift*) x))))
+       => #T)
 
 (define (traverse/shift xs)
-  (letrec ([visit
+  (letrec ((visit
             (lambda (xs)
               (if (null? xs)
                 '()
-                (visit (shift k (cons (car xs) (k (cdr xs)))))))])
+                (visit (shift k (cons (car xs) (k (cdr xs)))))))))
     (reset (visit xs))))
 
 (check (traverse/shift '(1 2 3 4 5))
@@ -48,16 +48,16 @@
 ;			Control tests
 ; Example from Sitaram, Felleisen
 
-(check (let ([g (prompt (* 2 (control k k)))])
+(check (let ((g (prompt (* 2 (control k k)))))
          (* 3 (prompt (* 5 (abort (g 7))))))
        => 42)
 
 (define (traverse/control xs)
-  (letrec ([visit
+  (letrec ((visit
             (lambda (xs)
               (if (null? xs)
                 '()
-                (visit (control k (cons (car xs) (k (cdr xs)))))))])
+                (visit (control k (cons (car xs) (k (cdr xs)))))))))
     (prompt (visit xs))))
 
 (check (traverse/control '(1 2 3 4 5))
@@ -79,7 +79,7 @@
        => '(a))
 
 (check (prompt (let ((x 'abcde)) (eq? x ((control k (control k2 (k k2))) x))))
-       => #t)
+       => #T)
 
 ;------------------------------------------------------------------------
 ;			control0 and shift0 tests

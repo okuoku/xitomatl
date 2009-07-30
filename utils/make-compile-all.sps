@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (only (xitomatl file-system base) directory-walk-enumerator)
@@ -23,16 +23,16 @@
    (lambda (path dirs files syms accum)
      (if (irregex-match "\\./(\\.bzr|gtk|tests|utils|programs).*" path)
        (values dirs accum)
-       (let loop ([files (filter (lambda (f) (irregex-match ".+\\.sls" f))
-                                 files)]
-                  [accum accum])
+       (let loop ((files (filter (lambda (f) (irregex-match ".+\\.sls" f))
+                                 files))
+                  (accum accum))
          (if (null? files)
            (values dirs accum)
            (loop (cdr files)
                  (match (call-with-input-file (path-join path (car files)) read-all)
-                   [(('library name . _) (... 1))
-                    (apply cons* (reverse (cons accum name)))]
-                   [_ accum]))))))
+                   ((('library name . _) (... 1))
+                    (apply cons* (reverse (cons accum name))))
+                   (_ accum)))))))
    '()))
 
 (define libraries-names/prepared

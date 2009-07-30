@@ -61,8 +61,8 @@
       (define (gen-stx who kw=? missing-value missing-keyword predicate-false
                        kw-values process-input-list car-id cdr-id additional)
         (lambda (kw-spec index)
-          (with-syntax ([(kw-id . _) kw-spec]
-                        [v (gen-temp)])
+          (with-syntax (((kw-id . _) kw-spec)
+                        (v (gen-temp)))
             (define (gen-clause/val)
               #`((#,kw=? #,car-id 'kw-id)
                  (if (pair? #,cdr-id)
@@ -84,37 +84,37 @@
                  (#,process-input-list #,cdr-id #,additional)))
             (define (gen-test/bool)
               #`(not (not-given? (vector-ref #,kw-values #,index))))
-            (let-values ([(default predicate boolean) (process-options stx kw-spec)])
-              (cond [(and default predicate)
+            (let-values (((default predicate boolean) (process-options stx kw-spec)))
+              (cond ((and default predicate)
                      (list (gen-clause/val)
-                           (gen-test/val (gen-pred/val predicate) default))]
-                    [default
+                           (gen-test/val (gen-pred/val predicate) default)))
+                    (default
                      (list (gen-clause/val)
-                           (gen-test/val #'v default))]
-                    [predicate
+                           (gen-test/val #'v default)))
+                    (predicate
                      (list (gen-clause/val)
-                           (gen-test/val (gen-pred/val predicate) (gen-missing)))]
-                    [boolean
+                           (gen-test/val (gen-pred/val predicate) (gen-missing))))
+                    (boolean
                      (list (gen-clause/bool)
-                           (gen-test/bool))]
-                    [else
+                           (gen-test/bool)))
+                    (else
                      (list (gen-clause/val)
-                           (gen-test/val #'v (gen-missing)))])))))
+                           (gen-test/val #'v (gen-missing)))))))))
       (syntax-case stx ()
-        [(_ who kw=? missing-value missing-keyword predicate-false
-            [kw-id options ...] ...)
+        ((_ who kw=? missing-value missing-keyword predicate-false
+            (kw-id options ...) ...)
          (for-all identifier?
                   #'(kw=? missing-value missing-keyword predicate-false kw-id ...))
-         (with-syntax* ([num (length #'(kw-id ...))]
-                        [(kw-values process-input-list car-id cdr-id additional)
-                         (generate-temporaries '(1 2 3 4 5))]
-                        [((cond-clause value-expr) ...)
+         (with-syntax* ((num (length #'(kw-id ...)))
+                        ((kw-values process-input-list car-id cdr-id additional)
+                         (generate-temporaries '(1 2 3 4 5)))
+                        (((cond-clause value-expr) ...)
                          (map (gen-stx #'who #'kw=?
                                #'missing-value #'missing-keyword #'predicate-false
                                #'kw-values #'process-input-list
                                #'car-id #'cdr-id #'additional)
-                              #'([kw-id options ...] ...)
-                              (enumerate #'(kw-id ...)))])
+                              #'((kw-id options ...) ...)
+                              (enumerate #'(kw-id ...)))))
            #'(lambda (input-list)
                (let ((kw-values (make-vector num not-given)))
                  (let process-input-list ((l input-list) (additional '()))
@@ -128,5 +128,5 @@
                             (values kw-id ... (reverse additional))))
                          (else
                           (assertion-violation 'who "not a proper list"
-                                               input-list)))))))])))
+                                               input-list)))))))))))
 )

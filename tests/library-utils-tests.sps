@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl library-utils)
@@ -12,11 +12,11 @@
 
 (define-syntax check-AV
   (syntax-rules ()
-    [(_ expr)
-     (check (catch ex ([else (assertion-violation? ex)])
+    ((_ expr)
+     (check (catch ex ((else (assertion-violation? ex)))
               expr
               'unexpected-return)
-            => #T)]))
+            => #T))))
 
 ;; library-name-without-version
 (check (library-name-without-version '(foo zab (0 4))) => '(foo zab))

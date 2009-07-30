@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl strings)
   (export
     string-intersperse
@@ -28,36 +28,36 @@
   
   (define string-split
     (case-lambda
-      [(str) 
-       (string-split str whitespace #f)]
-      [(str delim-chars)
-       (string-split str delim-chars #f)]
-      [(str delim-chars keep-empty)
+      ((str) 
+       (string-split str whitespace #F))
+      ((str delim-chars)
+       (string-split str delim-chars #F))
+      ((str delim-chars keep-empty)
        (unless (and (string? str) (string? delim-chars))
          (assertion-violation 'string-split "not a string" 
                               (if (string? delim-chars) str delim-chars)))
-       (let ([strlen (string-length str)]
-             [dellen (string-length delim-chars)])
-         (let loop ([i (- strlen 1)]
-                    [to strlen]
-                    [accum '()])
+       (let ((strlen (string-length str))
+             (dellen (string-length delim-chars)))
+         (let loop ((i (- strlen 1))
+                    (to strlen)
+                    (accum '()))
            (if (< i 0)
              (if (or (< 0 to) keep-empty)
                (cons (substring str 0 to) accum)
                accum)
-             (let ([c (string-ref str i)])
-               (let check ([j 0])
-                 (cond [(= j dellen) (loop (- i 1) to accum)]
-                       [(char=? c (string-ref delim-chars j))
-                        (loop (- i 1) i (let ([i+1 (+ i 1)])
+             (let ((c (string-ref str i)))
+               (let check ((j 0))
+                 (cond ((= j dellen) (loop (- i 1) to accum))
+                       ((char=? c (string-ref delim-chars j))
+                        (loop (- i 1) i (let ((i+1 (+ i 1)))
                                           (if (or (< i+1 to) keep-empty)
                                             (cons (substring str i+1 to) accum)
-                                            accum)))]
-                       [else (check (+ j 1))]))))))]))
+                                            accum))))
+                       (else (check (+ j 1))))))))))))
   
   (define (string-end=? str end)
-    (let ([sl (string-length str)]
-          [el (string-length end)])
+    (let ((sl (string-length str))
+          (el (string-length end)))
       (and (>= sl el)
            (string=? (substring str (- sl el) sl) end))))
 )

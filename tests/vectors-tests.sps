@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (xitomatl vectors)
@@ -11,15 +11,15 @@
 
 (define-syntax check-invalid
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else (and (assertion-violation? ex)
+    ((_ expr)
+     (check (guard (ex (else (and (assertion-violation? ex)
                                   (who-condition? ex)
                                   (message-condition? ex)
                                   (list (condition-who ex)
-                                        (condition-message ex)))])
+                                        (condition-message ex)))))
               expr
               'unexpected-return)
-            => '(subvector "invalid indices"))]))
+            => '(subvector "invalid indices")))))
 
 (check (subvector '#() 0 0) => '#())
 (check-invalid (subvector '#() 0 1))

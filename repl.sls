@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl repl)
   (export
     repl)
@@ -21,13 +21,13 @@
   
   (define/? repl 
     (case-lambda/?
-      [(in out err env)
-       (repl in out err env (lambda () "> "))]
-      [([in textual-input-port?] 
-        [out textual-output-port?]
-        [err textual-output-port?]
-        [env environment?]
-        [prompt procedure?])
+      ((in out err env)
+       (repl in out err env (lambda () "> ")))
+      (((in textual-input-port?) 
+        (out textual-output-port?)
+        (err textual-output-port?)
+        (env environment?)
+        (prompt procedure?))
        (define (print-ex ex)
          (flush-output-port out)
          (print-exception ex err)
@@ -35,18 +35,18 @@
        (let loop ()
          (display (prompt) out)
          (flush-output-port out)
-         (let ([x (catch ex ([(lexical-violation? ex)
+         (let ((x (catch ex (((lexical-violation? ex)
                               (print-ex ex)
                               (display "\nQuiting REPL.\n" err)
                               (flush-output-port err)
-                              (eof-object)])
-                    (read in))])
+                              (eof-object)))
+                    (read in))))
            (cond
-             [(eof-object? x) 
+             ((eof-object? x) 
               (newline out)
               (flush-output-port out)
-              (values)]
-             [else
+              (values))
+             (else
               (call/cc
                (lambda (k)
                  (call-with-values
@@ -65,13 +65,13 @@
                               (k))
                             (values))
                           (lambda ()
-                            (parameterize ([current-input-port in]
-                                           [current-output-port out]
-                                           [current-error-port err])
+                            (parameterize ((current-input-port in)
+                                           (current-output-port out)
+                                           (current-error-port err))
                               (eval x env)))))))
                   (lambda vals
                     (for-each (lambda (v) (pretty-print v out))
                               vals)
                     (flush-output-port out)))))
-              (loop)])))]))
+              (loop))))))))
 )

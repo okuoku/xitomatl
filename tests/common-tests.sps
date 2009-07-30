@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (srfi :78 lightweight-testing)
@@ -12,11 +12,11 @@
 
 (define-syntax check-AV
   (syntax-rules ()
-    [(_ expr)
-     (check (catch ex ([else (assertion-violation? ex)])
+    ((_ expr)
+     (check (catch ex ((else (assertion-violation? ex)))
               expr
               'unexpected-return)
-            => #T)]))
+            => #T))))
 
 ;; add1
 (check (add1 1) => 2)
@@ -37,18 +37,18 @@
 (check (string-upcase (format "~x" #xB)) => "B")
 (check (string-upcase (format "~x" #xDEADBEEF)) => "DEADBEEF")
 ;; printf
-(let ([fn "/tmp/xitomatl-common-tests--printf"])
+(let ((fn "/tmp/xitomatl-common-tests--printf"))
   (with-output-to-file fn
     (lambda () (printf "\nTHIS ~s ~x ~a ~~ ~b ~o\n" "is" 10 'TEST 255 8)))
   (check (string-upcase (call-with-input-file fn get-string-all)) 
          => "\nTHIS \"IS\" A TEST ~ 11111111 10\n")
   (delete-file fn))
 ;; fprintf
-(let-values ([(sop get) (open-string-output-port)])
+(let-values (((sop get) (open-string-output-port)))
   (fprintf sop "\nTHIS ~s ~x ~a ~~ ~b ~o\n" "is" 10 'TEST 255 8)
   (check (string-upcase (get)) => "\nTHIS \"IS\" A TEST ~ 11111111 10\n"))
 ;; pretty-print
-(let ([fn "/tmp/xitomatl-common-tests--pretty-print"])
+(let ((fn "/tmp/xitomatl-common-tests--pretty-print"))
   (with-output-to-file fn
     (lambda () (pretty-print '(a "b" #\c))))
   (check (call-with-input-file fn read) => '(a "b" #\c))
@@ -56,13 +56,13 @@
            (string-ref s (- (string-length s) 1)))
          => #\newline)
   (delete-file fn))
-(let-values ([(sop get) (open-string-output-port)])
+(let-values (((sop get) (open-string-output-port)))
   (pretty-print '(a "b" #\c) sop)
   (let ((s (get)))
     (check (read (open-string-input-port s)) => '(a "b" #\c))
     (check (string-ref s (- (string-length s) 1)) => #\newline)))
 ;; gensym
-(let ([g (gensym)])
+(let ((g (gensym)))
   (check (symbol? g) => #T)
   (check (eq? g g) => #T)
   (check (symbol=? g g) => #T)

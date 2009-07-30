@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl rnrs-profiled)
   (export
     (rename
@@ -635,15 +635,15 @@
   (define-syntax define-all
     (lambda (stx)
       (syntax-case stx ()
-        [(kw)
-         (with-syntax ([((profiled:n r:n) ...)
+        ((kw)
+         (with-syntax ((((profiled:n r:n) ...)
                         (map (lambda (id)
                                (list (identifier-append #'kw 'profiled: id)
                                      (datum->syntax #'kw id)))
-                             (names-of '(rnrs) 'procedures))])
+                             (names-of '(rnrs) 'procedures))))
            #'(begin
                (define/profiled (profiled:n . a) (apply r:n a))
-               ...))])))
+               ...))))))
   
   (define-all)
 )

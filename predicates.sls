@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl predicates)
   (export
     not? and? or? xor?
@@ -91,12 +91,12 @@
     (and (integer? x) (exact? x)))
   
   (define (list-of? pred)
-    (letrec ([list-of?-pred
+    (letrec ((list-of?-pred
               (lambda (x)
                 (if (pair? x)
                   (and (pred (car x))
                        (list-of?-pred (cdr x)))
-                  (null? x)))])
+                  (null? x)))))
       list-of?-pred))
   
   #;(define (datum? x)
@@ -113,20 +113,20 @@
     ;; to use with the binary predicate, or raise an exception; this procedure
     ;; is useful for efficiently type-checking elements and/or transforming them.
     (case-lambda
-      [(binary-pred)
-       (pairwise? binary-pred #F)]
-      [(binary-pred proc)
-       (let ([next (if proc
+      ((binary-pred)
+       (pairwise? binary-pred #F))
+      ((binary-pred proc)
+       (let ((next (if proc
                      (lambda (l) (proc (car l)))
-                     car)])
+                     car)))
          (lambda args
            (or (null? args)
-               (let ([x (next args)])
-                 (let loop ([x x] [r (cdr args)])
+               (let ((x (next args)))
+                 (let loop ((x x) (r (cdr args)))
                    (or (null? r)
-                       (let ([y (next r)])
+                       (let ((y (next r)))
                          (and (binary-pred x y)
-                              (loop y (cdr r))))))))))]))
+                              (loop y (cdr r)))))))))))))
 
   (define symbol<?
     (pairwise? string<?
@@ -138,17 +138,17 @@
   (define name=?
     (pairwise? string=?
      (lambda (x) 
-       (cond [(identifier? x) (symbol->string (syntax->datum x))]
-             [(symbol? x) (symbol->string x)]
-             [(string? x) x]
-             [else (assertion-violation 'name=? 
-                    "not an identifier, symbol, or string" x)]))))
+       (cond ((identifier? x) (symbol->string (syntax->datum x)))
+             ((symbol? x) (symbol->string x))
+             ((string? x) x)
+             (else (assertion-violation 'name=? 
+                    "not an identifier, symbol, or string" x))))))
   
   (define (non-empty-string? x)
     (and (string? x) (positive? (string-length x))))
   
   (define (char-line-ending? c)
     (and (memv c '(#\xa #\xd #\x85 #\x2028))  ;; correct? everything it should be?
-         #t))
+         #T))
 
 )

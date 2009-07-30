@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import 
   (rnrs)
   (xitomatl fuego)
@@ -11,11 +11,11 @@
 
 (define-syntax check-exn
   (syntax-rules ()
-    [(_ expr => pred)
-     (check (guard (ex [(pred ex) #t] [else #f])
+    ((_ expr => pred)
+     (check (guard (ex ((pred ex) #T) (else #F))
               expr
               'returned)
-            => #t)]))
+            => #T))))
 
 (define (fuego-exn? ex msg irrts obj)
   (and (assertion-violation? ex)
@@ -51,7 +51,7 @@
        root-keys)
 (check (for-all (lambda (rk) (send root-object :has? rk))
                 root-keys)
-       => #t)
+       => #T)
 (check-exn (send root-object 'oops) 
            => (unknown-exn? '(oops) root-object))
 (check-exn (send root-object :add-value! :clone 1) 
@@ -70,7 +70,7 @@
   (check (send o 'vi) => 1)
   (check-exn (send o 'vi "asdf")
              => (immutable-exn? '(vi "asdf") o))
-  (send o :add-value! 'vm 2 #t)
+  (send o :add-value! 'vm 2 #T)
   (check (send o 'vm) => 2)
   (send o 'vm "asdf")
   (check (send o 'vm) => "asdf")
@@ -79,19 +79,19 @@
          '(m m2 vi vm))
   (check (for-all (lambda (k) (send o :has? k))
                   '(m vi vm))
-         => #t)
+         => #T)
   (send o :delete! 'm2)
   (check (send o :keys) 
          (=> (lambda (r e) (for-all (lambda (x) (memq x r)) e))) 
          '(m vi vm))
-  (check (send o :has? 'm2) => #f)
+  (check (send o :has? 'm2) => #F)
   (check-exn (send o 'm2 'x "y") 
              => (unknown-exn? '(m2) o))
   (send o :delete! 'vi)
   (check (send o :keys) 
          (=> (lambda (r e) (for-all (lambda (x) (memq x r)) e))) 
          '(m vm))
-  (check (send o :has? 'vi) => #f)
+  (check (send o :has? 'vi) => #F)
   (check-exn (send o 'vi) 
              => (unknown-exn? '(vi) o)))
 
@@ -99,20 +99,20 @@
 ;;;; clone of root-object
 
 (define o0 (send root-object :clone))
-(check (fuego-object? o0) => #t)
+(check (fuego-object? o0) => #T)
 (check (length (send o0 :keys)) => 1)
 (check (eq? root-object (send o0 (car (send o0 :keys)))) 
-       => #t)
+       => #T)
 (basic-tests o0)
 
 ;;;; inheritance / slot resolution
 
 (define o1 (send o0 :clone))
 ;; same tests as o0
-(check (fuego-object? o1) => #t)
+(check (fuego-object? o1) => #T)
 (check (length (send o1 :keys)) => 1)
 (check (eq? o0 (send o1 (car (send o1 :keys)))) 
-       => #t)
+       => #T)
 (basic-tests o1)
 ;; o1 overriding o0
 (check (send o1 'vm) => "asdf")
@@ -122,12 +122,12 @@
 (send o1 :add-method! 'm (lambda (s resend . a) (resend 'm a)))
 (check (send o1 'm 'foo "bar") => (list o1 '(foo "bar")))
 ;; resend lookup through more than one parent
-(let ([ob (object (parent (object (parent (object))))
+(let ((ob (object (parent (object (parent (object))))
                   (parent (object (parent (object))
                                   (parent (object (parent 
                                                     (object (parent (object (parent (object))))))
                                                   (parent o1)))))
-                  (method ('m s r . a) (r 'm a)))])
+                  (method ('m s r . a) (r 'm a)))))
   (check (send ob 'm 'bar "foo")
          => (list ob '((bar "foo")))))
 ;; resend delivers :unknown to the owner of the method which uses it
@@ -137,16 +137,16 @@
            => (unknown-exn? '(asdf) o0)) ;; note that it's o0 which gets the :unknown
 ;; o1 using parent's slots
 (send o1 :delete! 'vm)
-(check (send o1 :has? 'vm) => #f)
+(check (send o1 :has? 'vm) => #F)
 (check (send o1 'vm) => "asdf")
 (send o1 :delete! 'm)
-(check (send o1 :has? 'm) => #f)
+(check (send o1 :has? 'm) => #F)
 (check (send o1 'm 'a 2 "x") => (list o1 'a 2 "x"))
 ;; Setting parent's value causes new slot to be allocated in the immediate
 ;; instance for the new value so that the parent's stays unchanged.
 (send o1 'vm #\λ)
 (check (send o1 'vm) => #\λ)
-(check (send o1 :has? 'vm) => #t)
+(check (send o1 :has? 'vm) => #T)
 (check (send o1 :keys) 
        (=> (lambda (r e) (for-all (lambda (x) (memq x r)) e))) 
          '(vm))
@@ -187,10 +187,10 @@
 ;; defined helpers, etc.
 
 (define o3 (object))
-(check (fuego-object? o3) => #t)
+(check (fuego-object? o3) => #T)
 (check (length (send o3 :keys)) => 1)
 (check (eq? root-object (send o3 (car (send o3 :keys)))) 
-       => #t)
+       => #T)
 (basic-tests o3)
 (define Pk (make-key 'Pk))
 (define Mk (list 'Mk))
@@ -205,11 +205,11 @@
                    (method (,Mk s r) 'hehehe)
                    (method (,:unknown s r k . v) `(WHAT?! ,k . ,v))
                    (value 'v 'VEE)
-                   (value ,Vk 'first #t)))
+                   (value ,Vk 'first #T)))
 (check (send o4 'vm) => "asdf")  ;; basic-tests added 'vm to o3
-(check (send o4 'm) => (vector #t (list o4 '())))
+(check (send o4 'm) => (vector #T (list o4 '())))
 (check (send o4 'v) => 'VEE)
-(check (fuego-object? (send o4 Pk)) => #t)
+(check (fuego-object? (send o4 Pk)) => #T)
 (check (send o4 Mk) => 'hehehe)
 (check (send o4 'oops #\a "b" 'c) => '(WHAT?! oops #\a "b" c))
 (check (send o4 Vk) => 'first)
@@ -233,9 +233,9 @@
 ;; Use unquote to refer to keys to override them.
 (define o6
   (object (parent o5)
-          (method ,:plus3 (case-lambda [(s r x) (r :plus3 x)] 
-                                       [(s r x y . a) (map (lambda (n) (r :plus3 n)) 
-                                                           (cons* x y a))]))
+          (method ,:plus3 (case-lambda ((s r x) (r :plus3 x)) 
+                                       ((s r x y . a) (map (lambda (n) (r :plus3 n)) 
+                                                           (cons* x y a)))))
           (method (,:self s r) o6)))
 (check (send o6 :plus3 -3) => 0)
 (check (send o6 :plus3 1 2 3 4 5) => '(4 5 6 7 8))

@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -9,7 +10,6 @@
 ;; operate on raw association lists and are functional (never mutate).
 ;; The order of association lists is preserved for all operations.
 
-#!r6rs
 (library (xitomatl alists)
   (export
     alist? pred-alist? equal-alist? eqv-alist? eq-alist?
@@ -29,15 +29,15 @@
     (fields (mutable al) m))
   (define (make-alist-subtype-protocol who)
     (lambda (p)
-      (letrec ([f (case-lambda 
-                    [() (f '() #t)]
-                    [(al) (f al #t)]
-                    [(al m) 
+      (letrec ((f (case-lambda 
+                    (() (f '() #T))
+                    ((al) (f al #T))
+                    ((al m) 
                      (unless (and (list? al) (for-all pair? al))
                        (assertion-violation who "not a list of pairs" al))
                      (unless (boolean? m)
                        (assertion-violation who "not a boolean" m))
-                     ((p al m))])])
+                     ((p al m))))))
         f)))
   (define-record-type pred-alist (parent alist) 
     (protocol (make-alist-subtype-protocol 'make-pred-alist)))
@@ -50,17 +50,17 @@
   
   (define (make-dispatch asspf assocf assvf assqf)
     (lambda (a) 
-      (cond [(eq-alist? a) assqf]
-            [(equal-alist? a) assocf]
-            [(eqv-alist? a) assvf]
-            [(pred-alist? a) asspf])))
+      (cond ((eq-alist? a) assqf)
+            ((equal-alist? a) assocf)
+            ((eqv-alist? a) assvf)
+            ((pred-alist? a) asspf))))
   
   (define-syntax alist-al-set!/check-immutable--macro
     (syntax-rules ()
-      [(_ who a-expr al-expr)
-       (let ([a a-expr])
+      ((_ who a-expr al-expr)
+       (let ((a a-expr))
          (check-mutability a who)
-         (alist-al-set! a al-expr))]))
+         (alist-al-set! a al-expr)))))
   
   (define (check-mutability a who)
     (unless (alist-m a)
@@ -69,16 +69,16 @@
   (define-syntax define-alist-proc
     (lambda (stx)
       (syntax-case stx ()
-        [(ctxt name (asspf assocf assvf assqf) expr) 
+        ((ctxt name (asspf assocf assvf assqf) expr) 
          (identifier? #'name)
-         (with-syntax ([d (datum->syntax #'ctxt 'dispatch)]
-                       [s (datum->syntax #'ctxt 'alist-al-set!/check-immutable)])
+         (with-syntax ((d (datum->syntax #'ctxt 'dispatch))
+                       (s (datum->syntax #'ctxt 'alist-al-set!/check-immutable)))
            #'(define/? name
-               (let ([d (make-dispatch asspf assocf assvf assqf)])
-                 (let-syntax ([s (syntax-rules ()
-                                   [(_ a al) 
-                                    (alist-al-set!/check-immutable--macro 'name a al)])]) 
-                   expr))))])))
+               (let ((d (make-dispatch asspf assocf assvf assqf)))
+                 (let-syntax ((s (syntax-rules ()
+                                   ((_ a al) 
+                                    (alist-al-set!/check-immutable--macro 'name a al))))) 
+                   expr))))))))
   
   (define (not-proper who x) 
     (assertion-violation who "not a proper alist" x))
@@ -94,28 +94,28 @@
   
   ;--------------------------------------------------------------------------
   
-  (define/? (alist-size [a alist?])
+  (define/? (alist-size (a alist?))
     (length (alist-al a)))
   
   ;--------------------------------------------------------------------------
   
   (define (ass-ref--meta in-al kop default pred who nf)
-    (let loop ([al in-al])
-      (cond [(and (pair? al) (pair? (car al)))
+    (let loop ((al in-al))
+      (cond ((and (pair? al) (pair? (car al)))
              (if (pred kop (caar al))
                (cdar al)
-               (loop (cdr al)))]
-            [(null? al)
+               (loop (cdr al))))
+            ((null? al)
              (nf who kop in-al)
-             default]
-            [else (not-proper who in-al)])))
+             default)
+            (else (not-proper who in-al)))))
   
   (define (make-ass-ref pred who)
     (case-lambda
-      [(al kop default)
-       (ass-ref--meta al kop default pred who ignore)]
-      [(al kop)
-       (ass-ref--meta al kop #F pred who not-found)]))
+      ((al kop default)
+       (ass-ref--meta al kop default pred who ignore))
+      ((al kop)
+       (ass-ref--meta al kop #F pred who not-found))))
   
   (define/who assp-ref (make-ass-ref apply-p who))
   (define/who assoc-ref (make-ass-ref equal? who))
@@ -125,10 +125,10 @@
   (define-alist-proc alist-ref 
                      (assp-ref assoc-ref assv-ref assq-ref)
     (case-lambda/?
-      [([a alist?] kop d)
-       ((dispatch a) (alist-al a) kop d)]
-      [([a alist?] kop) 
-       ((dispatch a) (alist-al a) kop)]))
+      (((a alist?) kop d)
+       ((dispatch a) (alist-al a) kop d))
+      (((a alist?) kop) 
+       ((dispatch a) (alist-al a) kop))))
   
   ;--------------------------------------------------------------------------
   
@@ -143,20 +143,20 @@
   
   (define-alist-proc alist-set! 
                      (assp-replace assoc-replace assv-replace assq-replace)
-    (lambda/? ([a alist?] kop o)
+    (lambda/? ((a alist?) kop o)
       (alist-al-set!/check-immutable a ((dispatch a) (alist-al a) kop o))))
   
   ;--------------------------------------------------------------------------
   
   (define (ass-remove--meta in-al kop pred who)
-    (let loop ([al in-al] [new '()])
-      (cond [(and (pair? al) (pair? (car al)))
+    (let loop ((al in-al) (new '()))
+      (cond ((and (pair? al) (pair? (car al)))
              (if (pred kop (caar al))
                (loop (cdr al) new)
-               (loop (cdr al) (cons (car al) new)))]
-            [(null? al)
-             (reverse new)]
-            [else (not-proper who in-al)])))
+               (loop (cdr al) (cons (car al) new))))
+            ((null? al)
+             (reverse new))
+            (else (not-proper who in-al)))))
   
   (define (make-ass-remove pred who)
     (lambda (al kop)
@@ -169,7 +169,7 @@
  
   (define-alist-proc alist-delete!
                      (assp-remove assoc-remove assv-remove assq-remove)
-    (lambda/? ([a alist?] kop) 
+    (lambda/? ((a alist?) kop) 
       (alist-al-set!/check-immutable a ((dispatch a) (alist-al a) kop))))
   
   ;--------------------------------------------------------------------------
@@ -188,30 +188,30 @@
   
   (define-alist-proc alist-contains? 
                      (assp-contains? assoc-contains? assv-contains? assq-contains?)
-    (lambda/? ([a alist?] kop)
+    (lambda/? ((a alist?) kop)
       ((dispatch a) (alist-al a) kop)))
   
   ;--------------------------------------------------------------------------
   
   (define (ass-update--meta in-al kop proc default pred nf who)
-    (let loop ([al in-al] [new '()] [found #F])
-      (cond [(and (pair? al) (pair? (car al)))
+    (let loop ((al in-al) (new '()) (found #F))
+      (cond ((and (pair? al) (pair? (car al)))
              (if (pred kop (caar al))
                (loop (cdr al) (cons (cons (caar al) (proc (cdar al))) new) #T)
-               (loop (cdr al) (cons (car al) new) found))]
-            [(null? al)
+               (loop (cdr al) (cons (car al) new) found)))
+            ((null? al)
              (if found 
                (reverse new) 
                (begin (nf who kop in-al)
-                      (reverse (cons (cons kop (proc default)) new))))]
-            [else (not-proper who in-al)])))
+                      (reverse (cons (cons kop (proc default)) new)))))
+            (else (not-proper who in-al)))))
   
   (define (make-ass-update pred nf/dflt nf who)
     (case-lambda
-      [(al kop proc default)
-       (ass-update--meta al kop proc default pred nf/dflt who)]
-      [(al kop proc)
-       (ass-update--meta al kop proc #F pred nf who)]))
+      ((al kop proc default)
+       (ass-update--meta al kop proc default pred nf/dflt who))
+      ((al kop proc)
+       (ass-update--meta al kop proc #F pred nf who))))
   
   (define/who assp-update (make-ass-update apply-p not-found not-found who))  
   (define/who assoc-update (make-ass-update equal? ignore not-found who))  
@@ -221,68 +221,68 @@
   (define-alist-proc alist-update!
                      (assp-update assoc-update assv-update assq-update)
     (case-lambda/?
-      [([a alist?] kop [p procedure?] d)
-       (alist-al-set!/check-immutable a ((dispatch a) (alist-al a) kop p d))]
-      [([a alist?] kop [p procedure?])
-       (alist-al-set!/check-immutable a ((dispatch a) (alist-al a) kop p))]))
+      (((a alist?) kop (p procedure?) d)
+       (alist-al-set!/check-immutable a ((dispatch a) (alist-al a) kop p d)))
+      (((a alist?) kop (p procedure?))
+       (alist-al-set!/check-immutable a ((dispatch a) (alist-al a) kop p)))))
   
   ;--------------------------------------------------------------------------
 
   (define (ass-copy in-al)
-    (let loop ([al in-al] [new '()])
-      (cond [(and (pair? al) (pair? (car al)))
-             (loop (cdr al) (cons (cons (caar al) (cdar al)) new))]
-            [(null? al)
-             (reverse new)]
-            [else (not-proper 'ass-copy in-al)])))
+    (let loop ((al in-al) (new '()))
+      (cond ((and (pair? al) (pair? (car al)))
+             (loop (cdr al) (cons (cons (caar al) (cdar al)) new)))
+            ((null? al)
+             (reverse new))
+            (else (not-proper 'ass-copy in-al)))))
   
   (define-alist-proc alist-copy 
                      (make-pred-alist make-equal-alist make-eqv-alist make-eq-alist)
     (case-lambda/?
-      [(a) (alist-copy a #f)]
-      [([a alist?] mutable)
-       ((dispatch a) (ass-copy (alist-al a)) (and mutable #T))]))
+      ((a) (alist-copy a #F))
+      (((a alist?) mutable)
+       ((dispatch a) (ass-copy (alist-al a)) (and mutable #T)))))
   
   ;--------------------------------------------------------------------------
   
-  (define/? (alist-clear! [a alist?])
+  (define/? (alist-clear! (a alist?))
     (alist-al-set!/check-immutable--macro 'alist-clear! a '()))
   
   ;--------------------------------------------------------------------------
   
   (define (ass-keys in-al) 
-    (let loop ([al in-al] [keys '()])
-      (cond [(and (pair? al) (pair? (car al)))
-             (loop (cdr al) (cons (caar al) keys))]
-            [(null? al)
-             (reverse keys)]
-            [else (not-proper 'ass-keys in-al)])))
+    (let loop ((al in-al) (keys '()))
+      (cond ((and (pair? al) (pair? (car al)))
+             (loop (cdr al) (cons (caar al) keys)))
+            ((null? al)
+             (reverse keys))
+            (else (not-proper 'ass-keys in-al)))))
   
-  (define/? (alist-keys [a alist?])
+  (define/? (alist-keys (a alist?))
     (list->vector (ass-keys (alist-al a))))
   
   ;--------------------------------------------------------------------------
   
   (define (ass-entries in-al) 
-    (let loop ([al in-al] [keys '()] [vals '()])
-      (cond [(and (pair? al) (pair? (car al))) 
-             (loop (cdr al) (cons (caar al) keys) (cons (cdar al) vals))]
-            [(null? al) 
-             (values (reverse keys) (reverse vals))]
-            [else (not-proper 'ass-entries in-al)])))
+    (let loop ((al in-al) (keys '()) (vals '()))
+      (cond ((and (pair? al) (pair? (car al))) 
+             (loop (cdr al) (cons (caar al) keys) (cons (cdar al) vals)))
+            ((null? al) 
+             (values (reverse keys) (reverse vals)))
+            (else (not-proper 'ass-entries in-al)))))
   
-  (define/? (alist-entries [a alist?])
-    (let-values ([(kl vl) (ass-entries (alist-al a))])
+  (define/? (alist-entries (a alist?))
+    (let-values (((kl vl) (ass-entries (alist-al a))))
       (values (list->vector kl) (list->vector vl))))
   
   ;--------------------------------------------------------------------------
 
   (define-alist-proc alist-equivalence-function
                      ('pred equal? eqv? eq?)
-    (lambda/? ([a alist?])
+    (lambda/? ((a alist?))
       (dispatch a)))
   
-  (define/? (alist-mutable? [a alist?])
+  (define/? (alist-mutable? (a alist?))
     (alist-m a))
 
 )

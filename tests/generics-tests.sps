@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (rnrs eval)
@@ -13,33 +13,33 @@
 
 (define-syntax check-AV-who-msg
   (syntax-rules ()
-    [(_ who msg expr)
-     (check (guard (ex [else (and (assertion-violation? ex)
+    ((_ who msg expr)
+     (check (guard (ex (else (and (assertion-violation? ex)
                                   (message-condition? ex)
                                   (who-condition? ex)
                                   (list (condition-who ex) 
-                                        (condition-message ex)))])
+                                        (condition-message ex)))))
               expr
               'unexpected-return)
-            => '(who msg))]))
+            => '(who msg)))))
 
 (define-syntax check-no-spec
   (syntax-rules ()
-    [(_ who expr)
-     (check-AV-who-msg who "no specialization" expr)]))
+    ((_ who expr)
+     (check-AV-who-msg who "no specialization" expr))))
 
 (define-syntax check-SV
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else (syntax-violation? ex)])
+    ((_ expr)
+     (check (guard (ex (else (syntax-violation? ex)))
               (eval 'expr (environment '(rnrs) '(xitomatl generics)))
               'unexpected-return)
-            => #t)]))
+            => #T))))
 
 (define invalid-preds-spec-msg "invalid predicates specification")
 
 (define-generic/temporal g0)
-(check (procedure? g0) => #t)
+(check (procedure? g0) => #T)
 (check-no-spec g0 (g0))
 (g0-specialize! '() (lambda () 1))
 (check (g0) => 1)
@@ -48,8 +48,8 @@
 (check (g0 'a) => "a")
 (check-no-spec g0 (g0 'a 'b))
 (g0-specialize! (list symbol? symbol?) symbol=?)
-(check (g0 'a 'b) => #f)
-(check (g0 'a 'a) => #t)
+(check (g0 'a 'b) => #F)
+(check (g0 'a 'a) => #T)
 (check-no-spec g0 (g0 'a 3))
 (g0-specialize! (list (lambda (x) (or (symbol? x) (string? x))) number?) 
   (lambda (s n) (make-vector n s)))
@@ -66,12 +66,12 @@
 (check-no-spec g0 (g0 #\1 #\2))
 (check-no-spec g0 (g0 #\1 #\2 #\3 #\4))
 ;; no required, rest arguments list
-(g0-specialize! (lambda args #t) (lambda args (reverse args)))
+(g0-specialize! (lambda args #T) (lambda args (reverse args)))
 ;; specializations have precedence according to their order of being added
 (check (g0) => 1)
 (check (g0 1 2 3) => '(3 2 1))
 (check (g0 's) => "s")
-(check (g0 's 's) => #t)
+(check (g0 's 's) => #T)
 (check (g0 "x" 'y) => '(y "x"))
 (check (g0 "x" 2) => '#("x" "x"))
 (check (g0 #\1 #\2 #\3 #\4) => '(#\4 #\3 #\2 #\1))
@@ -111,28 +111,28 @@
     (foo-specs 'oops)))
 ;; define-generic/temporal syntax
 (define-generic/temporal g2
-  [() 1]
-  [([x symbol?])
-   (symbol->string x)]
-  [([x symbol?] [y symbol?])
-   (symbol=? x y)]
-  [([x (lambda (x) (or (symbol? x) (string? x)))] [y number?])
-   (make-vector y x)]
-  [([x char?] . #(y (lambda r (for-all char-alphabetic? r))))
-   (apply string x y)]
-  [#(x (lambda a #t))
-   (reverse x)])
+  (() 1)
+  (((x symbol?))
+   (symbol->string x))
+  (((x symbol?) (y symbol?))
+   (symbol=? x y))
+  (((x (lambda (x) (or (symbol? x) (string? x)))) (y number?))
+   (make-vector y x))
+  (((x char?) . #(y (lambda r (for-all char-alphabetic? r))))
+   (apply string x y))
+  (#(x (lambda a #T))
+   (reverse x)))
 (check (g2) => 1)
 (check (g2 'a) => "a")
-(check (g2 'a 'b) => #f)
-(check (g2 'a 'a) => #t)
+(check (g2 'a 'b) => #F)
+(check (g2 'a 'a) => #T)
 (check (g2 'a 3) => '#(a a a))
 (check (g2 "a" 4) => '#("a" "a" "a" "a"))
 (check (g2 #\1) => "1")
 (check (g2 #\1 #\b #\c #\d) => "1bcd")
 (check (g2 1 2 3) => '(3 2 1))
 (check (g2 's) => "s")
-(check (g2 's 's) => #t)
+(check (g2 's 's) => #T)
 (check (g2 "x" 'y) => '(y "x"))
 (check (g2 "x" 2) => '#("x" "x"))
 (check (g2 #\1 #\2 #\3 #\4) => '(#\4 #\3 #\2 #\1))
@@ -143,54 +143,54 @@
 (check-AV-who-msg reconfigure/temporal "argument check failed" 
   (let ()
     (define-generic/temporal g1 
-      [([a 'oops]) (values)])
+      (((a 'oops)) (values)))
     g1))
 (check-AV-who-msg reconfigure/temporal "argument check failed" 
   (let ()
     (define-generic/temporal g1 
-      [#(a 'oops) (values)])
+      (#(a 'oops) (values)))
     g1))
 (check-AV-who-msg reconfigure/temporal "argument check failed" 
   (let ()
     (define-generic/temporal g1 
-      [([z char?] . #(a 'oops)) (values)])
+      (((z char?) . #(a 'oops)) (values)))
     g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [(oops) (values)])
+              ((oops) (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [(oops oops2) (values)])
+              ((oops oops2) (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [oops (values)])
+              (oops (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [#(oops) (values)])
+              (#(oops) (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [([1 char?]) (values)])
+              (((1 char?)) (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [([a null?] . #(1 char?)) (values)])
+              (((a null?) . #(1 char?)) (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [#(1 char?) (values)])
+              (#(1 char?) (values)))
             g1))
 (check-SV (let ()
             (define-generic/temporal g1 
-              [(#(x char?)) (values)])
+              ((#(x char?)) (values)))
             g1))
 ;; define-generic/temporal does not break internal define contexts
 (check (let ()
          (define-generic/temporal g
-           [([a (lambda (a) #t)]) a])
+           (((a (lambda (a) #T))) a))
          (define x 'okay)
          (g x))
        => 'okay)

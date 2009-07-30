@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -107,9 +108,9 @@
       (die 'make-engine "not a procedure" thunk))    
     (new-engine
       (lambda (ticks)
-        (let-values ([vals (begin (start-timer ticks) 
-                                  (thunk))]) 
-          (let ([leftover (stop-timer)])
+        (let-values ((vals (begin (start-timer ticks) 
+                                  (thunk)))) 
+          (let ((leftover (stop-timer)))
             ;; stop-timer refills fuel, so there's enough for do-complete to reset-state
             (do-complete leftover vals))))))
   
@@ -119,7 +120,7 @@
     (do-return args))
   
   (define (mileage fuel thunk)
-    (let loop ([eng (make-engine thunk)] [total-ticks 0])
+    (let loop ((eng (make-engine thunk)) (total-ticks 0))
       (eng fuel
         (lambda (ticks value)
           (+ total-ticks (- fuel ticks)))
@@ -138,13 +139,13 @@
   
   (define-syntax por
     (syntax-rules (fuel)
-      [(_ (fuel f) x ...)
+      ((_ (fuel f) x ...)
        (first-true f
-         (list (make-engine (lambda () x)) ...))]))
+         (list (make-engine (lambda () x)) ...)))))
   
   (define (first-true fuel engs)
     (if (null? engs)
-      #f
+      #F
       ((car engs) fuel
         (lambda (ticks value)
           (or value (first-true fuel (cdr engs))))

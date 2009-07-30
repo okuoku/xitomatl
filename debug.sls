@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl debug)
   (export
     dprint dprint-mark
@@ -22,25 +22,25 @@
   (define-syntax dprint
     (lambda (stx)
       (syntax-case stx ()
-        [(_ expr ...)
+        ((_ expr ...)
          (positive? (length #'(expr ...)))
-         #'(let ([cep (current-error-port)]
-                 [mark (dprint-mark)])
+         #'(let ((cep (current-error-port))
+                 (mark (dprint-mark)))
              (fprintf cep "~a\n" mark)           
-             (let-values ([vs expr])
+             (let-values ((vs expr))
                (pretty-print 'expr cep)  ;; does newline
                (display "=>\n" cep)
                (for-each (lambda (v) (pretty-print v cep)) 
                          vs)
                (fprintf cep "~a\n" mark)           
                (apply values vs))
-             ...)])))
+             ...)))))
   
   (define eprint-mark (make-parameter "***"))
   
   (define (print-exn exn)
-    (let ([cep (current-error-port)]
-          [mark (eprint-mark)])
+    (let ((cep (current-error-port))
+          (mark (eprint-mark)))
       (fprintf cep "~a\n" mark)
       (print-exception exn cep)
       (fprintf cep "~a\n" mark)
@@ -49,13 +49,13 @@
   (define-syntax eprint
     (lambda (stx)
       (syntax-case stx ()
-        [(_ expr ...)
+        ((_ expr ...)
          (positive? (length #'(expr ...)))
          #'(begin
-             (let-values ([vs (with-exception-handler
+             (let-values ((vs (with-exception-handler
                                 print-exn
-                                (lambda () #f expr))])
+                                (lambda () #F expr))))
                (apply values vs))
-             ...)])))
+             ...)))))
   
 )

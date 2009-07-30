@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -59,13 +60,13 @@
  
   (define rename-file 
     (case-lambda
-      [(old new)
-       (rename-file old new #F)]
-      [(old new exists-ok)
+      ((old new)
+       (rename-file old new #F))
+      ((old new exists-ok)
        (when (and (not exists-ok) (file-exists? new #F))
          (raise (condition (make-who-condition 'rename-file)
                            (make-message-condition 
                             (format "already exists: ~a" new))
                            (make-i/o-filename-error old))))
-       (ik:rename-file old new)]))
+       (ik:rename-file old new))))
 )

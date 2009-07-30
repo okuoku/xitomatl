@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (rnrs eval)
@@ -14,15 +14,15 @@
 
 (define-syntax check-include-ex
   (syntax-rules ()
-    [(_ main-ex? who msg expr)
-     (check (catch ex ([else (and (main-ex? ex)
+    ((_ main-ex? who msg expr)
+     (check (catch ex ((else (and (main-ex? ex)
                                   (who-condition? ex)
                                   (message-condition? ex)
                                   (list (condition-who ex) 
-                                        (condition-message ex)))])
+                                        (condition-message ex)))))
               (eval 'expr (environment '(rnrs) '(xitomatl include)))
               'unexpected-return)
-            => '(who msg))]))
+            => '(who msg)))))
 
 (define-syntax check-include-error
   (syntax-rules ()
@@ -43,7 +43,7 @@
          (include "file-a")
          (include "file-b"))
        => 3)
-(let-syntax ([ae (begin (assert (file-exists? "file-c")) (lambda (_) #F))])
+(let-syntax ((ae (begin (assert (file-exists? "file-c")) (lambda (_) #F))))
   (ae)
   (check-include-error include/lexical-context "error while trying to include" 
     (include "file-c")))
@@ -53,8 +53,8 @@
 (define-syntax s
   (lambda (stx)
     (syntax-case stx ()
-      [(ctxt fn)
-       #'(include/lexical-context ctxt fn)])))
+      ((ctxt fn)
+       #'(include/lexical-context ctxt fn)))))
 (check (let () 
          (s "file-a")
          (+ x y))

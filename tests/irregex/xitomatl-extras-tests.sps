@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (import
   (rnrs)
   (srfi :78 lightweight-testing)
@@ -14,21 +14,21 @@
 
 (define-syntax check-ex/not-advancing
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else (and (assertion-violation? ex)
+    ((_ expr)
+     (check (guard (ex (else (and (assertion-violation? ex)
                                   (message-condition? ex)
-                                  (condition-message ex))])
+                                  (condition-message ex))))
               expr
               'unexpected-return)
-            => "pattern not advancing search")]))
+            => "pattern not advancing search"))))
 
 (define-syntax check-AV
   (syntax-rules ()
-    [(_ expr)
-     (check (guard (ex [else (assertion-violation? ex)])
+    ((_ expr)
+     (check (guard (ex (else (assertion-violation? ex)))
               expr
               'unexpected-return)
-            => #t)]))
+            => #T))))
 
 ;;----------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@
 
 (check (irregex-search/all "foobar" text0) 
        => '())
-(check (let ([ms (irregex-search/all "\\w+" text0)])
+(check (let ((ms (irregex-search/all "\\w+" text0)))
          (and (for-all irregex-match-data? ms)
               (length ms)))
        => 4)
@@ -69,22 +69,22 @@
 ;;;; make-lose-refs chunk-eqv? chunk-equal?
 ;; list-chunking-lose-refs uses make-lose-refs
 
-(let* ([chunk (apply list  ;; ensure we have newly allocated pairs and strings
+(let* ((chunk (apply list  ;; ensure we have newly allocated pairs and strings
                      (map string-copy
-                          '("This" "is" "a" "test" "of" "losing" "refs")))]
-       [saved (apply list chunk)]
-       [submatch-chunks (list chunk (cddddr chunk)
+                          '("This" "is" "a" "test" "of" "losing" "refs"))))
+       (saved (apply list chunk))
+       (submatch-chunks (list chunk (cddddr chunk)
                               (cdr chunk) (cdddr chunk)
                               (cddr chunk) (cddddr chunk)
-                              #f #f
-                              (cddddr chunk) (cddddr chunk))]
-       [replacements (list-chunking-lose-refs submatch-chunks)])      
+                              #F #F
+                              (cddddr chunk) (cddddr chunk)))
+       (replacements (list-chunking-lose-refs submatch-chunks)))      
   (check chunk => '("This" "is" "a" "test" "of" "losing" "refs"))
-  (check (for-all eq? chunk saved) => #t)
+  (check (for-all eq? chunk saved) => #T)
   (check (length replacements) => (length submatch-chunks))
   (check (for-all eq? (map (lambda (x) (and x (car x))) replacements) 
                       (map (lambda (x) (and x (car x))) submatch-chunks)) 
-         => #t)
+         => #T)
   (check (for-all (lambda (x y) (or (not x) ((chunk-eqv? list-chunker) x y)))
                   replacements submatch-chunks)
          => #T)
@@ -93,15 +93,15 @@
          => #T)
   (check (exists (lambda (x y) (and x (eq? x y))) 
                  replacements submatch-chunks)
-         => #f)
+         => #F)
   (check (list-ref replacements 0) => '("This" "is" "a" "test" "of"))
   (check (list-ref replacements 1) => '("of"))
   (check (list-ref replacements 2) => '("is" "a" "test" "of"))
   (check (list-ref replacements 3) => '("test" "of"))
   (check (list-ref replacements 4) => '("a" "test" "of"))
   (check (list-ref replacements 5) => '("of"))
-  (check (list-ref replacements 6) => #f)
-  (check (list-ref replacements 7) => #f)
+  (check (list-ref replacements 6) => #F)
+  (check (list-ref replacements 7) => #F)
   (check (list-ref replacements 8) => '("of"))
   (check (list-ref replacements 9) => '("of"))
   (let* ((get-next (chunker-get-next list-chunker))
@@ -158,12 +158,12 @@
 (check (irregex-search/chunked/all "foobar" list-chunker chunked-text0
                                    list-chunking-lose-refs)
        => '())
-(check (let ([ms (irregex-search/chunked/all "\\w+" list-chunker chunked-text0)])
+(check (let ((ms (irregex-search/chunked/all "\\w+" list-chunker chunked-text0)))
          (and (for-all irregex-match-data? ms)
               (length ms)))
        => 12)
-(check (let ([ms (irregex-search/chunked/all "\\w+" list-chunker chunked-text0
-                                             list-chunking-lose-refs)])
+(check (let ((ms (irregex-search/chunked/all "\\w+" list-chunker chunked-text0
+                                             list-chunking-lose-refs)))
          (and (for-all irregex-match-data? ms)
               (length ms)))
        => 12)
@@ -204,7 +204,7 @@
                                      (list (irregex-match-substring m 0)
                                            (irregex-match-substring m 1)
                                            (irregex-match-substring m 2))))
-       => '(("bar  zab" #f "bar") ("foozab" "foo" #f)))
+       => '(("bar  zab" #F "bar") ("foozab" "foo" #F)))
 
 ;;;; irregex-search/chunked/all/strings
 
@@ -214,7 +214,7 @@
        => '())
 (check (irregex-search/chunked/all/strings "foobar" list-chunker chunked-text0)
        => '())
-(check (let ([ms (irregex-search/chunked/all/strings "\\w+" list-chunker chunked-text0)])
+(check (let ((ms (irregex-search/chunked/all/strings "\\w+" list-chunker chunked-text0)))
          (and (for-all string? ms)
               (length ms)))
        => 12)
@@ -353,9 +353,9 @@
 (check (fold/enumerator (irregex-string-enumerator "(\\w+)-\\w+")
                         "this-will-search-until-stop-and-this-won't-be-seen"
                         (lambda (m) 
-                          (let ([s (irregex-match-substring m 1)])
+                          (let ((s (irregex-match-substring m 1)))
                             (or (not (string=? s "stop"))
-                                (values #f s)))))
+                                (values #F s)))))
        => "stop")
 (check (fold/enumerator (irregex-string-enumerator "^.*$" 3)
                         "abcdefghijklmnopqrstuvwxyz"
@@ -371,11 +371,11 @@
        => '("defghi"))
 (check (fold/enumerator (irregex-chunk-enumerator "." list-chunker)
                         '("zabbo")
-                        (lambda (_) (values #f 'ok)))
+                        (lambda (_) (values #F 'ok)))
        => 'ok)
 (check (fold/enumerator (irregex-chunk-enumerator ".*?" list-chunker)
                         '("zabbo")
-                        (lambda (m) (values #f (irregex-match-substring m))))
+                        (lambda (m) (values #F (irregex-match-substring m))))
        => "")
 (check-ex/not-advancing
  (fold/enumerator (irregex-chunk-enumerator ".*?" list-chunker)
@@ -383,40 +383,40 @@
                   (lambda (_) #T)))
 (check (fold/enumerator (irregex-list-enumerator ".")
                         chunked-text0
-                        (lambda (m i) (values #t (+ 1 i)))
+                        (lambda (m i) (values #T (+ 1 i)))
                         0)
        => 64)
 (check (fold/enumerator (irregex-list-enumerator "")
                         '()
-                        (lambda (_) (assert #f))
+                        (lambda (_) (assert #F))
                         'ok)
        => 'ok)
 (check (fold/enumerator (irregex-port-enumerator "\\w{8,}")
                         (make-sip)
-                        (lambda (m a) (values #t (cons (irregex-match-substring m) a)))
+                        (lambda (m a) (values #T (cons (irregex-match-substring m) a)))
                         '())
        => '("implement"))
 (check (fold/enumerator (irregex-port-enumerator "\\w{8,}" 3)
                         (make-sip)
-                        (lambda (m a) (values #t (cons (irregex-match-substring m) a)))
+                        (lambda (m a) (values #T (cons (irregex-match-substring m) a)))
                         '())
        => '("implement"))
 (check (fold/enumerator (irregex-enumerator "i.")
                         "generic is convenient"
-                        (lambda (m x) (values #t (irregex-match-substring m)))
-                        #f)
+                        (lambda (m x) (values #T (irregex-match-substring m)))
+                        #F)
        => "ie")
 (check (fold/enumerator (irregex-enumerator "i.")
                         '("IiIi" "Fooi" "B")
-                        (lambda (m a) (values #t (cons (irregex-match-substring m) a)))
+                        (lambda (m a) (values #T (cons (irregex-match-substring m) a)))
                         '())
        => '("iB" "iF" "iI"))
 (check (fold/enumerator (irregex-enumerator "i.")
                         (make-sip)
                         (lambda (m i) 
                           (if (< i 3)
-                            (values #t (+ 1 i))
-                            (values #f (irregex-match-substring m))))
+                            (values #T (+ 1 i))
+                            (values #F (irregex-match-substring m))))
                         0)
        => "in")
 (check-AV (fold/enumerator (irregex-enumerator "") 'bad-type (lambda _ (raise 'bork))))

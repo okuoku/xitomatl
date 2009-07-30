@@ -1,9 +1,9 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-#!r6rs
 (library (xitomatl datum-find)
   (export
     datum-find-enumerator
@@ -21,81 +21,81 @@
   
   (define/?/AV datum-find-enumerator 
     (case-lambda/?
-      [(pred)
-       (datum-find-enumerator pred #f)]
-      [([pred procedure?] want-warn)       
+      ((pred)
+       (datum-find-enumerator pred #F))
+      (((pred procedure?) want-warn)       
        (lambda (start proc seeds)
          (cond
-           [(path? start)
-            (find/dir-walk pred want-warn start proc seeds)]
-           [(textual-input-port? start)
-            (find/port pred want-warn start proc seeds)]
-           [else 
-            (AV "invalid start argument" start)]))]))
+           ((path? start)
+            (find/dir-walk pred want-warn start proc seeds))
+           ((textual-input-port? start)
+            (find/port pred want-warn start proc seeds))
+           (else 
+            (AV "invalid start argument" start)))))))
 
   (define (find/port pred want-warn port proc seeds)
     ((input-port-enumerator (lambda (p)
-                              (catch ex ([(lexical-violation? ex)
+                              (catch ex (((lexical-violation? ex)
                                           (when want-warn (warn ex port))
-                                          (eof-object)])
+                                          (eof-object)))
                                 (get-datum p))))
      port
      (lambda (datum . seeds)
-       (let recur ([ds (list datum)] [seeds seeds])
+       (let recur ((ds (list datum)) (seeds seeds))
          (if (null? ds)
-           (apply values #t seeds)
-           (let ([d (car ds)] [r (cdr ds)])
-             (let-values ([(c s)
+           (apply values #T seeds)
+           (let ((d (car ds)) (r (cdr ds)))
+             (let-values (((c s)
                            (if (pred d)
-                             (let-values ([(continue . next-seeds) 
-                                           (apply proc d seeds)])
+                             (let-values (((continue . next-seeds) 
+                                           (apply proc d seeds)))
                                (values continue next-seeds))
-                             (values #t seeds))])
+                             (values #T seeds))))
                (if c
-                 (let destruct ([d d])
+                 (let destruct ((d d))
                    (cond 
-                     [(pair? d)  ;; handle as improper list
-                      (let loop ([h (car d)] [t (cdr d)] [a '()])
-                        (cond [(pair? t)
-                               (loop (car t) (cdr t) (cons h a))]
-                              [(null? t)
-                               (recur (apply cons* (reverse (cons* r h a))) s)]
-                              [else
-                               (recur (apply cons* (reverse (cons* r t h a))) s)]))]
-                     [(vector? d)
-                      (destruct (vector->list d))]
-                     [else
-                      (recur r s)]))  
-                 (apply values #f s)))))))
+                     ((pair? d)  ;; handle as improper list
+                      (let loop ((h (car d)) (t (cdr d)) (a '()))
+                        (cond ((pair? t)
+                               (loop (car t) (cdr t) (cons h a)))
+                              ((null? t)
+                               (recur (apply cons* (reverse (cons* r h a))) s))
+                              (else
+                               (recur (apply cons* (reverse (cons* r t h a))) s)))))
+                     ((vector? d)
+                      (destruct (vector->list d)))
+                     (else
+                      (recur r s))))  
+                 (apply values #F s)))))))
      seeds))
   
   (define (find/dir-walk pred want-warn start-path proc seeds)
     ((directory-walk-enumerator)
      start-path
      (lambda (path dirs files syms . seeds)
-       (let next-file ([l files] [seeds seeds])
+       (let next-file ((l files) (seeds seeds))
          (cond
-           [(null? l)
-            (apply values dirs seeds)]
-           [else
-            (let* ([f (path-join path (car l))]
-                   [fip (catch ex ([(i/o-filename-error? ex)
+           ((null? l)
+            (apply values dirs seeds))
+           (else
+            (let* ((f (path-join path (car l)))
+                   (fip (catch ex (((i/o-filename-error? ex)
                                     (when want-warn (warn ex f))
-                                    #f])
-                          (open-input-file f))])
+                                    #F))
+                          (open-input-file f))))
               (if fip
-                (let-values ([(continue next-seeds)
+                (let-values (((continue next-seeds)
                               (find/port pred want-warn fip 
                                          (lambda (datum _ seeds) 
-                                           (let-values ([(c . s)
-                                                         (apply proc datum f seeds)])
+                                           (let-values (((c . s)
+                                                         (apply proc datum f seeds)))
                                              (values c c s)))
-                                         (list #t seeds))])
+                                         (list #T seeds))))
                   (close-port fip)
                   (if continue
                     (next-file (cdr l) next-seeds)
-                    (apply values #f next-seeds)))
-                (next-file (cdr l) seeds)))])))
+                    (apply values #F next-seeds)))
+                (next-file (cdr l) seeds)))))))
      seeds))
   
   (define (warn ex . irrts)
@@ -109,34 +109,34 @@
   
   (define/? datum-find 
     (case-lambda
-      [(pred)
-       (datum-find pred #f)]
-      [(pred want-warn) 
-       (lambda/? ([proc procedure?] start)
+      ((pred)
+       (datum-find pred #F))
+      ((pred want-warn) 
+       (lambda/? ((proc procedure?) start)
          ((datum-find-enumerator pred want-warn) 
           start
           (case-lambda
-            [(d f) (proc d f) #T]
-            [(d) (proc d) #T])
-          '()))]))
+            ((d f) (proc d f) #T)
+            ((d) (proc d) #T))
+          '())))))
   
   (define datum-find->list
     (case-lambda
-      [(pred)
-       (datum-find->list pred #f)]
-      [(pred want-warn)
+      ((pred)
+       (datum-find->list pred #F))
+      ((pred want-warn)
        (lambda (start)
-         (let ([r ((datum-find-enumerator pred want-warn) 
+         (let ((r ((datum-find-enumerator pred want-warn) 
                    start
                    (if (path? start)
                      (lambda (d f a)
-                       (values #t (assoc-update a f (lambda (x) (cons d x)) '())))
+                       (values #T (assoc-update a f (lambda (x) (cons d x)) '())))
                      (lambda (d a)
-                       (values #t (cons d a))))
-                   '(()))])
+                       (values #T (cons d a))))
+                   '(()))))
            (if (path? start)
              (map (lambda (x) (cons (car x) (reverse (cdr x))))
                   (list-sort (lambda (x y) (string<? (car x) (car y))) r))
-             (reverse r))))])) 
+             (reverse r))))))) 
 
 )

@@ -1,3 +1,4 @@
+#!r6rs
 ;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
@@ -5,7 +6,6 @@
 
 ;; TODO: Use SRFI-23-error->R6RS.
 
-#!r6rs
 (library (xitomatl irregex (0 7 4))
   (export
     irregex string->irregex sre->irregex irregex?
@@ -46,8 +46,8 @@
 
   (define-syntax ->string
     (syntax-rules ()
-      [(_ expr)
-       expr]))
+      ((_ expr)
+       expr)))
 
   (include/resolve ("xitomatl" "irregex") "irregex-r6rs.scm")
   (include/resolve ("xitomatl" "irregex") "irregex-utils.scm")
