@@ -630,7 +630,7 @@
     (rnrs)
     (only (xitomatl profiler srfi-time) define/profiled)  ;; change as desired
     (for (only (xitomatl macro-utils) identifier-append) expand)
-    (for (only (xitomatl r6rs-bindings utils) names-of) expand))
+    (for (only (xitomatl R6RS-bindings utils) names-of) expand))
   
   (define-syntax define-all
     (lambda (stx)

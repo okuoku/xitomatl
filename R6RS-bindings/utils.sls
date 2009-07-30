@@ -4,7 +4,7 @@
 ;; some other collection, my license must also be included.
 
 #!r6rs
-(library (xitomatl r6rs-bindings utils)
+(library (xitomatl R6RS-bindings utils)
   (export
     all-libraries-names 
     names-of)
@@ -15,7 +15,7 @@
     (only (xitomatl define) define/AV)
     (only (xitomatl exceptions) catch)
     (only (xitomatl library-utils) library-name<? library-name?)
-    (xitomatl r6rs-bindings spec))
+    (xitomatl R6RS-bindings spec))
   
   (define all-libraries-names
     (list-sort library-name<?

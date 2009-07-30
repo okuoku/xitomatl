@@ -4,7 +4,7 @@
 ;; some other collection, my license must also be included.
 
 #!r6rs
-(library (xitomatl r6rs-bindings spec)
+(library (xitomatl R6RS-bindings spec)
   (export
     spec)
   (import
