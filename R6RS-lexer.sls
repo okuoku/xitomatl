@@ -6,7 +6,7 @@
 
 (library (xitomatl R6RS-lexer)
   (export
-    R6RS-lexer R6RS-token?
+    (rename (R6RS-lexer/seps R6RS-lexer)) R6RS-token?
     identifier-token? make-identifier-token
     boolean-token? make-boolean-token
     number-token? make-number-token
@@ -37,6 +37,7 @@
     comment-token? atmosphere-token? abbreviation-token?)
   (import
     (rnrs)
+    (srfi :39 parameters)
     (except (xitomatl irregex)
             sre->irregex
             irregex-search/chunked)
@@ -44,6 +45,7 @@
           compile-SRE
           regexp-search/chunked)
     (only (xitomatl irregex counting)
+          line-separators
           counted-match-start-positions)
     #;(xitomatl irregex unicode-general-categories)
     (xitomatl lexer)
@@ -284,6 +286,16 @@
     (hashbang-comment
      "#!"))  ;; Different than R6RS 4.2.1.
 
+  (define (R6RS-lexer/seps x)
+    (parameterize ((line-separators
+                    '("\xD;\xA;"
+                      "\xD;\x85;"
+                      "\xD;"
+                      "\xA;"
+                      "\x85;"
+                      "\x2028;")))
+      (R6RS-lexer x)))
+  
   (define comment-token?
     (or? line-comment-token? nested-comment-token?
          datum-comment-token? hashbang-comment-token?))

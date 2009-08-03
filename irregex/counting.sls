@@ -48,9 +48,9 @@
     ;; Default is Unicode line terminators.
     ;; From http://en.wikipedia.org/wiki/Newline#Unicode
     (make-parameter
-     '("\xA;"      ;; LF:    Line Feed, U+000A
+     '("\xD;\xA;"  ;; CR+LF: CR followed by LF, U+000D followed by U+000A
        "\xD;"      ;; CR:    Carriage Return, U+000D
-       "\xD;\xA;"  ;; CR+LF: CR followed by LF, U+000D followed by U+000A
+       "\xA;"      ;; LF:    Line Feed, U+000A
        "\x85;"     ;; NEL:   Next Line, U+0085
        "\xC;"      ;; FF:    Form Feed, U+000C
        "\x2028;"   ;; LS:    Line Separator, U+2028

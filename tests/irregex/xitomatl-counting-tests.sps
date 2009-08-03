@@ -30,7 +30,7 @@
 ;;;; line-separators
 
 (check (line-separators)
-       => '("\xA;" "\xD;" "\xD;\xA;" "\x85;" "\xC;" "\x2028;" "\x2029;"))
+       => '("\xD;\xA;" "\xD;" "\xA;" "\x85;" "\xC;" "\x2028;" "\x2029;"))
 (check-AV (line-separators 'oops))
 (check-AV (line-separators '("ab" "cd" oops)))
 (check-AV (line-separators '("ab" "c" "" "d")))

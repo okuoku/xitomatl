@@ -145,8 +145,6 @@
 
 ;;;; define-simple-lexer -- uses simple-lexer/who and sre-tokenizer
 
-;; TODO: test (type ,make-tokr)
-
 (define-simple-lexer slexr0
   (never ,(lambda (c-chunker)
             (lambda (c-chunk idx)
