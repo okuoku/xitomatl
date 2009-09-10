@@ -100,6 +100,8 @@
   (only (xitomatl ssax raise))
   (only (xitomatl ssax sxpath (5 1)))
   (only (xitomatl ssax tree-trans (5 1)))
+  (only (xitomatl stack-lang))
+  (only (xitomatl stack-lang core))
   (only (xitomatl strings))
   (only (xitomatl strings compat))
   (only (xitomatl sxml-match (1 0)))
