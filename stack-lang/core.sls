@@ -6,12 +6,10 @@
 
 (library (xitomatl stack-lang core)
   (export
-    S
-    Q
-    λS
-    data-stack
-    pop
-    push)
+    Q S* S
+    define-λS λS λS/who
+    data-stack pop push
+    not-enough-values)
   (import
     (rnrs)
     (srfi :39 parameters)
@@ -29,9 +27,7 @@
 
   (define (push x) (data-stack (cons x (data-stack))))
 
-  (define-syntax S
-    ;; TODO?: Should it allow only identifiers, literals, and (Q ---) ?
-    ;;        I.e., disallow arbitrary Scheme expressions?
+  (define-syntax Q
     (lambda (stx)
       (define (one-ret-val? x)
         (define (literal? x)
@@ -47,34 +43,55 @@
               (_ #F))))
       (syntax-case stx ()
         ((_ expr ...)
-         (with-syntax (((expr^ ...)
-                        (map (lambda (e)
-                               (cond ((identifier? e)
-                                      (list e))
-                                     ((one-ret-val? e)
-                                      (list (syntax push) e))
-                                     (else
-                                      (quasisyntax ((λS () v (unsyntax e)))))))
-                             (syntax (expr ...)))))
-           (syntax (begin expr^ ...)))))))
+         (with-syntax
+             (((expr^ ...)
+               (map (lambda (e)
+                      (cond ((identifier? e)
+                             (list e (syntax s)))
+                            ((one-ret-val? e)
+                             (list (syntax cons) e (syntax s)))
+                            (else
+                             (quasisyntax ((λS () v (unsyntax e)) s)))))
+                    (syntax (expr ...)))))
+           (syntax
+            (lambda (s) (let* ((s expr^) ...) s))))))))
 
-  (define-syntax Q
+  (define-syntax S*
     (syntax-rules ()
-      ((_ expr ...)
-       (lambda () (S expr ...)))))
+      ((_ s expr ...)
+       ((Q expr ...) s))))
 
-  (define (not-enough-values)
-    (assertion-violation #F "not enough values on data stack"))
+  (define-syntax S
+    (syntax-rules ()
+      ((_) (values))
+      ((_ expr ...)
+       (begin (data-stack (S* (data-stack) expr ...))
+              (values)))))
+
+  (define not-enough-values
+    (case-lambda
+      ((who . irrts)
+       (apply assertion-violation who "not enough values on data stack" irrts))
+      (() (not-enough-values #F))))
+
+  (define-syntax define-λS
+    (lambda (stx)
+      (syntax-case stx (λS)
+        ((_ name (λS . r))
+         (identifier? (syntax name))
+         (syntax (define name (λS/who name . r))))
+        ((_ . r)
+         (syntax (define . r))))))
 
   (define-syntax λS
+    (syntax-rules ()
+      ((_ in-frmls out-frmls . body)
+       (λS/who "a λS" in-frmls out-frmls . body))))
+
+  (define-syntax λS/who
     (lambda (stx)
-      (define (make-expr in-frmls eval-push)
+      (define (make-pop-bind who in-frmls eval-push)
         (syntax-case in-frmls ()
-          (() eval-push)
-          (ds (identifier? (syntax ds))
-           (quasisyntax
-            (let ((ds data-stack))
-              (unsyntax eval-push))))
           ((id ... . ds)
            (with-syntax
                (((clause ...)
@@ -84,27 +101,29 @@
                                       ((unsyntax x)
                                        (if (pair? s)
                                          (car s)
-                                         (not-enough-values))))
+                                         (not-enough-values (quote (unsyntax who))))))
                                      (syntax (s (cdr s)))))
                              (reverse (syntax (id ...))))))
                 ((maybe-ds ...)
                  (if (identifier? (syntax ds))
-                   (list (syntax (ds data-stack)))
+                   (list (syntax (ds s)))
                    (list))))
              (quasisyntax
-              (let* (maybe-ds ...
-                     (s (data-stack))
-                     clause ...)
-                (data-stack s)
+              (let* (clause ...
+                     maybe-ds ...)
                 (unsyntax eval-push)))))))
       (define (make-eval-push out-frmls body)
         (syntax-case out-frmls ()
-          (()
+          (#F
            (quasisyntax (let () . (unsyntax body))))
+          (()
+           (quasisyntax
+            (begin (let () . (unsyntax body))
+                   s)))
           ((id)
            (quasisyntax
             (let ((id (let () . (unsyntax body))))
-              (data-stack (cons id (data-stack))))))
+              (cons id s))))
           ((id ... . r)
            (with-syntax
                (((clause ...)
@@ -122,16 +141,17 @@
               (call-with-values
                 (lambda () . (unsyntax body))
                 (lambda (id ... . r)
-                  (let* ((s (data-stack))
-                         clause ...
+                  (let* (clause ...
                          maybe-rest ...)
-                    (data-stack s)))))))))
+                    s))))))))
       (syntax-case stx ()
-        ((_ in-frmls out-frmls . body)
+        ((_ who in-frmls out-frmls . body)
          (and (formals-ok?/raise (syntax in-frmls) stx)
-              (formals-ok?/raise (syntax out-frmls) stx))
+              (or (not (syntax->datum (syntax out-frmls)))
+                  (formals-ok?/raise (syntax out-frmls) stx)))
          (with-syntax
-             ((expr (make-expr (syntax in-frmls)
+             ((expr (make-pop-bind (syntax who) (syntax in-frmls)
                      (make-eval-push (syntax out-frmls) (syntax body)))))
-           (syntax (lambda () expr)))))))
+           (syntax
+            (lambda (s) expr)))))))
 )

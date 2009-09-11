@@ -7,69 +7,79 @@
 (library (xitomatl stack-lang)
   (export
     ;; From (xitomatl stack-lang core)
-    S Q λS
+    S Q λS define
     ;; From this library
     current-stack
     print
     show
-    not
-    if
-    when
-    unless
-    list
-    length
-    map
-    filter
+    dup
+    drop
+    swap
+    (rename
+     (S:not not)
+     (S:if if)
+     (S:when when)
+     (S:unless unless)
+     (S:list list)
+     (S:length length)
+     (S:map map)
+     (S:filter filter))
     compose
     curry)
   (import
-    (except (rename (rnrs)
-                    (assertion-violation AV))
-            not if when unless list length map filter)
-    (prefix (only (rnrs)
-                  not if when unless list length map filter)
-            scheme:)
+    (except (rnrs) define)
     (only (xitomatl common) pretty-print)
-    (only (xitomatl predicates) non-negative-integer?)
-    (xitomatl stack-lang core))
+    (rename (xitomatl stack-lang core) (define-λS define)))
 
-  ;; Some of these λS procedures could be optimized more.
-
-  (define current-stack (λS ds (x) (ds)))
+  (define current-stack (λS ds (r) ds))
   (define print (λS (x) () (pretty-print x)))
   (define show (λS (x) (r) (pretty-print x) x))
 
-  (define not (λS (x) (r) (scheme:not x)))
-  (define if (λS (v t f) () (scheme:if v (t) (f))))
-  (define when (λS (v p) () (scheme:if v (p) (values))))
-  (define unless (λS (v p) () (scheme:if v (values) (p))))
+  (define (dup ds)
+    (if (pair? ds)
+      (cons (car ds) ds)
+      (not-enough-values 'dup)))
+  (define (drop ds)
+    (if (pair? ds)
+      (cdr ds)
+      (not-enough-values 'drop)))
+  (define swap (λS (x y . ds) #F (cons x (cons y ds))))
 
-  (define list
-    (λS (size . ds) (r)
+  (define S:not (λS/who not (x) (r) (not x)))
+  (define S:if (λS/who if (v t f . ds) #F (if v (t ds) (f ds))))
+  (define S:when (λS/who when (v t . ds) #F (if v (t ds) ds)))
+  (define S:unless (λS/who unless (v f . ds) #F (if v ds (f ds))))
+
+  (define S:list
+    (λS/who list (size . ds) (r)
       (define who (quote list))
-      (scheme:unless (non-negative-integer? size)
-        (AV who "not a non-negative integer" size))
-      (let loop ((s (ds)) (n size) (l (quote ())))
-        (scheme:if (positive? n)
-          (scheme:if (null? s)
-            (AV who "not enough values on data stack" size)
+      (let loop ((s ds) (n size) (l (quote ())))
+        (if (positive? n)
+          (if (null? s)
+            (not-enough-values who size)
             (loop (cdr s) (- n 1) (cons (car s) l)))
-          (begin (ds s)
-                 l)))))
-  (define length
-    (λS (l) (r) (scheme:length l)))
+          l))))
+  (define S:length
+    (λS/who length (l) (r) (length l)))
 
-  (define map
-    (λS (l p) (r)
-      (scheme:map (lambda (x) (push x) (p) (pop)) l)))
-  (define filter
-    (λS (l p) (r)
-      (scheme:filter (lambda (x) (push x) (p) (pop)) l)))
+  (define S:map
+    (λS/who map (l p . ds) #F
+      (let loop ((l l) (ds ds) (a (quote ())))
+        (if (null? l)
+          (cons (reverse a) ds)
+          (let ((ds (p (cons (car l) ds))))
+            (loop (cdr l) (cdr ds) (cons (car ds) a)))))))
+  (define S:filter
+    (λS/who filter (l p . ds) #F
+      (let loop ((l l) (ds ds) (a (quote ())))
+        (if (null? l)
+          (cons (reverse a) ds)
+          (let* ((v (car l))
+                (ds (p (cons v ds))))
+            (loop (cdr l) (cdr ds) (if (car ds) (cons v a) a)))))))
 
-  (define compose
-    (λS (g f) (r)
-      (Q g f)))
+  (define compose (λS (g f) (r) (Q g f)))
   (define curry
     (λS (x p) (r)
-      (lambda () (push x) (p))))
+      (lambda (ds) (p (cons x ds)))))
 )
