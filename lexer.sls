@@ -127,10 +127,10 @@
                (begin
                  ;; NOTE: assert commented-out because (xitomatl regexp) is
                  ;; somewhat different.
-                 #;(assert (and (eq? (irregex-match-start-source m 0) chunk)
+                 #;(assert (and (eq? (irregex-match-start-chunk m 0) chunk)
                               (= (irregex-match-start-index m 0) index)))
                  (values (make-token m)
-                         (irregex-match-end-source m 0)
+                         (irregex-match-end-chunk m 0)
                          (irregex-match-end-index m 0)))
                (values #F #F #F))))))))
 

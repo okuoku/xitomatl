@@ -109,7 +109,7 @@
            (let loop ((chk chunk) (i (get-start chunk)) (seeds seeds))
              (let ((m (irregex-search/chunked irx-c chunker chk i)))
                (if m
-                 (let ((end-chunk (irregex-match-end-source m 0))
+                 (let ((end-chunk (irregex-match-end-chunk m 0))
                        (end-index (irregex-match-end-index m 0)))
                    (when lose-refs
                      ;; Losing possible reference(s) reachable from the match
@@ -129,16 +129,16 @@
                               (if (negative? n)
                                 (lose-refs submatch-chunks)
                                 (loop (- n 1)
-                                      (cons* (irregex-match-start-source m n)
-                                             (irregex-match-end-source m n)
+                                      (cons* (irregex-match-start-chunk m n)
+                                             (irregex-match-end-chunk m n)
                                              submatch-chunks))))))
                        (assert (and (list? replacements)
                                     (let ((l (length replacements)))
                                       (and (>= l 2) (even? l)))))
                        (let loop ((r replacements) (n 0))
                          (unless (null? r)
-                           (irregex-match-start-source-set! m n (car r))
-                           (irregex-match-end-source-set! m n (cadr r))
+                           (irregex-match-start-chunk-set! m n (car r))
+                           (irregex-match-end-chunk-set! m n (cadr r))
                            (loop (cddr r) (+ 1 n))))))
                    (let-values (((continue . next-seeds) (apply proc m seeds)))
                      (if continue

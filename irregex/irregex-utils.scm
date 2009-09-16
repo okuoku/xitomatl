@@ -1,6 +1,6 @@
 ;;;; irregex-utils.scm
 ;;
-;; Copyright (c) 2008 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define rx-special-chars
@@ -27,42 +27,44 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (irregex-opt ls)
+  (define (make-alt ls)
+    (cond ((null? (cdr ls)) (car ls))
+          ((every char? ls) (list (list->string ls)))
+          (else (cons 'or ls))))
+  (define (make-seq ls)
+    (cond ((null? (cdr ls)) (car ls))
+          ((every (lambda (x) (or (string? x) (char? x))) ls)
+           (apply string-append (map (lambda (x) (if (char? x) (string x) x)) ls)))
+          (else (cons 'seq ls))))
   (cond
-    ((null? ls) "")
-    ((null? (cdr ls)) (irregex-quote (car ls)))
-    (else
-     (let ((chars (make-vector 256 '())))
-       (let lp1 ((ls ls) (empty? #f))
-         (if (null? ls)
-           (string-append
-            "(?:"
-            (string-intersperse
-             (let lp2 ((i 0) (res '()))
-               (if (= i 256)
-                 (reverse res)
-                 (let ((c (integer->char i))
-                       (opts (vector-ref chars i)))
-                   (lp2 (+ i 1)
-                        (if (null? opts)
-                          res
-                          (cons (string-append
-                                 (irregex-quote (string c))
-                                 (irregex-opt opts))
-                                res))))))
-             "|")
-            (if empty? "|" "") ; or use trailing '?' ?
-            ")")
-           (let* ((str (car ls))
-                  (len (string-length str)))
-             (if (zero? len)
-               (lp1 (cdr ls) #t)
-               (let ((i (char->integer (string-ref str 0))))
-                 (vector-set!
-                  chars
-                  i
-                  (cons (substring str 1 (string-length str))
-                        (vector-ref chars i)))
-                 (lp1 (cdr ls) empty?))))))))))
+   ((null? ls) "")
+   ((null? (cdr ls)) (car ls))
+   (else
+    (let ((chars (make-vector 256 '())))
+      (let lp1 ((ls ls) (empty? #f))
+        (if (null? ls)
+            (let lp2 ((i 0) (res '()))
+              (if (= i 256)
+                  (let ((res (make-alt (reverse res))))
+                    (if empty? `(? ,res) res))
+                  (let ((c (integer->char i))
+                        (opts (vector-ref chars i)))
+                    (lp2 (+ i 1)
+                         (cond
+                          ((null? opts) res)
+                          ((equal? opts '("")) `(,c ,@res))
+                          (else `(,(make-seq (list c (irregex-opt opts)))
+                                  ,@res)))))))
+            (let* ((str (car ls))
+                   (len (string-length str)))
+              (if (zero? len)
+                  (lp1 (cdr ls) #t)
+                  (let ((i (char->integer (string-ref str 0))))
+                    (vector-set!
+                     chars
+                     i
+                     (cons (substring str 1 len) (vector-ref chars i)))
+                    (lp1 (cdr ls) empty?))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -92,7 +94,7 @@
                  (display "(?:") (for-each lp (cdr x)) (display ")"))
                 (else (for-each lp (cdr x)))))
              ((submatch) (display "(") (for-each lp (cdr x)) (display ")"))
-             ((\x7C; or)  ;; \x7C; is (string->symbol "|")
+             ((or)
               (display "(?:")
               (lp (cadr x))
               (for-each (lambda (x) (display "|") (lp x)) (cddr x))
@@ -120,7 +122,10 @@
               (display ":")
               (for-each lp (cdr x))
               (display ")"))
-             (else (error "unknown match operator" x))))
+             (else
+              (if (string? (car x))
+                  (lp `(cset ,@(string->list (car x))))
+                  (error "unknown match operator" x)))))
           ((symbol? x)
            (case x
              ((bos bol) (display "^"))
@@ -128,6 +133,8 @@
              ((any nonl) (display "."))
              (else (error "unknown match symbol" x))))
           ((string? x)
-           (display (irregex-quote (->string x))))
+           (display (irregex-quote x)))
+          ((char? x)
+           (display (irregex-quote (string x))))
           (else (error "unknown match pattern" x)))))))
 

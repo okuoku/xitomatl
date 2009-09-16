@@ -190,13 +190,13 @@
             (irregex-search/chunked/all "(e)((\\w+)(e))" list-chunker chunked-text0
                                         list-chunking-lose-refs))
        => '("e"))
-(check (map irregex-match-substring
-            (irregex-search/chunked/all "^.*$" list-chunker chunked-text0))
-       => '("Once upon a time...  There was a string used for testing chunks!"))
-(check (map irregex-match-substring
-            (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
-                                        list-chunking-lose-refs))
-       => '("Once upon a time...  There was a string used for testing chunks!"))
+(check-ex/not-advancing
+ (map irregex-match-substring
+      (irregex-search/chunked/all "^.*$" list-chunker chunked-text0)))
+(check-ex/not-advancing
+ (map irregex-match-substring
+      (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
+                                  list-chunking-lose-refs)))
 (check (irregex-search/chunked/all "(?:(foo)|(bar))\\s*zab" list-chunker 
                                    '("bar " " zab" "fo" "oza" "b")
                                    list-chunking-lose-refs
@@ -225,8 +225,8 @@
        => '("On" "on" "or"))
 (check (irregex-search/chunked/all/strings "(e)((\\w+)(e))" list-chunker chunked-text0)
        => '("ere"))
-(check (irregex-search/chunked/all/strings "^.*$" list-chunker chunked-text0)
-       => '("Once upon a time...  There was a string used for testing chunks!"))
+(check-ex/not-advancing
+ (irregex-search/chunked/all/strings "^.*$" list-chunker chunked-text0))
 
 ;;----------------------------------------------------------------------------
 
@@ -357,18 +357,21 @@
                             (or (not (string=? s "stop"))
                                 (values #F s)))))
        => "stop")
-(check (fold/enumerator (irregex-string-enumerator "^.*$" 3)
-                        "abcdefghijklmnopqrstuvwxyz"
-                        (lambda (m a)
-                          (values #T (cons (irregex-match-substring m) a)))
-                        '())
-       => '("defghijklmnopqrstuvwxyz"))
+(check-ex/not-advancing
+ (fold/enumerator (irregex-string-enumerator "^.*$")
+                  "abcdefghijklmnopqrstuvwxyz"
+                  (lambda (m a)
+                    (values #T (cons (irregex-match-substring m) a)))
+                  '()))
 (check (fold/enumerator (irregex-string-enumerator "^.*$" 3 9)
                         "abcdefghijklmnopqrstuvwxyz"
                         (lambda (m a)
-                          (values #T (cons (irregex-match-substring m) a)))
+                          (let ((s (irregex-match-substring m)))
+                            (if (positive? (string-length s))
+                              (values #T (cons s a))
+                              (values #F (cons s a)))))
                         '())
-       => '("defghi"))
+       => '("" "defghi"))
 (check (fold/enumerator (irregex-chunk-enumerator "." list-chunker)
                         '("zabbo")
                         (lambda (_) (values #F 'ok)))
@@ -381,6 +384,13 @@
  (fold/enumerator (irregex-chunk-enumerator ".*?" list-chunker)
                   '("zabbo")
                   (lambda (_) #T)))
+(check (fold/enumerator (irregex-chunk-enumerator ".*?" list-chunker)
+                        '("zabbo")
+                        (lambda (m)
+                          (if (string=? "" (irregex-match-substring m))
+                            (values #F 'stopped)
+                            #T)))
+       => 'stopped)
 (check (fold/enumerator (irregex-list-enumerator ".")
                         chunked-text0
                         (lambda (m i) (values #T (+ 1 i)))

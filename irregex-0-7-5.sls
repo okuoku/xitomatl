@@ -4,28 +4,27 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-;; TODO: Use SRFI-23-error->R6RS.
-
-(library (xitomatl irregex (0 7 4))
+(library (xitomatl irregex (0 7 5))
   (export
     irregex string->irregex sre->irregex irregex?
 
     irregex-new-matches irregex-reset-matches! irregex-match-data?
     make-irregex-match irregex-match-chunker-set!
-    irregex-match-start-source-set! irregex-match-start-index-set!
-    irregex-match-end-source-set! irregex-match-end-index-set!
-    
-    irregex-match-num-submatches irregex-match-substring irregex-match-index 
-    irregex-match-start-source irregex-match-start-index
-    irregex-match-end-source irregex-match-end-index
-    irregex-match-subchunk irregex-match-chunker 
-    
+    irregex-match-start-chunk-set! irregex-match-start-index-set!
+    irregex-match-end-chunk-set! irregex-match-end-index-set!
+    irregex-match-num-submatches irregex-match-substring irregex-match-index
+    irregex-match-start-chunk irregex-match-start-index
+    irregex-match-end-chunk irregex-match-end-index
+    irregex-match-subchunk irregex-match-chunker
+
     irregex-search irregex-search/matches irregex-match
-    irregex-replace irregex-replace/all irregex-fold irregex-fold/chunked
+    irregex-replace irregex-replace/all
     irregex-search/chunked irregex-match/chunked
+    irregex-fold irregex-fold/chunked irregex-fold/fast irregex-fold/chunked/fast
+    irregex-extract irregex-split
 
     make-irregex-chunker chunker-get-next chunker-get-str chunker-get-start
-    chunker-get-end chunker-get-substring chunker-get-subchunk 
+    chunker-get-end chunker-get-substring chunker-get-subchunk
 
     irregex-dfa irregex-dfa/search irregex-dfa/extract
     irregex-nfa irregex-flags irregex-num-submatches irregex-lengths irregex-names
@@ -37,18 +36,16 @@
     (rnrs mutable-strings)
     (rnrs mutable-pairs)
     (rnrs r5rs)
+    (srfi :23 error tricks)
+    (prefix (only (srfi :43 vectors) vector-copy!) srfi-43:)
     (only (xitomatl include) include/resolve)
     (only (xitomatl strings) string-intersperse)
     (only (xitomatl common) with-output-to-string))
 
-  (define (error . args)
-    (apply assertion-violation "(library (xitomatl irregex (0 7 4)))" args))
+  (define (vector-copy! src dst)
+    (srfi-43:vector-copy! dst 0 src))
 
-  (define-syntax ->string
-    (syntax-rules ()
-      ((_ expr)
-       expr)))
-
-  (include/resolve ("xitomatl" "irregex") "irregex-r6rs.scm")
-  (include/resolve ("xitomatl" "irregex") "irregex-utils.scm")
+  (SRFI-23-error->R6RS "(library (xitomatl irregex (0 7 5)))"
+   (include/resolve ("xitomatl" "irregex") "irregex-r6rs.scm")
+   (include/resolve ("xitomatl" "irregex") "irregex-utils.scm"))
 )

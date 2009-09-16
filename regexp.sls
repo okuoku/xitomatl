@@ -50,9 +50,9 @@
                    ;; TODO: Supporting groups will require different arguments to
                    ;; above call to make-irregex-match.
                    (irregex-match-chunker-set! im chunker)
-                   (irregex-match-start-source-set! im 0 o)
+                   (irregex-match-start-chunk-set! im 0 o)
                    (irregex-match-start-index-set! im 0 i)
-                   (irregex-match-end-source-set! im 0 o^)
+                   (irregex-match-end-chunk-set! im 0 o^)
                    (irregex-match-end-index-set! im 0 i^)
                    im)
                  (and (not (eq? i^ 'bos))

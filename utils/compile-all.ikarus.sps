@@ -52,7 +52,7 @@
   (only (xitomatl include))
   (only (xitomatl include compat))
   (only (xitomatl indexes))
-  (only (xitomatl irregex (0 7 4)))
+  (only (xitomatl irregex (0 7 5)))
   (only (xitomatl irregex counting))
   (only (xitomatl irregex extras))
   (only (xitomatl irregex-tool))

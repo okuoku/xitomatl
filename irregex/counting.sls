@@ -110,10 +110,10 @@
                      (seps (if (= 0 offset) '() (list (cons #F i)))))
             (let ((m (irregex-search/chunked
                       newline-rx two-chunker two-chunk i #;???next #;???ne)))
-              (let ((msc (and m (irregex-match-start-source m 0)))
+              (let ((msc (and m (irregex-match-start-chunk m 0)))
                     (msi (and m (irregex-match-start-index m 0))))
                 (if (and (eq? msc two-chunk) (< msi pos))
-                  (let ((mec (irregex-match-end-source m 0))
+                  (let ((mec (irregex-match-end-chunk m 0))
                         (mei (irregex-match-end-index m 0)))
                     (if (eq? mec two-chunk)
                       (let ((seps (cons (cons msi mei) seps)))
@@ -383,11 +383,11 @@
     counted-match-positions)
 
   (define counted-match-start-positions
-    (make-counted-match-positions irregex-match-start-source
+    (make-counted-match-positions irregex-match-start-chunk
                                   irregex-match-start-index))
 
   (define counted-match-end-positions
-    (make-counted-match-positions irregex-match-end-source
+    (make-counted-match-positions irregex-match-end-chunk
                                   irregex-match-end-index))
 
 )

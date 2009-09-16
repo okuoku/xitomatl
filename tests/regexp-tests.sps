@@ -9,8 +9,8 @@
   (srfi :78 lightweight-testing)
   (srfi :2 and-let*)
   (only (xitomatl irregex) irregex-match-substring
-                           irregex-match-start-source irregex-match-start-index
-                           irregex-match-end-source irregex-match-end-index)
+                           irregex-match-start-chunk irregex-match-start-index
+                           irregex-match-end-chunk irregex-match-end-index)
   (only (xitomatl irregex extras) range-list-chunker)
   (xitomatl regexp))
 
@@ -273,9 +273,9 @@
                 (let ((m (regexp-search/chunked sre range-list-chunker text)))
                   (check (and m #T) => #T)
                   (check (irregex-match-substring m) => mt)
-                  (check (irregex-match-start-source m 0) (=> eq?) so)
+                  (check (irregex-match-start-chunk m 0) (=> eq?) so)
                   (check (irregex-match-start-index m 0) => si)
-                  (check (irregex-match-end-source m 0) (=> eq?) eo)
+                  (check (irregex-match-end-chunk m 0) (=> eq?) eo)
                   (check (irregex-match-end-index m 0) => ei))))))
     (test '(* any)
           => "This is a chunked sentence."
