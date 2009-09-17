@@ -4,9 +4,11 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
+;; NOTE: Not currently thread-safe
+
 (library (xitomatl profiler meta)
   (export
-    def--case-lambda/profiled def--lambda/profiled def--define/profiled
+    def--/profiled
     make-make-profiled-proxy case-lambda/profiled--meta
     profiled-procedure?
     profiled-procedure-proc-obj
@@ -24,46 +26,38 @@
     (only (xitomatl define) define/AV)
     (only (srfi :39 parameters) make-parameter))
   
-  ;; NOTE: Not currently thread-safe
-  
-  (define-syntax def--case-lambda/profiled
+  (define-syntax def--/profiled
     (syntax-rules ()
-      ((_ name make-profiled-proxy)
-       (define-syntax name
-         (syntax-rules ()
-           ((_ (formals . body) (... ...))
-            (case-lambda/profiled--meta 
-             '(case-lambda (formals . body) (... ...))
-             make-profiled-proxy
-             (formals . body) (... ...))))))))
-  
-  (define-syntax def--lambda/profiled
-    (syntax-rules ()
-      ((_ name make-profiled-proxy)
-       (define-syntax name
-         (syntax-rules ()
-           ((_ formals . body)
-            (case-lambda/profiled--meta 
-             '(lambda formals . body)
-             make-profiled-proxy
-             (formals . body))))))))
-  
-  (define-syntax def--define/profiled
-    (syntax-rules ()
-      ((_ name make-profiled-proxy)
-       (define-syntax name
-         (lambda (stx)
-           (syntax-case stx ()
-             ((_ (n . formals) . body)
-              (identifier? #'n)
-              #'(define n 
-                  (case-lambda/profiled--meta 
-                   '(define (n . formals) . body)
-                   make-profiled-proxy
-                   (formals . body))))
-             ((_ n expr)
-              (identifier? #'n)
-              #'(define n expr))))))))
+      ((_ case-lambda--name lambda--name define--name make-profiled-proxy)
+       (begin
+         (define-syntax case-lambda--name
+           (lambda (stx)
+             (syntax-case stx ()
+               ((_ . r)
+                #`(case-lambda/profiled--meta '#,stx make-profiled-proxy . r)))))
+         (define-syntax lambda--name
+           (lambda (stx)
+             (syntax-case stx ()
+               ((_ . r)
+                #`(case-lambda/profiled--meta '#,stx make-profiled-proxy r)))))
+         (define-syntax define--name
+           (lambda (stx)
+             (syntax-case stx (case-lambda--name lambda--name)
+               ((_ (n . formals) . body)
+                (identifier? #'n)
+                #`(define n 
+                    (case-lambda/profiled--meta '#,stx make-profiled-proxy
+                      (formals . body))))
+               ((_ n (case-lambda--name . r))
+                (identifier? #'n)
+                #`(define n 
+                    (case-lambda/profiled--meta '#,stx make-profiled-proxy . r)))
+               ((_ n (lambda--name . r))
+                (identifier? #'n)
+                #`(define n 
+                    (case-lambda/profiled--meta '#,stx make-profiled-proxy r)))
+               ((_ . r)
+                #'(define . r)))))))))
   
   (define (make-make-profiled-proxy current-info info-add info-sub)
     (lambda (proc)

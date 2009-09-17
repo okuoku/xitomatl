@@ -16,11 +16,11 @@
     ((_ expr => vals ...)
      (check (let-values ((v expr)) v) => (list vals ...)))))
 
-(define clp0 
+(define/profiled clp0 
   (case-lambda/profiled
      ((x) (values (+ x x) (- x)))
      ((x y) (* x y))))
-(define lp0
+(define/profiled lp0
   (lambda/profiled a 
     (apply values (reverse a))))
 (define/profiled (dp0 x y . a)
@@ -29,7 +29,7 @@
     (begin ((call/cc (lambda (cc) (set! dp0-k cc) values)) 'C)
            'R)))
 (define dp0-k)
-(define/profiled (unused . _) (assert #F))
+(define unused (lambda/profiled _ (assert #F)))
 
 (check-values (clp0 123) => 246 -123)
 (check (clp0 4 3) => 12)
@@ -68,20 +68,22 @@
            (check calleds => cs)
            (check returneds => rs)))))))
 
-(check-pp clp0 '(case-lambda
-                  ((x) (values (+ x x) (- x)))
-                  ((x y) (* x y)))
+(check-pp clp0 '(define/profiled clp0
+                  (case-lambda/profiled
+                    ((x) (values (+ x x) (- x)))
+                    ((x y) (* x y))))
           2 '(2 1) '(1 2))
-(check-pp lp0 '(lambda a 
-                 (apply values (reverse a)))
+(check-pp lp0 '(define/profiled lp0
+                 (lambda/profiled a 
+                   (apply values (reverse a))))
           3 '(1 2 4) '(1 2 4))
-(check-pp dp0 '(define (dp0 x y . a)
+(check-pp dp0 '(define/profiled (dp0 x y . a)
                  (if (number? x)
                    (apply + x y a)
                    (begin ((call/cc (lambda (cc) (set! dp0-k cc) values)) 'C)
                           'R)))
           3 '(#F 2 5) '(#F 1 1))
-(check-pp unused '(define (unused . _) (assert #F))
+(check-pp unused '(lambda/profiled _ (assert #F))
           0 '() '())
 
 (define report-str

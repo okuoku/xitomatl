@@ -22,11 +22,10 @@
                                   (subtract-duration x y)
                                   (time-difference x y)))))
   
-  (def--case-lambda/profiled case-lambda/profiled make-profiled-proxy)
-  
-  (def--lambda/profiled lambda/profiled make-profiled-proxy)
-  
-  (def--define/profiled define/profiled make-profiled-proxy)
+  (def--/profiled case-lambda/profiled
+                  lambda/profiled
+                  define/profiled
+                  make-profiled-proxy)
   
   (define (generate-report)
     (let-values (((keys vals) (hashtable-entries (profiled-procedures-HT))))
