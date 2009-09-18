@@ -102,6 +102,7 @@
   (only (xitomatl ssax tree-trans (5 1)))
   (only (xitomatl stack-lang))
   (only (xitomatl stack-lang core))
+  (only (xitomatl stack-lang unsafe))
   (only (xitomatl strings))
   (only (xitomatl strings compat))
   (only (xitomatl sxml-match (1 0)))

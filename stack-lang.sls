@@ -27,9 +27,10 @@
     compose
     curry)
   (import
-    (except (rnrs) define)
+    (rename (except (rnrs) define) (assertion-violation AV))
     (only (xitomatl common) pretty-print)
-    (rename (xitomatl stack-lang core) (define-λS define)))
+    (rename (xitomatl stack-lang core) (define-λS define))
+    (xitomatl stack-lang unsafe))
 
   (define current-stack (λS ds (r) ds))
   (define print (λS (x) () (pretty-print x)))
@@ -37,11 +38,11 @@
 
   (define (dup ds)
     (if (pair? ds)
-      (cons (car ds) ds)
+      (cons ($car ds) ds)
       (not-enough-values 'dup)))
   (define (drop ds)
     (if (pair? ds)
-      (cdr ds)
+      ($cdr ds)
       (not-enough-values 'drop)))
   (define swap (λS (x y . ds) #F (cons x (cons y ds))))
 
@@ -55,28 +56,34 @@
       (define who (quote list))
       (let loop ((s ds) (n size) (l (quote ())))
         (if (positive? n)
-          (if (null? s)
-            (not-enough-values who size)
-            (loop (cdr s) (- n 1) (cons (car s) l)))
-          l))))
+          (if (pair? s)
+            (loop ($cdr s) (- n 1) (cons ($car s) l))
+            (not-enough-values who size))
+          (cons l s)))))
   (define S:length
     (λS/who length (l) (r) (length l)))
 
   (define S:map
     (λS/who map (l p . ds) #F
       (let loop ((l l) (ds ds) (a (quote ())))
-        (if (null? l)
-          (cons (reverse a) ds)
-          (let ((ds (p (cons (car l) ds))))
-            (loop (cdr l) (cdr ds) (cons (car ds) a)))))))
+        (cond ((pair? l)
+               (let ((ds (p (cons ($car l) ds))))
+                 (loop ($cdr l) (cdr ds) (cons (car ds) a))))
+              ((null? l)
+               (cons (reverse a) ds))
+              (else
+               (AV 'map "not a proper list"))))))
   (define S:filter
     (λS/who filter (l p . ds) #F
       (let loop ((l l) (ds ds) (a (quote ())))
-        (if (null? l)
-          (cons (reverse a) ds)
-          (let* ((v (car l))
-                (ds (p (cons v ds))))
-            (loop (cdr l) (cdr ds) (if (car ds) (cons v a) a)))))))
+        (cond ((pair? l)
+               (let* ((v ($car l))
+                      (ds (p (cons v ds))))
+                 (loop ($cdr l) (cdr ds) (if (car ds) (cons v a) a))))
+              ((null? l)
+               (cons (reverse a) ds))
+              (else
+               (AV 'filter "not a proper list"))))))
 
   (define compose (λS (g f) (r) (Q g f)))
   (define curry

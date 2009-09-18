@@ -8,24 +8,81 @@
   (export
     Q S* S
     define-λS λS λS/who
-    data-stack pop push
+    stack #;pop #;push
     not-enough-values)
   (import
     (rnrs)
     (srfi :39 parameters)
-    (for (only (xitomatl macro-utils) formals-ok?/raise) expand))
+    (for (only (xitomatl macro-utils) formals-ok?/raise) expand)
+    (xitomatl stack-lang unsafe))
 
+#|(define block-size 4000)  ;; Must be greater than 1.
+  (define max-index (- block-size 1))
+  (define (new-block lower)
+    (let ((b (make-vector block-size)))
+      (vector-set! b 0 lower)
+      b))
+  (define (new-stack)
+    (vector 1 (new-block #F)))
+  (define-syntax stack-index
+    (syntax-rules () ((_ s) ($vector-ref s 0))))
+  (define-syntax stack-index-set!
+    (syntax-rules () ((_ s v) ($vector-set! s 0 v))))
+  (define-syntax stack-block
+    (syntax-rules () ((_ s) ($vector-ref s 1))))
+  (define-syntax stack-block-set!
+    (syntax-rules () ((_ s v) ($vector-set! s 1 v))))
+  (define-syntax stack-lower-block
+    (syntax-rules () ((_ s) ($vector-ref (stack-block s) 0))))
+
+  (define-syntax %push
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ s v)
+         (identifier? (syntax s))
+         (syntax
+          (let ((i (stack-index s)))
+            (if ($fx= block-size i)
+              (let ((b (new-block (stack-block s))))
+                ($vector-set! b 1 v)
+                (stack-index-set! s 2)
+                (stack-block-set! s b))
+              (begin ($vector-set! (stack-block s) i v)
+                     (stack-index-set! ($fx+ 1 i))))))))))
+  
+  (define-syntax %pop
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ s)
+         (identifier? (syntax s))
+         (syntax
+          (let ((i ($fx- (stack-index s) 1)))
+            (if ($fx= 0 i)
+              (let ((b (stack-lower-block s)))
+                (if b
+                  (let ((x ($vector-ref b max-index)))
+                    ($vector-set! b max-index #F)
+                    (stack-index-set! s max-index)
+                    (stack-block-set! s b)
+                    x)
+                  (not-enough-values)))
+              (let* ((b (stack-block s))
+                     (x ($vector-ref b i)))
+                ($vector-set! b i #F)
+                (stack-index-set! s i)
+                x))))))))
+|#    
   ;; The reason for using a parameter is so that it's thread-local if
   ;; multi-threading happens.
-  (define data-stack (make-parameter (quote ())))
+  (define stack (make-parameter (quote ()) #;(new-stack)))
 
-  (define (pop)
-    (let* ((ds (data-stack))
-           (x (car ds)))
-      (data-stack (cdr ds))
+#;(define (pop)
+    (let* ((ds (stack))
+           (x ($car ds)))
+      (stack ($cdr ds))
       x))
 
-  (define (push x) (data-stack (cons x (data-stack))))
+#;(define (push x) (stack (cons x (stack))))
 
   (define-syntax Q
     (lambda (stx)
@@ -43,18 +100,17 @@
               (_ #F))))
       (syntax-case stx ()
         ((_ expr ...)
-         (with-syntax
-             (((expr^ ...)
-               (map (lambda (e)
-                      (cond ((identifier? e)
-                             (list e (syntax s)))
-                            ((one-ret-val? e)
-                             (list (syntax cons) e (syntax s)))
-                            (else
-                             (quasisyntax ((λS () v (unsyntax e)) s)))))
-                    (syntax (expr ...)))))
-           (syntax
-            (lambda (s) (let* ((s expr^) ...) s))))))))
+         (with-syntax ((expr^ (fold-left (lambda (a e)
+                                           (cond ((identifier? e)
+                                                  (list e a))
+                                                 ((one-ret-val? e)
+                                                  (list (syntax cons) e a))
+                                                 (else
+                                                  (quasisyntax ((λS () v (unsyntax e))
+                                                                (unsyntax a))))))
+                                         (syntax s)
+                                         (syntax (expr ...)))))
+           (syntax (lambda (s) expr^)))))))
 
   (define-syntax S*
     (syntax-rules ()
@@ -65,7 +121,7 @@
     (syntax-rules ()
       ((_) (values))
       ((_ expr ...)
-       (begin (data-stack (S* (data-stack) expr ...))
+       (begin (stack (S* (stack) expr ...))
               (values)))))
 
   (define not-enough-values
@@ -100,9 +156,9 @@
                                (list (quasisyntax
                                       ((unsyntax x)
                                        (if (pair? s)
-                                         (car s)
+                                         ($car s)
                                          (not-enough-values (quote (unsyntax who))))))
-                                     (syntax (s (cdr s)))))
+                                     (syntax (s ($cdr s)))))
                              (reverse (syntax (id ...))))))
                 ((maybe-ds ...)
                  (if (identifier? (syntax ds))
@@ -135,7 +191,7 @@
                           (s (let loop ((r r) (s s))
                                (if (null? r)
                                  s
-                                 (loop (cdr r) (cons (car r) s)))))))
+                                 (loop ($cdr r) (cons ($car r) s)))))))
                    (list))))
              (quasisyntax
               (call-with-values
