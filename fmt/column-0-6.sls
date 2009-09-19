@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt column (0 5))
+(library (xitomatl fmt column (0 6))
   (export
     fmt-columns
     columnar
@@ -24,7 +24,7 @@
                              string-index string-tokenize substring/shared)
     (srfi :23 error tricks)
     (xitomatl include)
-    (xitomatl fmt base (0 5))
+    (xitomatl fmt base (0 6))
     (xitomatl fmt let-optionals*))
   
   (define read-line
@@ -32,6 +32,6 @@
       (() (read-line (current-input-port)))
       ((tip) (get-line tip))))
 
-  (SRFI-23-error->R6RS "(library (xitomatl fmt column (0 5)))"  
+  (SRFI-23-error->R6RS "(library (xitomatl fmt column (0 6)))"  
    (include/resolve ("xitomatl" "fmt") "fmt-column.scm"))
 )

@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt unicode (0 5))
+(library (xitomatl fmt unicode (0 6))
   (export
     unicode-char-width
     unicode-string-width
@@ -14,7 +14,7 @@
             (bytevector-u8-ref u8vector-ref))
     (only (rnrs r5rs) quotient remainder)
     (xitomatl include)
-    (xitomatl fmt base (0 5))
+    (xitomatl fmt base (0 6))
     (xitomatl fmt srfi-33))
 
   (define-syntax u8vector

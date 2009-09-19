@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt (0 5))
+(library (xitomatl fmt (0 6))
   (export
     new-fmt-state
     fmt fmt-start fmt-if fmt-capture fmt-let fmt-bind fmt-null
@@ -16,7 +16,8 @@
     fmt-decimal-sep fmt-set-decimal-sep!
     copy-fmt-state
     fmt-file fmt-try-fit cat apply-cat nl fl nl-str
-    join join/last join/dot join/prefix join/suffix join/range
+    fmt-join fmt-join/last fmt-join/dot
+    fmt-join/prefix fmt-join/suffix fmt-join/range
     pad pad/right pad/left pad/both trim trim/left trim/both trim/length
     fit fit/left fit/both tab-to space-to wrt wrt/unshared dsp
     pretty pretty/unshared slashified maybe-slashified
@@ -27,7 +28,7 @@
     make-space make-nl-space display-to-string write-to-string
     fmt-columns columnar line-numbers)
   (import
-    (xitomatl fmt base (0 5))
-    (xitomatl fmt pretty (0 5))
-    (xitomatl fmt column (0 5)))
+    (xitomatl fmt base (0 6))
+    (xitomatl fmt pretty (0 6))
+    (xitomatl fmt column (0 6)))
 )

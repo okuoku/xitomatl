@@ -36,29 +36,32 @@
              (proc ((fmt-writer st) (gen-shared-ref (car cell) "=") st))))
           (proc st)))))
 
-(define (join/shares fmt ls . o)
+(define (fmt-join/shares fmt ls . o)
   (let ((sep (dsp (if (pair? o) (car o) " "))))
     (lambda (st)
-      (let* ((shares (fmt-shares st))
-             (tab (car shares))
-             (output (fmt-writer st)))
-        (let lp ((ls ls) (st st))
-          (let ((st ((fmt (car ls)) st))
-                (rest (cdr ls)))
-            (cond
-              ((null? rest) st)
-              ((pair? rest)
-               (call-with-shared-ref/cdr rest st shares
-                   (lambda (st) (lp rest st))
-                 sep))
-              (else ((fmt rest) (output ". " (sep st)))))))))))
+      (if (null? ls)
+          st
+          (let* ((shares (fmt-shares st))
+                 (tab (car shares))
+                 (output (fmt-writer st)))
+            (let lp ((ls ls) (st st))
+              (let ((st ((fmt (car ls)) st))
+                    (rest (cdr ls)))
+                (cond
+                 ((null? rest) st)
+                 ((pair? rest)
+                  (call-with-shared-ref/cdr rest st shares
+                      (lambda (st) (lp rest st))
+                    sep))
+                 (else ((fmt rest) (output ". " (sep st))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; pretty printing
 
 (define (non-app? x)
   (if (pair? x)
-      (non-app? (car x))
+      (or (not (or (null? (cdr x)) (pair? (cdr x))))
+          (non-app? (car x)))
       (not (symbol? x))))
 
 (define syntax-abbrevs
@@ -94,15 +97,15 @@
 (define (pp-indentation form)
   (let ((indent
          (cond
-           ((assq (car form) indent-rules) => cdr)
-           ((and (symbol? (car form))
-                 (let ((str (symbol->string (car form))))
-                   (or (find (lambda (rx) (string-prefix? (car rx) str))
-                             indent-prefix-rules)
-                       (find (lambda (rx) (string-suffix? (car rx) str))
-                             indent-suffix-rules))))
-            => cdr)
-           (else #f))))
+          ((assq (car form) indent-rules) => cdr)
+          ((and (symbol? (car form))
+                (let ((str (symbol->string (car form))))
+                  (or (find (lambda (rx) (string-prefix? (car rx) str))
+                            indent-prefix-rules)
+                      (find (lambda (rx) (string-suffix? (car rx) str))
+                            indent-suffix-rules))))
+           => cdr)
+          (else #f))))
     (if (and (number? indent) (negative? indent))
         (max 0 (- (+ (length+ form) indent) 1))
         indent)))
@@ -116,37 +119,43 @@
            (tail (drop* (cdr ls) (or indent-rule 1)))
            (st2 (fmt-copy-shares st))
            (first-line
-            ((fmt-to-string (cat " " (join/shares pp-flat fixed " "))) st2))
+            ((fmt-to-string (cat " " (fmt-join/shares pp-flat fixed " "))) st2))
            (default
              (let ((sep (make-nl-space (+ col1 1))))
-               (cat sep (join/shares pp-object (cdr ls) sep) ")"))))
-      (if (< (+ col2 (string-length first-line)) (fmt-width st2))
-          ;; fixed values on first line
-          (let ((sep (make-nl-space
-                      (if indent-rule (+ col1 2) (+ col2 1)))))
-            ((cat first-line
-                  (if (> (length+ (cdr ls)) (or indent-rule 1))
-                      (cat sep (join/shares pp-object tail sep))
-                      "")
-                  ")")
-             st2))
-          (if indent-rule ;;(and indent-rule (not (pair? (car ls))))
-              ;; fixed values lined up, body indented two spaces
-              ((fmt-try-fit
-                (lambda (st)
-                  ((cat
-                    " "
-                    (join/shares pp-object fixed (make-nl-space (+ col2 1)))
-                    (if (pair? tail)
-                        (let ((sep (make-nl-space (+ col1 2))))
-                          (cat sep (join/shares pp-object tail sep)))
-                        "")
-                    ")")
-                   (fmt-copy-shares st)))
-                default)
-               st)
-              ;; all on separate lines
-              (default st))))))
+               (cat sep (fmt-join/shares pp-object (cdr ls) sep) ")"))))
+      (cond
+       ((< (+ col2 (string-length first-line)) (fmt-width st2))
+        ;; fixed values on first line
+        (let ((sep (make-nl-space
+                    (if indent-rule (+ col1 2) (+ col2 1)))))
+          ((cat first-line
+                (cond
+                 ((not (or (null? tail) (pair? tail)))
+                  (cat ". " (pp-object tail)))
+                 ((> (length+ (cdr ls)) (or indent-rule 1))
+                  (cat sep (fmt-join/shares pp-object tail sep)))
+                 (else
+                  fmt-null))
+                ")")
+           st2)))
+       (indent-rule ;;(and indent-rule (not (pair? (car ls))))
+        ;; fixed values lined up, body indented two spaces
+        ((fmt-try-fit
+          (lambda (st)
+            ((cat
+              " "
+              (fmt-join/shares pp-object fixed (make-nl-space (+ col2 1)))
+              (if (pair? tail)
+                  (let ((sep (make-nl-space (+ col1 2))))
+                    (cat sep (fmt-join/shares pp-object tail sep)))
+                  "")
+              ")")
+             (fmt-copy-shares st)))
+          default)
+         st))
+       (else
+        ;; all on separate lines
+        (default st))))))
 
 (define (pp-app ls)
   (let ((indent-rule (pp-indentation ls)))
@@ -175,31 +184,34 @@
          => (lambda (abbrev)
               (cat (cdr abbrev) (pp-flat (cadr x)))))
         (else
-         (cat "(" (join/shares pp-flat x " ") ")")))))
+         (cat "(" (fmt-join/shares pp-flat x " ") ")")))))
     ((vector? x)
-     (fmt-shared-write x (cat "#(" (join pp-flat (vector->list x) " ") ")")))
-    (else (lambda (st) ((write-with-shares x (fmt-shares st)) st)))))
+     (fmt-shared-write
+      x
+      (cat "#(" (fmt-join/shares pp-flat (vector->list x) " ") ")")))
+    (else
+     (lambda (st) ((write-with-shares x (fmt-shares st)) st)))))
 
 (define (pp-pair ls)
   (fmt-shared-write
    ls
    (cond
-     ;; one element list, no lines to break
-     ((null? (cdr ls))
-      (cat "(" (pp-object (car ls)) ")"))
-     ;; quote or other abbrev
-     ((and (pair? (cdr ls)) (null? (cddr ls))
-           (assq (car ls) syntax-abbrevs))
-      => (lambda (abbrev)
-           (cat (cdr abbrev) (pp-object (cadr ls)))))
-     (else
-      (fmt-try-fit
-       (lambda (st) ((pp-flat ls) (fmt-copy-shares st)))
-       (lambda (st)
-         (if (and (non-app? ls)
-                  (proper-non-shared-list? ls (fmt-shares st)))
-             ((pp-data-list ls) st)
-             ((pp-app ls) st))))))))
+    ;; one element list, no lines to break
+    ((null? (cdr ls))
+     (cat "(" (pp-object (car ls)) ")"))
+    ;; quote or other abbrev
+    ((and (pair? (cdr ls)) (null? (cddr ls))
+          (assq (car ls) syntax-abbrevs))
+     => (lambda (abbrev)
+          (cat (cdr abbrev) (pp-object (cadr ls)))))
+    (else
+     (fmt-try-fit
+      (lambda (st) ((pp-flat ls) (fmt-copy-shares st)))
+      (lambda (st)
+        (if (and (non-app? ls)
+                 (proper-non-shared-list? ls (fmt-shares st)))
+            ((pp-data-list ls) st)
+            ((pp-app ls) st))))))))
 
 (define (pp-data-list ls)
   (lambda (st)
@@ -231,7 +243,7 @@
                              (lp (cdr ls) st (+ i 1)))))))))))
         (else
          ;; no room, print one per line
-         ((cat (join pp-object ls (make-nl-space col)) ")") st))))))
+         ((cat (fmt-join pp-object ls (make-nl-space col)) ")") st))))))
 
 (define (pp-vector vec)
   (fmt-shared-write vec (cat "#" (pp-data-list (vector->list vec)))))

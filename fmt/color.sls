@@ -1,1 +1,1 @@
-color-0-5.sls
+color-0-6.sls

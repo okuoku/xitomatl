@@ -4,14 +4,14 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt c (0 5))
+(library (xitomatl fmt c (0 6))
   (export
     fmt-in-macro? fmt-expression? fmt-return? fmt-default-type
     fmt-newline-before-brace? fmt-braceless-bodies?
     fmt-indent-space fmt-switch-indent-space fmt-op fmt-gen
     c-in-expr c-in-stmt c-in-test
     c-paren c-maybe-paren c-type c-literal? c-literal char->c-char
-    c-struct c-union c-class c-enum c-attribute c-typedef
+    c-struct c-union c-class c-enum c-attribute c-typedef c-cast
     c-expr c-expr/sexp c-apply c-op c-indent c-current-indent-string
     c-wrap-stmt c-open-brace c-close-brace
     c-block c-braced-block c-begin
@@ -33,8 +33,10 @@
     (only (srfi :13 strings) substring/shared string-index)
     (srfi :23 error tricks)
     (xitomatl include)
-    (xitomatl fmt base (0 5)))
+    (xitomatl fmt base (0 6)))
 
-  (SRFI-23-error->R6RS "(library (xitomatl fmt c (0 5)))"
+  (define-syntax fprintf (syntax-rules () ((_ . _) (values))))
+
+  (SRFI-23-error->R6RS "(library (xitomatl fmt c (0 6)))"
    (include/resolve ("xitomatl" "fmt") "fmt-c.scm"))
 )

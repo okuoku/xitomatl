@@ -79,32 +79,6 @@
      st)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; default type handling
-
-(define (c-type x)
-  (lambda (st)
-    ((cond
-       ((pair? x)
-        (case (car x)
-          ((struct union class) (apply c-struct/aux x))
-          ((%array)
-           (if (pair? (cdr x))
-               (cat "[" (apply-cat (cdr x)) "]")
-               (dsp "[]")))
-          (else (join c-type x ""))))
-       ((not x) (cat (fmt-default-type st)))
-       (else
-        (cat
-         (case x
-           ((%immutable const) "const ")
-           ((%bit %byte) "char") ((%short) "short")
-           ((%word) "int") ((* %pointer) "*")
-           ((%array) "[]")
-           ((signed unsigned long) (cat x " "))
-           (else x)))))
-     st)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; default literals writer
 
 (define (c-control-operator? x)
@@ -159,101 +133,114 @@
       x
       (lambda (st)
         (cond
-          ((pair? x)
-           (case (car x)
-             ((if) ((apply c-if (cdr x)) st))
-             ((for) ((apply c-for (cdr x)) st))
-             ((while) ((apply c-while (cdr x)) st))
-             ((switch) ((apply c-switch (cdr x)) st))
-             ((case) ((apply c-case (cdr x)) st))
-             ((case/fallthrough) ((apply c-case/fallthrough (cdr x)) st))
-             ((default) ((apply c-default (cdr x)) st))
-             ((break) (c-break st))
-             ((continue) (c-continue st))
-             ((return) ((apply c-return (cdr x)) st))
-             ((goto) ((apply c-goto (cdr x)) st))
-             ((typedef) ((apply c-typedef (cdr x)) st))
-             ((struct union class) ((apply c-struct/aux x) st))
-             ((enum) ((apply c-enum (cdr x)) st))
-             ((inline auto restrict register volatile extern static)
-              ((cat (car x) " " (apply-cat (cdr x))) st))
-             ;; non C-keywords must have some character invalid in a C
-             ;; identifier to avoid conflicts - by default we prefix %
-             ((vector-ref)
-              ((c-wrap-stmt
-                (cat (c-expr (cadr x)) "[" (c-expr (caddr x)) "]"))
-               st))
-             ((vector-set!)
-              ((c= (c-in-expr
-                    (cat (c-expr (cadr x)) "[" (c-expr (caddr x)) "]"))
-                   (c-expr (cadddr x)))
-               st))
-             ((extern/C) ((apply c-extern/C (cdr x)) st))
-             ((%apply) ((apply c-apply (cdr x)) st))
-             ((%define) ((apply cpp-define (cdr x)) st))
-             ((%include) ((apply cpp-include (cdr x)) st))
-             ((%fun) ((apply c-fun (cdr x)) st))
-             ((%cond)
-              (let lp ((ls (cdr x)) (res '()))
-                (if (null? ls)
-                    ((apply c-if (reverse res)) st)
-                    (lp (cdr ls)
-                        (cons (if (pair? (cddar ls))
-                                   (apply c-begin (cdar ls))
-                                   (cadar ls))
-                              (cons (caar ls) res))))))
-             ((%prototype) ((apply c-prototype (cdr x)) st))
-             ((%var) ((apply c-var (cdr x)) st))
-             ((%begin) ((apply c-begin (cdr x)) st))
-             ((%attribute) ((apply c-attribute (cdr x)) st))
-             ((%line) ((apply cpp-line (cdr x)) st))
-             ((%pragma %error %warning)
-              ((apply cpp-generic (substring/shared (symbol->string (car x)) 1)
-                      (cdr x)) st))
-             ((%if %ifdef %ifndef %elif)
-              ((apply cpp-if/aux (substring/shared (symbol->string (car x)) 1)
-                      (cdr x)) st))
-             ((%endif) ((apply cpp-endif (cdr x)) st))
-             ((%block) ((apply c-braced-block (cdr x)) st))
-             ((%comment) ((apply c-comment (cdr x)) st))
-             ((:) ((apply c-label (cdr x)) st))
-             ((%cast) ((apply c-cast (cdr x)) st))
-             ((+ - & * / % ! ~ ^ && < > <= >= == != << >>
-                 = *= /= %= &= ^= >>= <<=) ; |\|| |\|\|| |\|=|
-              ((apply c-op x) st))
-             ((bitwise-and bit-and) ((apply c-op '& (cdr x)) st))
-             ((bitwise-ior bit-or) ((apply c-op "|" (cdr x)) st))
-             ((bitwise-xor bit-xor) ((apply c-op '^ (cdr x)) st))
-             ((bitwise-not bit-not) ((apply c-op '~ (cdr x)) st))
-             ((arithmetic-shift) ((apply c-op '<< (cdr x)) st))
-             ((bitwise-ior= bit-or=) ((apply c-op "|=" (cdr x)) st))
-             ((%or) ((apply c-op "||" (cdr x)) st))
-             ((%. %field) ((apply c-op "." (cdr x)) st))
-             ((%->) ((apply c-op "->" (cdr x)) st))
-             (else
-              (cond
-                ((eq? (car x) (string->symbol "."))
-                 ((apply c-op "." (cdr x)) st))
-                ((eq? (car x) (string->symbol "->"))
-                 ((apply c-op "->" (cdr x)) st))
-                ((eq? (car x) (string->symbol "++"))
-                 ((apply c-op "++" (cdr x)) st))
-                ((eq? (car x) (string->symbol "--"))
-                 ((apply c-op "--" (cdr x)) st))
-                ((eq? (car x) (string->symbol "+="))
-                 ((apply c-op "+=" (cdr x)) st))
-                ((eq? (car x) (string->symbol "-="))
-                 ((apply c-op "-=" (cdr x)) st))
-                (else ((c-apply x) st))))))
-          (else
-           ((c-literal x) st))))))
+         ((pair? x)
+          (case (car x)
+            ((if) ((apply c-if (cdr x)) st))
+            ((for) ((apply c-for (cdr x)) st))
+            ((while) ((apply c-while (cdr x)) st))
+            ((switch) ((apply c-switch (cdr x)) st))
+            ((case) ((apply c-case (cdr x)) st))
+            ((case/fallthrough) ((apply c-case/fallthrough (cdr x)) st))
+            ((default) ((apply c-default (cdr x)) st))
+            ((break) (c-break st))
+            ((continue) (c-continue st))
+            ((return) ((apply c-return (cdr x)) st))
+            ((goto) ((apply c-goto (cdr x)) st))
+            ((typedef) ((apply c-typedef (cdr x)) st))
+            ((struct union class) ((apply c-struct/aux x) st))
+            ((enum) ((apply c-enum (cdr x)) st))
+            ((inline auto restrict register volatile extern static)
+             ((cat (car x) " " (apply-cat (cdr x))) st))
+            ;; non C-keywords must have some character invalid in a C
+            ;; identifier to avoid conflicts - by default we prefix %
+            ((vector-ref)
+             ((c-wrap-stmt
+               (cat (c-expr (cadr x)) "[" (c-expr (caddr x)) "]"))
+              st))
+            ((vector-set!)
+             ((c= (c-in-expr
+                   (cat (c-expr (cadr x)) "[" (c-expr (caddr x)) "]"))
+                  (c-expr (cadddr x)))
+              st))
+            ((extern/C) ((apply c-extern/C (cdr x)) st))
+            ((%apply) ((apply c-apply (cdr x)) st))
+            ((%define) ((apply cpp-define (cdr x)) st))
+            ((%include) ((apply cpp-include (cdr x)) st))
+            ((%fun) ((apply c-fun (cdr x)) st))
+            ((%cond)
+             (let lp ((ls (cdr x)) (res '()))
+               (if (null? ls)
+                   ((apply c-if (reverse res)) st)
+                   (lp (cdr ls)
+                       (cons (if (pair? (cddar ls))
+                                 (apply c-begin (cdar ls))
+                                 (cadar ls))
+                             (cons (caar ls) res))))))
+            ((%prototype) ((apply c-prototype (cdr x)) st))
+            ((%var) ((apply c-var (cdr x)) st))
+            ((%begin) ((apply c-begin (cdr x)) st))
+            ((%attribute) ((apply c-attribute (cdr x)) st))
+            ((%line) ((apply cpp-line (cdr x)) st))
+            ((%pragma %error %warning)
+             ((apply cpp-generic (substring/shared (symbol->string (car x)) 1)
+                     (cdr x)) st))
+            ((%if %ifdef %ifndef %elif)
+             ((apply cpp-if/aux (substring/shared (symbol->string (car x)) 1)
+                     (cdr x)) st))
+            ((%endif) ((apply cpp-endif (cdr x)) st))
+            ((%block) ((apply c-braced-block (cdr x)) st))
+            ((%comment) ((apply c-comment (cdr x)) st))
+            ((:) ((apply c-label (cdr x)) st))
+            ((%cast) ((apply c-cast (cdr x)) st))
+            ((+ - & * / % ! ~ ^ && < > <= >= == != << >>
+                = *= /= %= &= ^= >>= <<=) ; |\|| |\|\|| |\|=|
+             ((apply c-op x) st))
+            ((bitwise-and bit-and) ((apply c-op '& (cdr x)) st))
+            ((bitwise-ior bit-or) ((apply c-op "|" (cdr x)) st))
+            ((bitwise-xor bit-xor) ((apply c-op '^ (cdr x)) st))
+            ((bitwise-not bit-not) ((apply c-op '~ (cdr x)) st))
+            ((arithmetic-shift) ((apply c-op '<< (cdr x)) st))
+            ((bitwise-ior= bit-or=) ((apply c-op "|=" (cdr x)) st))
+            ((%or) ((apply c-op "||" (cdr x)) st))
+            ((%. %field) ((apply c-op "." (cdr x)) st))
+            ((%->) ((apply c-op "->" (cdr x)) st))
+            (else
+             (cond
+              ((eq? (car x) (string->symbol "."))
+               ((apply c-op "." (cdr x)) st))
+              ((eq? (car x) (string->symbol "->"))
+               ((apply c-op "->" (cdr x)) st))
+              ((eq? (car x) (string->symbol "++"))
+               ((apply c-op "++" (cdr x)) st))
+              ((eq? (car x) (string->symbol "--"))
+               ((apply c-op "--" (cdr x)) st))
+              ((eq? (car x) (string->symbol "+="))
+               ((apply c-op "+=" (cdr x)) st))
+              ((eq? (car x) (string->symbol "-="))
+               ((apply c-op "-=" (cdr x)) st))
+              (else ((c-apply x) st))))))
+         ((vector? x)
+          ((c-wrap-stmt
+            (fmt-try-fit
+             (fmt-let 'no-wrap? #t
+                      (cat "{" (fmt-join c-expr (vector->list x) ", ") "}"))
+             (lambda (st)
+               (fprintf (current-error-port) "in alternate\n")
+               (let* ((col (fmt-col st))
+                      (sep (string-append "," (make-nl-space col))))
+                 (fprintf (current-error-port) "x = ~S\n" x)
+                 (cat "{" (fmt-join c-expr (vector->list x) sep)
+                      "}" nl)))))
+           st))
+         (else
+          ((c-literal x) st))))))
 
 (define (c-apply ls)
   (c-wrap-stmt
    (c-with-op
     'paren
     (cat (c-expr (car ls))
-         (let ((flat (fmt-let 'no-wrap? #t (join c-expr (cdr ls) ", "))))
+         (let ((flat (fmt-let 'no-wrap? #t (fmt-join c-expr (cdr ls) ", "))))
            (fmt-if
             fmt-no-wrap?
             (c-paren flat)
@@ -263,7 +250,7 @@
               (lambda (st)
                 (let* ((col (fmt-col st))
                        (sep (string-append "," (make-nl-space col))))
-                  ((join c-expr (cdr ls) sep) st)))))))))))
+                  ((fmt-join c-expr (cdr ls) sep) st)))))))))))
 
 (define (c-expr x)
   (lambda (st) (((or (fmt-gen st) c-expr/sexp) x) st)))
@@ -380,10 +367,10 @@
         (if (pair? x)
             (cat fl "#define " (name-of (car x))
                  (c-paren
-                  (join/dot name-of
-                            (lambda (dot) (dsp "..."))
-                            (cdr x)
-                            ", "))
+                  (fmt-join/dot name-of
+                                (lambda (dot) (dsp "..."))
+                                (cdr x)
+                                ", "))
                  tail fl)
             (cat fl "#define " (c-expr x) tail fl)))
        st))))
@@ -442,7 +429,7 @@
   (cat "#" x))
 
 (define (cpp-sym-cat . args)
-  (join dsp args " ## "))
+  (fmt-join dsp args " ## "))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; general indentation and brace rules
@@ -508,23 +495,20 @@
        (lambda (st)
          (if (fmt-expression? st)
              ((fmt-try-fit
-               (fmt-let 'no-wrap? #t (join c-expr (cons body0 body) ", "))
+               (fmt-let 'no-wrap? #t (fmt-join c-expr (cons body0 body) ", "))
                (lambda (st)
                  (let ((indent (c-current-indent-string st)))
-                   ((join c-expr (cons body0 body) (cat "," nl indent)) st))))
+                   ((fmt-join c-expr (cons body0 body) (cat "," nl indent)) st))))
               st)
              (let ((orig-ret? (fmt-return? st)))
-               ((join/last c-expr
-                           (lambda (x) (fmt-let 'return? orig-ret? (c-expr x)))
-                           (cons body0 body)
-                           (cat fl (c-current-indent-string st)))
+               ((fmt-join/last c-expr
+                               (lambda (x) (fmt-let 'return? orig-ret? (c-expr x)))
+                               (cons body0 body)
+                               (cat fl (c-current-indent-string st)))
                 (fmt-set! st 'return? (and ret? orig-ret?))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; data structures
-
-(define (c-typedef what name . o)
-  (c-wrap-stmt (cat "typedef " (c-type what) name (apply-cat o))))
 
 (define (c-struct/aux type x . o)
   (let* ((name (if (null? o) (if (or (symbol? x) (string? x)) x #f) x))
@@ -557,7 +541,7 @@
        (c-in-expr (apply c-begin (map c-enum-one vals))))))))
 
 (define (c-attribute . args)
-  (cat "__attribute__ ((" (join c-expr args ", ") "))"))
+  (cat "__attribute__ ((" (fmt-join c-expr args ", ") "))"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; basic control structures
@@ -579,11 +563,11 @@
 (define (c-param x)
   (cond
     ((procedure? x) x)
-    ((pair? x) (cat (c-type (car x)) " " (cadr x)))
+    ((pair? x) (c-type (car x) (cadr x)))
     (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
 
 (define (c-param-list ls)
-  (c-in-expr (join/dot c-param (lambda (dot) (dsp "...")) ls ", ")))
+  (c-in-expr (fmt-join/dot c-param (lambda (dot) (dsp "...")) ls ", ")))
 
 (define (c-fun type name params . body)
   (cat (c-block (c-in-expr (c-prototype type name params))
@@ -593,7 +577,8 @@
 
 (define (c-prototype type name params . o)
   (c-wrap-stmt
-   (cat (c-type type) " " (c-expr name) " (" (c-param-list params) ")" (apply-cat o))))
+   (cat (c-type type) " " (c-expr name) " (" (c-param-list params) ")"
+        (fmt-join/prefix c-expr o " "))))
 
 (define (c-static x) (cat "static " (c-expr x)))
 (define (c-const x) (cat "const " (c-expr x)))
@@ -603,16 +588,52 @@
 (define (c-inline x) (cat "inline " (c-expr x)))
 (define (c-extern x) (cat "extern " (c-expr x)))
 (define (c-extern/C . body)
-  (cat "extern \"C\" {" fl (apply c-begin body) fl "}" fl))
+  (cat "extern \"C\" {" nl (apply c-begin body) nl "}" nl))
+
+(define (c-type type . o)
+  (let ((name (and (pair? o) (car o))))
+    (cond
+     ((pair? type)
+      (case (car type)
+        ((%fun)
+         (cat (c-type (cadr type) #f)
+              " (*" (or name "") ")("
+              (fmt-join (lambda (x) (c-type x #f)) (caddr type) ", ") ")"))
+        ((%array)
+         (let ((name (cat name "[" (if (pair? (cddr type))
+                                       (c-expr (caddr type))
+                                       "")
+                          "]")))
+           (c-type (cadr type) name)))
+        ((%pointer *)
+         (let ((name (cat "*" (if name (c-expr name) ""))))
+           (c-type (cadr type)
+                   (if (and (pair? (cadr type)) (eq? '%array (caadr type)))
+                       (c-paren name)
+                       name))))
+        ((enum) (apply c-enum name (cdr type)))
+        ((struct union class)
+         (cat (apply c-struct/aux (car type) (cdr type)) " " name))
+        (else (fmt-join/last c-expr (lambda (x) (c-type x name)) type " "))))
+     ((not type)
+      (lambda (st) ((c-type (or (fmt-default-type st) 'int) name) st)))
+     (else
+      (cat (if (eq? '%pointer type) '* type) (if name (cat " " name) ""))))))
 
 (define (c-var type name . init)
   (c-wrap-stmt
    (if (pair? init)
-       (cat (c-type type) " " name " = " (c-expr (car init)))
-       (cat (c-type type) " " (if (pair? name) (join dsp name ", ") name)))))
+       (cat (c-type type name) " = " (c-expr (car init)))
+       (c-type type (if (pair? name)
+                        (fmt-join c-expr name ", ")
+                        (c-expr name))))))
 
 (define (c-cast type expr)
   (cat "(" (c-type type) ")" (c-expr expr)))
+
+(define (c-typedef type alias . o)
+  (c-wrap-stmt
+   (cat "typedef " (c-type type alias) (fmt-join/prefix c-expr o " "))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generalized IF: allows multiple tail forms for if/else if/.../else
@@ -694,7 +715,7 @@
            (indent-body (c-indent st))
            (sep (string-append ":" nl-str indent)))
       ((cat (c-in-expr
-             (join/suffix
+             (fmt-join/suffix
               dsp
               (if (pair? (cadr x))
                   (map (lambda (y) (cat (dsp "case ") (c-expr y)))
@@ -702,7 +723,7 @@
                   (list (dsp "default")))
               sep))
             (make-space (or (fmt-indent-space st) 4))
-            (join c-expr (cddr x) indent-body)
+            (fmt-join c-expr (cddr x) indent-body)
             (if (and break? (not (fmt-return? st)))
                 (cat fl indent-body c-break)
                 ""))
@@ -735,14 +756,16 @@
      (c-maybe-paren
       op
       (if (or (equal? str ".") (equal? str "->"))
-          (join c-expr ls str)
+          (fmt-join c-expr ls str)
           (let ((flat
                  (fmt-let 'no-wrap? #t
                           (lambda (st)
-                            ((join c-expr ls (if (and (fmt-non-spaced-ops? st)
-                                                      (every lit-op? ls))
-                                                 str
-                                                 (string-append " " str " ")))
+                            ((fmt-join c-expr
+                                       ls
+                                       (if (and (fmt-non-spaced-ops? st)
+                                                (every lit-op? ls))
+                                           str
+                                           (string-append " " str " ")))
                              st)))))
             (fmt-if
              fmt-no-wrap?
@@ -750,9 +773,9 @@
              (fmt-try-fit
               flat
               (lambda (st)
-                   ((join c-expr
-                          ls
-                          (cat nl (make-space (+ 2 (fmt-col st))) str " "))
+                   ((fmt-join c-expr
+                              ls
+                              (cat nl (make-space (+ 2 (fmt-col st))) str " "))
                     st))))))))))
 
 (define (c-unary-op op x)

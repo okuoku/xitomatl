@@ -1,1 +1,1 @@
-pretty-0-5.sls
+pretty-0-6.sls

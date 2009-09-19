@@ -1,6 +1,7 @@
 
-#;(cond-expand
- (chicken (use test fmt-c))
+(cond-expand
+ (chicken (use test) (load "fmt-c.scm") ;;(use test fmt-c)
+          )
  (gauche
   (use gauche.test)
   (use text.fmt)
@@ -54,7 +55,7 @@
     (fmt #f (c-fun 'int 'foo '((int x) (int y) (int z))
                    (c-if (c-if 'x 'y 'z) 2 3))))
 
-(test "void bar (int mode, const char* msg, unsigned int arg) {
+(test "void bar (int mode, const char *msg, unsigned int arg) {
     if (mode == 1) {
         printf(msg);
     } else {
@@ -64,7 +65,7 @@
 "
     (fmt #f (c-fun 'void 'bar
                    '((int mode)
-                     ((const char %pointer) msg)
+                     ((%pointer (const char)) msg)
                      ((unsigned int) arg))
                    (c-if (c== 'mode 1) '(printf msg) '(printf msg arg)))))
 
@@ -261,7 +262,7 @@ extern int foo ();
 
 (test "struct employee {
     short age;
-    char* name;
+    char *name;
     struct {
         int year;
         int month;
@@ -271,14 +272,14 @@ extern int foo ();
 "
     (fmt #f (c-expr `(struct employee
                              ((short age)
-                              ((char %pointer) name)
+                              ((%pointer char) name)
                               ((struct (year month day)) dob))
                              (%attribute packed)
                              ))))
 
-(test "struct employee {
+(test "class employee {
     short age;
-    char* name;
+    char *name;
     struct {
         int year;
         int month;
@@ -286,9 +287,9 @@ extern int foo ();
     } dob;
 } __attribute__ ((packed));
 "
-    (fmt #f (c-struct 'employee
+    (fmt #f (c-class 'employee
                       '((short age)
-                        ((char %pointer) name)
+                        ((%pointer char) name)
                         ((struct (year month day)) dob))
                       (c-attribute 'packed)
                       )))
@@ -297,30 +298,36 @@ extern int foo ();
     char tag;
     struct {
         char tag;
-        char* data;
+        char *data;
     } string;
     struct {
         char tag;
-        void* car;
-        void* cdr;
+        void *car;
+        void *cdr;
     } pair;
     struct {
         char tag;
         unsigned int length;
-        void* data;
+        void *data;
     } vector;
 };
 "
     (fmt #f (c-expr
              '(union object
                      ((char tag)
-                      ((struct ((char tag) (char* data))) string)
-                      ((struct ((char tag) (void* car) (void* cdr))) pair)
-                      ((struct ((char tag) ((unsigned int) length) (void* data))) vector)
+                      ((struct ((char tag) ((* char) data))) string)
+                      ((struct ((char tag)
+                                ((* void) car)
+                                ((* void) cdr)))
+                       pair)
+                      ((struct ((char tag)
+                                ((unsigned int) length)
+                                ((* void) data)))
+                       vector)
                       )))))
 
 (test "enum type_tags {
-    TYPE_CHAR,
+    TYPE_CHAR = 1,
     TYPE_FIXNUM,
     TYPE_BOOLEAN,
     TYPE_NULL,
@@ -330,9 +337,31 @@ extern int foo ();
     TYPE_VECTOR
 };
 "
-    (fmt #f (c-expr '(enum type_tags (TYPE_CHAR TYPE_FIXNUM TYPE_BOOLEAN TYPE_NULL TYPE_EOF TYPE_STRING TYPE_PAIR TYPE_VECTOR)))))
+    (fmt #f (c-expr '(enum type_tags ((TYPE_CHAR 1) TYPE_FIXNUM TYPE_BOOLEAN TYPE_NULL TYPE_EOF TYPE_STRING TYPE_PAIR TYPE_VECTOR)))))
 
 (test "#define OP_EVAL 0xFE\n" (fmt #f (radix 16 (cpp-define 'OP_EVAL 254))))
+
+(test "unsigned long table[SIZE] = {1, 2, 3, 4};\n"
+    (fmt #f (c-var '(%array (unsigned long) SIZE) 'table '#(1 2 3 4))))
+
+(test "int *array_of_ptr[];\n"
+    (fmt #f (c-var '(%array (* int)) 'array_of_ptr)))
+
+(test "int (*ptr_to_array)[];\n"
+    (fmt #f (c-var '(* (%array int)) 'ptr_to_array)))
+
+(test "foo **table = {{1, \"foo\"}, {2, \"bar\"}, {3, \"baz\"}, {4, \"qux\"}};\n"
+    (fmt #f (c-var '(* (* foo)) 'table
+                   '#(#(1 "foo") #(2 "bar") #(3 "baz") #(4 "qux")))))
+
+(test "sexp (*f)(sexp, sexp) = NULL;\n"
+    (fmt #f (c-var '(%fun sexp (sexp sexp)) 'f 'NULL)))
+
+(test "sexp (*)(sexp) (*f)(sexp, sexp) = NULL;\n"
+    (fmt #f (c-var '(%fun (%fun sexp (sexp)) (sexp sexp)) 'f 'NULL)))
+
+(test "typedef double (*f)(double *, double, int);\n"
+    (fmt #f (c-typedef '(%fun double ((* double) double int)) 'f)))
 
 (test-end)
 

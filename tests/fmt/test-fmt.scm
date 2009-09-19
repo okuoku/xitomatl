@@ -1,5 +1,5 @@
 
-#;(cond-expand
+(cond-expand
  (chicken (use test fmt))
  (gauche
   (use gauche.test)
@@ -59,6 +59,14 @@
 (test "3.14" (fmt #f (fix 2 3.14159)))
 (test "3.14" (fmt #f (fix 2 3.14)))
 (test "3.00" (fmt #f (fix 2 3.)))
+(test "1.10" (fmt #f (num 1.099 10 2)))
+(test "0.00" (fmt #f (fix 2 1e-17)))
+(test "0.0000000000" (fmt #f (fix 10 1e-17)))
+(test "0.00000000000000001000" (fmt #f (fix 20 1e-17)))
+(test-error (fmt #f (num 1e-17 0)))
+
+(test "11.75" (fmt #f (num (/ 47 4) 10 2)))
+(test "-11.75" (fmt #f (num (/ -47 4) 10 2)))
 
 (test "(#x11 #x22 #x33)" (fmt #f (radix 16 '(#x11 #x22 #x33))))
 
@@ -67,9 +75,20 @@
 (test "299.792.458" (fmt #f (comma-char #\. (num/comma 299792458))))
 (test "299.792.458,0" (fmt #f (comma-char #\. (num/comma 299792458.0))))
 
+(test "100,000" (fmt #f (num 100000 10 0 #f 3)))
+(test "100,000.0" (fmt #f (num 100000 10 1 #f 3)))
+(test "100,000.00" (fmt #f (num 100000 10 2 #f 3)))
+
 (test "1.23" (fmt #f (fix 2 (num/fit 4 1.2345))))
 (test "1.00" (fmt #f (fix 2 (num/fit 4 1))))
 (test "#.##" (fmt #f (fix 2 (num/fit 4 12.345))))
+
+(cond
+ ((feature? 'full-numeric-tower)
+  (test "1+2i" (fmt #f (string->number "1+2i")))
+  (test "1+2i" (fmt #f (num (string->number "1+2i"))))
+  (test "1.00+2.00i" (fmt #f (fix 2 (num (string->number "1+2i")))))
+  (test "3.14+2.00i" (fmt #f (fix 2 (num (string->number "3.14159+2i")))))))
 
 (test "3.9Ki" (fmt #f (num/si 3986)))
 (test "4k" (fmt #f (num/si 3986 1000)))
@@ -126,11 +145,11 @@
 (test "prefix: defgh" (fmt #f "prefix: " (fit/left 5 "abcdefgh")))
 (test "prefix: cdefg" (fmt #f "prefix: " (fit/both 5 "abcdefgh")))
 
-(test "abc\n123\n" (fmt #f (join/suffix (cut trim 3 <>) (string-split "abcdef\n123456\n" "\n") nl)))
+(test "abc\n123\n" (fmt #f (fmt-join/suffix (cut trim 3 <>) (string-split "abcdef\n123456\n" "\n") nl)))
 
 ;; utilities
 
-(test "1 2 3" (fmt #f (join dsp '(1 2 3) " ")))
+(test "1 2 3" (fmt #f (fmt-join dsp '(1 2 3) " ")))
 
 ;; shared structures
 
@@ -172,6 +191,12 @@
     `(test ,str (fmt #f (pretty ',sexp)))))
 
 (test-pretty "(foo bar)\n")
+
+(test-pretty
+"((self . aquanet-paper-1991)
+ (type . paper)
+ (title . \"Aquanet: a hypertext tool to hold your\"))
+")
 
 (test-pretty
 "(abracadabra xylophone
@@ -238,12 +263,12 @@
 ;; slashify
 
 (test "\"note\",\"very simple\",\"csv\",\"writer\",\"\"\"yay!\"\"\""
-    (fmt #f (join (lambda (x) (cat "\"" (slashified x #\" #f) "\""))
+    (fmt #f (fmt-join (lambda (x) (cat "\"" (slashified x #\" #f) "\""))
                   '("note" "very simple" "csv" "writer" "\"yay!\"")
                   ",")))
 
 (test "note,\"very simple\",csv,writer,\"\"\"yay!\"\"\""
-    (fmt #f (join (cut maybe-slashified <> char-whitespace? #\" #f)
+    (fmt #f (fmt-join (cut maybe-slashified <> char-whitespace? #\" #f)
                   '("note" "very simple" "csv" "writer" "\"yay!\"")
                   ",")))
 

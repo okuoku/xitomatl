@@ -181,7 +181,7 @@
       (else
        (error "invalid column" (car ls))))))
 
-;; break lines only, don't join short lines or justify
+;; break lines only, don't fmt-join short lines or justify
 (define (fold-lines . ls)
   (lambda (st)
     (define output (fmt-writer st))
@@ -274,7 +274,7 @@
 
 (define (wrap-lines . ls)
   (define (print-line ls st)
-    (nl ((join dsp ls " ") st)))
+    (nl ((fmt-join dsp ls " ") st)))
   (define buffer '())
   (lambda (st)
     ((fmt-let
@@ -312,7 +312,7 @@
                    (newline p)))
                st))))
       (define (justify-last ls st)
-        (nl ((join dsp ls " ") st)))
+        (nl ((fmt-join dsp ls " ") st)))
       ((fmt-let
         'writer
         (lambda (str st) (set! buffer (cons str buffer)) st)
@@ -333,5 +333,5 @@
 
 (define (line-numbers . o)
   (let ((start (if (pair? o) (car o) 1)))
-    (join/range dsp start #f nl-str)))
+    (fmt-join/range dsp start #f nl-str)))
 

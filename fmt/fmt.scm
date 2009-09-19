@@ -1,17 +1,12 @@
 ;;;; fmt.scm -- extensible formatting library
 ;;
-;; Copyright (c) 2006-2007 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2006-2008 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;; (require-extension (srfi 1 6 13 23 69))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; string utilities
-
-(define (call-with-output-string proc)
-  (let ((p (open-output-string)))
-    (proc p)
-    (get-output-string p)))
 
 (define (write-to-string x)
   (call-with-output-string (lambda (p) (write x p))))
@@ -187,9 +182,10 @@
                                 (str-width str (+ nli 1) len)
                                 (- len (+ nli 1))))
            row))
-        (fmt-set-col! st (if str-width
-                             (str-width str 0 len)
-                             (+ (fmt-col st) len))))))
+        (fmt-set-col! st (+ (fmt-col st)
+                            (if str-width
+                                (str-width str 0 len)
+                                len))))))
 
 (define (fmt-write str st)
   (display str (fmt-port st))
@@ -312,7 +308,7 @@
           ((fmt-writer st) (make-string width (fmt-pad-char st)) st)
           st))))
 
-(define (join fmt ls . o)
+(define (fmt-join fmt ls . o)
   (let ((sep (dsp (if (pair? o) (car o) ""))))
     (lambda (st)
       (if (null? ls)
@@ -323,14 +319,18 @@
                 st
                 (lp (cdr ls) ((fmt (car ls)) (sep st)))))))))
 
-(define (join/prefix fmt ls . o)
-  (let ((sep (dsp (if (pair? o) (car o) ""))))
-    (cat sep (join fmt ls sep))))
-(define (join/suffix fmt ls . o)
-  (let ((sep (dsp (if (pair? o) (car o) ""))))
-    (cat (join fmt ls sep) sep)))
+(define (fmt-join/prefix fmt ls . o)
+  (if (null? ls)
+      fmt-null
+      (let ((sep (dsp (if (pair? o) (car o) ""))))
+        (cat sep (fmt-join fmt ls sep)))))
+(define (fmt-join/suffix fmt ls . o)
+  (if (null? ls)
+      fmt-null
+      (let ((sep (dsp (if (pair? o) (car o) ""))))
+        (cat (fmt-join fmt ls sep) sep))))
 
-(define (join/last fmt fmt/last ls . o)
+(define (fmt-join/last fmt fmt/last ls . o)
   (let ((sep (dsp (if (pair? o) (car o) ""))))
     (lambda (st)
       (cond
@@ -345,7 +345,7 @@
                ((fmt/last (car ls)) (sep st))
                (lp (cdr ls) ((fmt (car ls)) (sep st))))))))))
 
-(define (join/dot fmt fmt/dot ls . o)
+(define (fmt-join/dot fmt fmt/dot ls . o)
   (let ((sep (dsp (if (pair? o) (car o) ""))))
     (lambda (st)
       (cond
@@ -359,7 +359,7 @@
         ((null? ls) st)
         (else ((fmt/dot ls) st))))))
 
-(define (join/range fmt start . o)
+(define (fmt-join/range fmt start . o)
   (let-optionals* o ((end #f) (sep ""))
     (lambda (st)
       (let lp ((i (+ start 1)) (st ((fmt start) st)))
@@ -537,12 +537,12 @@
 
 (define (integer-log a base)
   (if (zero? a)
-    0
-    (inexact->exact (ceiling (/ (log (+ a 1)) (log base))))))
+      0
+      (inexact->exact (ceiling (/ (log (+ a 1)) (log base))))))
 (define (integer-length* a)
   (if (negative? a)
-    (integer-log (- 1 a) 2)
-    (integer-log a 2)))
+      (integer-log (- 1 a) 2)
+      (integer-log a 2)))
 
 (define invlog2of
   (let ((table (make-vector 37))
@@ -552,8 +552,8 @@
       (vector-set! table b (/ log2 (log b))))
     (lambda (b)
       (if (<= 2 b 36)
-        (vector-ref table b)
-        (/ log2 (log b))))))
+          (vector-ref table b)
+          (/ log2 (log b))))))
 
 (define fast-expt
   (let ((table (make-vector 326)))
@@ -562,8 +562,8 @@
       (vector-set! table k v))
     (lambda (b k)
       (if (and (= b 10) (<= 0 k 326))
-        (vector-ref table (inexact->exact (truncate k)))
-        (expt b k)))))
+          (vector-ref table (inexact->exact (truncate k)))
+          (expt b k)))))
 
 (define (mirror-of c)
   (case c ((#\() #\)) ((#\[) #\]) ((#\{) #\}) ((#\<) #\>) (else c)))
@@ -588,7 +588,7 @@
 
         (define (write-positive n)
 
-          (let* ((m+e (mantissa+exponent n))
+          (let* ((m+e (mantissa+exponent (exact->inexact n)))
                  (f (car m+e))
                  (e (cadr m+e))
                  (inv-base (invlog2of base))
@@ -610,37 +610,42 @@
               (write-digit d)
               (let lp ((i (- i 1)))
                 (cond
-                  ((>= i 0)
-                   (if (and commify? (positive? i)
-                            (zero? (modulo i comma-rule)))
-                       (display comma-sep port))
-                   (if (= i (- digits 1))
-                       (display decimal-sep port))
-                   (write-char #\0 port)
-                   (lp (- i 1))))))
+                 ((>= i 0)
+                  (if (and commify?
+                           (if digits
+                               (and (> i digits)
+                                    (zero? (modulo (- i (- digits 1))
+                                                   comma-rule)))
+                               (and (positive? i)
+                                    (zero? (modulo i comma-rule)))))
+                      (display comma-sep port))
+                  (if (= i (- digits 1))
+                      (display decimal-sep port))
+                  (write-char #\0 port)
+                  (lp (- i 1))))))
 
             (define (pad-all d i)
               (write-digit d)
               (let lp ((i (- i 1)))
                 (cond
-                  ((> i 0)
-                   (if (and commify? (zero? (modulo i comma-rule)))
-                       (display comma-sep port))
-                   (write-char #\0 port)
-                   (lp (- i 1)))
-                  ((and (= i 0) (inexact? n))
-                   (display decimal-sep port)
-                   (write-digit 0)))))
+                 ((> i 0)
+                  (if (and commify? (zero? (modulo i comma-rule)))
+                      (display comma-sep port))
+                  (write-char #\0 port)
+                  (lp (- i 1)))
+                 ((and (= i 0) (inexact? n))
+                  (display decimal-sep port)
+                  (write-digit 0)))))
 
             (define (pad-sci d i k)
               (write-digit d)
               (write-char #\e port)
               (cond
-                ((positive? k)
-                 (write-char #\+ port)
-                 (write (- k 1) port))
-                (else
-                 (write k port))))
+               ((positive? k)
+                (write-char #\+ port)
+                (write (- k 1) port))
+               (else
+                (write k port))))
 
             (define (scale r s m+ m- k f e)
               (let ((est (inexact->exact
@@ -660,27 +665,28 @@
 
             (define (lead r s m+ m- k)
               (cond
-                ;;((and (not digits) (> k 14))
-                ;; (generate-sci r s m+ m- k))
-                ;;((and (not digits) (< k -4))
-                ;; (if (>= (/ r s) base)
-                ;;     (generate-sci (/ r base) s (/ m+ base) (/ m- base) k)
-                ;;     (generate-sci r s m+ m- k)))
-                ((and (not digits) (or (> k 14) (< k -4)))
-                 (write n port))     ; XXXX using native write for now
-                (else
-                 (cond
-                   ((and (not (positive? k)) (not (zero? n)))
-                    (write-char #\0 port)
-                    (display decimal-sep port)
-                    (let lp ((i 0))
-                      (cond
-                        ((> i k)
-                         (write-char #\0 port)
-                         (lp (- i 1)))))))
-                 (if digits
-                     (generate-fixed r s m+ m- k)
-                     (generate-all r s m+ m- k)))))
+               ;;((and (not digits) (> k 14))
+               ;; (generate-sci r s m+ m- k))
+               ;;((and (not digits) (< k -4))
+               ;; (if (>= (/ r s) base)
+               ;;     (generate-sci (/ r base) s (/ m+ base) (/ m- base) k)
+               ;;     (generate-sci r s m+ m- k)))
+               ((and (not digits) (or (> k 14) (< k -4)))
+                (write n port))      ; XXXX using native write for now
+               (else
+                (cond
+                 ((and (not digits)
+                       (not (positive? k)))
+                  (write-char #\0 port)
+                  (display decimal-sep port)
+                  (let lp ((i 0))
+                    (cond
+                     ((> i k)
+                      (write-char #\0 port)
+                      (lp (- i 1)))))))
+                (if digits
+                    (generate-fixed r s m+ m- k)
+                    (generate-all r s m+ m- k)))))
 
             (define (generate-all r s m+ m- k)
               (let gen ((r r) (m+ m+) (m- m-) (i k))
@@ -688,43 +694,95 @@
                       ((zero? i)
                        (display decimal-sep port))
                       ((and commify?
-                            (positive? i) (zero? (modulo i comma-rule)))
+                            (positive? i)
+                            (zero? (modulo i comma-rule)))
                        (display comma-sep port)))
                 (let ((d (quotient r s))
                       (r (remainder r s)))
                   (if (not (smaller r m-))
                       (cond
-                        ((not (bigger (+ r m+) s))
-                         (write-digit d)
-                         (gen (* r base) (* m+ base) (* m- base) (- i 1)))
-                        (else (pad-all (+ d 1) i)))
+                       ((not (bigger (+ r m+) s))
+                        (write-digit d)
+                        (gen (* r base) (* m+ base) (* m- base) (- i 1)))
+                       (else
+                        (pad-all (+ d 1) i)))
                       (if (not (bigger (+ r m+) s))
                           (pad-all d i)
                           (pad-all (if (< (* r 2) s) d (+ d 1)) i))))))
 
+            ;; This is ugly because we need to keep a list of all
+            ;; output of the form x9999... in case we get to the end
+            ;; of the precision and need to round up.
             (define (generate-fixed r s m+ m- k)
-              (let ((i0 (- (+ k digits) 1)))
+              (let ((i0 (- (+ k digits) 1))
+                    (stack (if (<= k 0)
+                               (append (make-list (min (- k) digits) 0)
+                                       (list decimal-sep 0))
+                               '())))
+                (define (write-digit-list ls)
+                  (for-each
+                   (lambda (x) (if (number? x) (write-digit x) (display x port)))
+                   ls))
+                (define (flush)
+                  (write-digit-list (reverse stack))
+                  (set! stack '()))
+                (define (flush/rounded)
+                  (let lp ((ls stack) (res '()))
+                    (cond
+                     ((null? ls)
+                      (write-digit-list (cons #\1 res)))
+                     ((not (number? (car ls)))
+                      (lp (cdr ls) (cons (car ls) res)))
+                     ((= (car ls) (- base 1))
+                      (lp (cdr ls) (cons #\0 res)))
+                     (else
+                      (write-digit-list
+                       (append (reverse (cdr ls))
+                               (cons (+ 1 (car ls)) res))))))
+                  (set! stack '()))
+                (define (output digit)
+                  (if (and (number? digit) (< digit (- base 1)))
+                      (flush))
+                  (set! stack (cons digit stack)))
                 (let gen ((r r) (m+ m+) (m- m-) (i i0))
                   (cond ((= i i0))
                         ((= i (- digits 1))
-                         (display decimal-sep port))
-                        ((and commify? (> i (- digits 1))
-                              (zero? (modulo (- i (- digits 1)) comma-rule)))
-                         (display comma-sep port)))
+                         (output decimal-sep))
+                        ((and commify?
+                              (> i digits)
+                              (zero? (modulo (- i (- digits 1))
+                                             comma-rule)))
+                         (output comma-sep)))
                   (let ((d (quotient r s))
                         (r (remainder r s)))
-                    (if (zero? i)
-                        (write-digit (if (< (* r 2) s) d (+ d 1)))
-                        (if (smaller r m-)
-                            (if (bigger (+ r m+) s)
-                                (pad (if (< (* r 2) s) d (+ d 1)) i)
-                                (pad d i))
-                            (if (bigger (+ r m+) s)
-                                (pad (+ d 1) i)
-                                (begin
-                                  (write-digit d)
-                                  (gen (* r base) (* m+ base)
-                                       (* m- base) (- i 1))))))))))
+                    (cond
+                     ((< i 0)
+                      (let ((d2 (* 2 (if (>= (* r 2) s) (+ d 1) d))))
+                        (if (and (not (> (- k) digits))
+                                 (or (> d2 base)
+                                     (and (= d2 base)
+                                          (pair? stack)
+                                          (number? (car stack))
+                                          (odd? (car stack)))))
+                            (flush/rounded)
+                            (flush))))
+                     ((smaller r m-)
+                      (cond
+                       ((= d base)
+                        (flush/rounded)
+                        (pad 0 i))
+                       (else
+                        (flush)
+                        (if (bigger (+ r m+) s)
+                            (pad (if (< (* r 2) s) d (+ d 1)) i)
+                            (pad d i)))))
+                     ((bigger (+ r m+) s)
+                      (flush)
+                      (pad (+ d 1) i))
+                     (else
+                      (output d)
+                      (gen (* r base) (* m+ base)
+                           (* m- base) (- i 1))))))))
 
             (define (generate-sci r s m+ m- k)
               (let gen ((r r) (m+ m+) (m- m-) (i k))
@@ -733,49 +791,53 @@
                       (r (remainder r s)))
                   (if (not (smaller r m-))
                       (cond
-                        ((not (bigger (+ r m+) s))
-                         (write-digit d)
-                         (gen (* r base) (* m+ base) (* m- base) (- i 1)))
-                        (else (pad-sci (+ d 1) i k)))
+                       ((not (bigger (+ r m+) s))
+                        (write-digit d)
+                        (gen (* r base) (* m+ base) (* m- base) (- i 1)))
+                       (else (pad-sci (+ d 1) i k)))
                       (if (not (bigger (+ r m+) s))
                           (pad-sci d i k)
                           (pad-sci (if (< (* r 2) s) d (+ d 1)) i k))))))
 
-            (if (negative? e)
-                (if (or (= e *min-e*) (not (= f *bot-f*)))
-                    (scale (* f 2) (* (expt 2 (- e)) 2) 1 1 0 f e)
-                    (scale (* f 2 2) (* (expt 2 (- 1 e)) 2) 2 1 0 f e))
-                (if (= f *bot-f*)
-                    (let ((be (expt 2 e)))
-                      (scale (* f be 2) 2 be be 0 f e))
-                    (let* ((be (expt 2 e)) (be1 (* be 2)))
-                      (scale (* f be1 2) (* 2 2) be1 be 0 f e))))))
+            (cond
+             ((negative? e)
+              (if (or (= e *min-e*) (not (= f *bot-f*)))
+                  (scale (* f 2) (* (expt 2.0 (- e)) 2) 1 1 0 f e)
+                  (scale (* f 2 2) (* (expt 2.0 (- 1 e)) 2) 2 1 0 f e)))
+             (else
+              (if (= f *bot-f*)
+                  (let ((be (expt 2 e)))
+                    (scale (* f be 2) 2.0 be be 0 f e))
+                  (let* ((be (expt 2 e)) (be1 (* be 2)))
+                    (scale (* f be1 2) (* 2.0 2) be1 be 0 f e)))))))
 
         (define (write-real n sign?)
           (cond
-            ((negative? n)
-             (if (char? sign?)
-                 (begin (display sign? port) (write-positive (abs n))
-                        (display (mirror-of sign?) port))
-                 (begin (write-char #\- port) (write-positive (abs n)))))
-            (else
-             (if (and sign? (not (char? sign?)))
-                 (write-char #\+ port))
-             (write-positive n))))
+           ((negative? n)
+            (if (char? sign?)
+                (begin (display sign? port) (write-positive (abs n))
+                       (display (mirror-of sign?) port))
+                (begin (write-char #\- port) (write-positive (abs n)))))
+           (else
+            (if (and sign? (not (char? sign?)))
+                (write-char #\+ port))
+            (write-positive n))))
 
         (let ((imag (imag-part n)))
           (cond
-            ((zero? imag)
-             (cond
-               ((and (not digits) (exact? n) (not (integer? n)))
-                (write-real (numerator n) sign?)
-                (write-char #\/ port)
-                (write-real (denominator n) #f))
-               (else
-                (write-real n sign?))))
-            (else (write-real imag sign?)
-                  (write-real (real-part n) #t)
-                  (write-char #\i port))))))))
+           ((and base (not (and (integer? base) (<= 2 base 36))))
+            (error "invalid base for numeric formatting" base))
+           ((zero? imag)
+            (cond
+             ((and (not digits) (exact? n) (not (integer? n)))
+              (write-real (numerator n) sign?)
+              (write-char #\/ port)
+              (write-real (denominator n) #f))
+             (else
+              (write-real n sign?))))
+           (else (write-real (real-part n) sign?)
+                 (write-real imag #t)
+                 (write-char #\i port))))))))
 
 (define (num n . opt)
   (lambda (st) ((fmt-writer st) (apply num->string n st opt) st)))
@@ -971,7 +1033,7 @@
             (cond ((and (= 10 (fmt-radix st))
                         (not (fmt-precision st)))
                    (lambda (n st) (output (number->string n) st)))
-                  ((assq (fmt-radix st)
+                  ((assv (fmt-radix st)
                          '((16 . "#x") (10 . "") (8 . "#o") (2 . "#b")))
                    => (lambda (cell)
                         (let ((prefix (cdr cell)))

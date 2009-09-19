@@ -11,4 +11,6 @@
   (xitomatl fmt c)
   (xitomatl tests fmt test))
 
+(define-syntax cond-expand (syntax-rules () ((_ . _) (begin))))
+
 (include/resolve ("xitomatl" "tests" "fmt") "test-fmt-c.scm")

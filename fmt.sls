@@ -1,1 +1,1 @@
-fmt-0-5.sls
+fmt-0-6.sls

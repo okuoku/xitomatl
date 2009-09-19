@@ -6,7 +6,7 @@
 
 (library (xitomatl tests fmt test)
   (export
-    test test-begin test-end)
+    test test-error test-begin test-end)
   (import
     (rnrs)
     (srfi :78 lightweight-testing))
@@ -17,6 +17,14 @@
          (test expected expr))
       ((_ expected expr)
        (check expr => expected))))
+
+  (define-syntax test-error
+    (syntax-rules ()
+      ((_ expr)
+       (check (guard (ex (else (assertion-violation? ex)))
+                expr
+                'unexpected-return)
+              => #T))))
 
   (define (test-begin _) #F)
   

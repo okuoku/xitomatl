@@ -16,6 +16,8 @@
   (xitomatl fmt)
   (xitomatl tests fmt test))
 
+(define-syntax cond-expand (syntax-rules () ((_ . _) (begin))))
+
 (define-syntax define-macro
   (syntax-rules ()
     ((_ (name arg) . body)
@@ -26,5 +28,7 @@
             (datum->syntax #'ctxt
              ((lambda (arg) . body)
               (syntax->datum #'x))))))))))
+
+(define (feature? x) (case x ((full-numeric-tower) #T) (else #F)))
 
 (include/resolve ("xitomatl" "tests" "fmt") "test-fmt.scm")

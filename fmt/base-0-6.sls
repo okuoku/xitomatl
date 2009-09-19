@@ -4,9 +4,10 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt base (0 5))
+(library (xitomatl fmt base (0 6))
   (export
     call-with-output-string
+    make-eq?-table
     write-to-string
     display-to-string
     nl-str
@@ -72,12 +73,12 @@
     fl
     tab-to
     space-to
-    join
-    join/prefix
-    join/suffix
-    join/last
-    join/dot
-    join/range
+    fmt-join
+    fmt-join/prefix
+    fmt-join/suffix
+    fmt-join/last
+    fmt-join/dot
+    fmt-join/range
     pad/both
     pad
     pad/right
@@ -121,17 +122,26 @@
     wrt
     wrt/unshared)
   (import
-    (rnrs)
+    (rename (rnrs)
+            (call-with-string-output-port call-with-output-string))
     (rnrs mutable-pairs)
-    (only (rnrs r5rs) exact->inexact inexact->exact modulo quotient remainder)
+    (only (rnrs r5rs)
+          exact->inexact inexact->exact modulo quotient remainder)
+    (only (srfi :1 lists)
+          make-list)
     (srfi :6 basic-string-ports)
-    (only (srfi :13 strings) substring/shared string-index string-index-right
-                             string-count string-concatenate-reverse)
+    (only (srfi :13 strings)
+          substring/shared string-index string-index-right
+          string-count string-concatenate-reverse)
     (srfi :23 error tricks)
+    (only (srfi :69 basic-hash-tables)
+          make-hash-table hash-table-ref/default
+          hash-table-set! hash-table-walk)
     (xitomatl include)
-    (xitomatl fmt let-optionals*)
-    (xitomatl fmt srfi-69))
+    (xitomatl fmt let-optionals*))
 
+  (define (make-eq?-table) (make-hash-table eq?))
+  
   (define (mantissa+exponent num . opt)
     ;; Break a positive real number down to a normalized mantissa and
     ;; exponent. Default base=2, mant-size=52, exp-size=11 for IEEE doubles.
@@ -146,6 +156,6 @@
               ((< n bot) (lp (* n base) (- e 1)))
               (else (list n e))))))))
   
-  (SRFI-23-error->R6RS "(library (xitomatl fmt base (0 5)))"
+  (SRFI-23-error->R6RS "(library (xitomatl fmt base (0 6)))"
    (include/resolve ("xitomatl" "fmt") "fmt.scm"))
 )
