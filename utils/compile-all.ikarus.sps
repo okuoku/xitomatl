@@ -31,6 +31,7 @@
   (only (xitomatl environments))
   (only (xitomatl environments compat))
   (only (xitomatl exceptions))
+  (only (xitomatl feature-cond))
   (only (xitomatl file-system base))
   (only (xitomatl file-system base compat))
   (only (xitomatl file-system paths))

@@ -17,7 +17,7 @@
     delete-any make-path-to)
   (import
     (except (rnrs) file-exists? delete-file)
-    (srfi :0 cond-expand)
+    (xitomatl feature-cond)
     (xitomatl file-system paths)
     (xitomatl file-system base compat)
     (only (xitomatl define) define/?)
@@ -189,7 +189,7 @@
                 (else (raise-io-f "already exists, but not a directory" p)))
           (loop (cdr todo) p)))))
   
-  (cond-expand 
+  (feature-cond
     (posix)  ;; okay
     (else (error "(library (xitomatl file-system base))"
                  "Only POSIX currently supported.")))

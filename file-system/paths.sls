@@ -17,11 +17,11 @@
     path-join path-split cleanse-path)
   (import
     (rnrs)
-    (srfi :0 cond-expand)
+    (xitomatl feature-cond)
     (only (xitomatl define) define/?)
     (xitomatl strings))
   
-  ;; If anyone ever wants to use my libraries on Windows, we can cond-expand or
+  ;; If anyone ever wants to use my libraries on Windows, we can feature-cond or
   ;; something this library to work.
   ;; TODO: Make run-time parameter to control if POSIX or Windows style is done;
   ;;       this way, either platform can work with paths for the other.
@@ -69,7 +69,7 @@
   
   ;;--------------------------------------------------------------------------
 
-  (cond-expand 
+  (feature-cond
     (posix)  ;; OK
     (else (error "(library (xitomatl file-system paths))"
                  "Only POSIX currently supported.")))
