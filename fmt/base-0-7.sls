@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt base (0 6))
+(library (xitomatl fmt base (0 7))
   (export
     call-with-output-string
     make-eq?-table
@@ -29,6 +29,7 @@
     fmt-writer
     fmt-port
     fmt-decimal-sep
+    fmt-decimal-align
     fmt-string-width
     fmt-ellipses
     fmt-set-row!
@@ -41,6 +42,7 @@
     fmt-set-writer!
     fmt-set-port!
     fmt-set-decimal-sep!
+    fmt-set-decimal-align!
     fmt-set-string-width!
     fmt-set-ellipses!
     fmt-ref
@@ -54,6 +56,7 @@
     pad-char
     comma-char
     decimal-char
+    decimal-align
     with-width
     ellipses
     fmt-start
@@ -102,10 +105,14 @@
     invlog2of
     fast-expt
     mirror-of
+    default-digits
     num->string
     num
     num/comma
     num/si
+    roman-numerals
+    num/old-roman
+    num/roman
     num/fit
     eq?-table-ref
     eq?-table-set!
@@ -132,7 +139,7 @@
     (srfi :6 basic-string-ports)
     (only (srfi :13 strings)
           substring/shared string-index string-index-right
-          string-count string-concatenate-reverse)
+          string-count string-concatenate-reverse reverse-list->string)
     (srfi :23 error tricks)
     (only (srfi :69 basic-hash-tables)
           make-hash-table hash-table-ref/default
@@ -141,7 +148,7 @@
     (xitomatl fmt let-optionals*))
 
   (define (make-eq?-table) (make-hash-table eq?))
-  
+
   (define (mantissa+exponent num . opt)
     ;; Break a positive real number down to a normalized mantissa and
     ;; exponent. Default base=2, mant-size=52, exp-size=11 for IEEE doubles.
@@ -155,7 +162,7 @@
               ((>= n top) (lp (quotient n base) (+ e 1)))
               ((< n bot) (lp (* n base) (- e 1)))
               (else (list n e))))))))
-  
-  (SRFI-23-error->R6RS "(library (xitomatl fmt base (0 6)))"
+
+  (SRFI-23-error->R6RS "(library (xitomatl fmt base (0 7)))"
    (include/resolve ("xitomatl" "fmt") "fmt.scm"))
 )

@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt c (0 6))
+(library (xitomatl fmt c (0 7))
   (export
     fmt-in-macro? fmt-expression? fmt-return? fmt-default-type
     fmt-newline-before-brace? fmt-braceless-bodies?
@@ -33,10 +33,8 @@
     (only (srfi :13 strings) substring/shared string-index)
     (srfi :23 error tricks)
     (xitomatl include)
-    (xitomatl fmt base (0 6)))
+    (xitomatl fmt base (0 7)))
 
-  (define-syntax fprintf (syntax-rules () ((_ . _) (values))))
-
-  (SRFI-23-error->R6RS "(library (xitomatl fmt c (0 6)))"
+  (SRFI-23-error->R6RS "(library (xitomatl fmt c (0 7)))"
    (include/resolve ("xitomatl" "fmt") "fmt-c.scm"))
 )

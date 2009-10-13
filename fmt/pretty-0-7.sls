@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt pretty (0 6))
+(library (xitomatl fmt pretty (0 7))
   (export
     fmt-shares
     fmt-set-shares!
@@ -36,7 +36,7 @@
     (only (srfi :1 lists) length+)
     (only (srfi :13 strings) string-prefix? string-suffix?)
     (xitomatl include)
-    (xitomatl fmt base (0 6))
+    (xitomatl fmt base (0 7))
     (only (srfi :69 basic-hash-tables) hash-table-walk))
 
   (include/resolve ("xitomatl" "fmt") "fmt-pretty.scm")  

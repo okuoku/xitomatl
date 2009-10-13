@@ -18,17 +18,4 @@
 
 (define-syntax cond-expand (syntax-rules () ((_ . _) (begin))))
 
-(define-syntax define-macro
-  (syntax-rules ()
-    ((_ (name arg) . body)
-     (define-syntax name
-       (lambda (stx)
-         (syntax-case stx ()
-           ((ctxt x)
-            (datum->syntax #'ctxt
-             ((lambda (arg) . body)
-              (syntax->datum #'x))))))))))
-
-(define (feature? x) (case x ((full-numeric-tower) #T) (else #F)))
-
 (include/resolve ("xitomatl" "tests" "fmt") "test-fmt.scm")

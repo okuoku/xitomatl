@@ -4,7 +4,7 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-(library (xitomatl fmt (0 6))
+(library (xitomatl fmt (0 7))
   (export
     new-fmt-state
     fmt fmt-start fmt-if fmt-capture fmt-let fmt-bind fmt-null
@@ -21,14 +21,15 @@
     pad pad/right pad/left pad/both trim trim/left trim/both trim/length
     fit fit/left fit/both tab-to space-to wrt wrt/unshared dsp
     pretty pretty/unshared slashified maybe-slashified
-    num num/si num/fit num/comma radix fix ellipses
+    num num/si num/fit num/comma num/roman num/old-roman
+    radix fix decimal-align ellipses
     upcase downcase titlecase pad-char comma-char decimal-char
     with-width wrap-lines fold-lines justify
     make-string-fmt-transformer
     make-space make-nl-space display-to-string write-to-string
     fmt-columns columnar line-numbers)
   (import
-    (xitomatl fmt base (0 6))
-    (xitomatl fmt pretty (0 6))
-    (xitomatl fmt column (0 6)))
+    (xitomatl fmt base (0 7))
+    (xitomatl fmt pretty (0 7))
+    (xitomatl fmt column (0 7)))
 )
