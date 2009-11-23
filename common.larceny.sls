@@ -11,12 +11,17 @@
     gensym
     time
     with-input-from-string with-output-to-string
+    system
     ;; TODO: add to as needed/appropriate
     )
   (import
     (rnrs)
     (prefix (primitives gensym) larceny:)
-    (primitives pretty-print time with-input-from-string with-output-to-string)
+    (primitives pretty-print
+                time
+                with-input-from-string
+                with-output-to-string
+                system)
     ;; Can't use Larceny's format because some of its directives differ.
     (prefix (srfi :48 intermediate-format-strings) IFS:))
 

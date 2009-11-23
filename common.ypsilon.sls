@@ -11,11 +11,14 @@
     gensym
     time
     with-input-from-string with-output-to-string
+    system
     ;; TODO: add to as needed/appropriate
     )
   (import
     (rnrs)
-    (only (core) format set-current-input-port! set-current-output-port!)
+    (only (core)
+          format system
+          set-current-input-port! set-current-output-port!)
     (prefix (only (core) pretty-print gensym) ypsilon:)
     (only (time) time))
   

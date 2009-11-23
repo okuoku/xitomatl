@@ -11,13 +11,15 @@
     gensym
     time
     with-input-from-string with-output-to-string
+    system
     ;; TODO: add to as needed/appropriate
     )
   (import
     (except (rnrs) current-input-port current-output-port)
     (only (scheme) add1 sub1 format printf fprintf gensym time
                    current-input-port current-output-port parameterize)
-    (only (scheme pretty) pretty-print))
+    (only (scheme pretty) pretty-print)
+    (only (scheme system) system))
 
   (define (with-input-from-string str thunk)
     (parameterize ((current-input-port (open-string-input-port str)))

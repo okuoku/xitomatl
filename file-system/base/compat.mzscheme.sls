@@ -19,7 +19,8 @@
                   make-file-or-directory-link current-directory
                   file-or-directory-modify-seconds file-or-directory-permissions
                   file-size rename-file-or-directory
-                  with-handlers exn:fail:filesystem? exn-message) 
+                  with-handlers exn:fail:filesystem? exn-message
+                  make-parameter) 
             mz:)
     (prefix (only (scheme mpair) list->mlist) mz:)
     (only (xitomatl predicates) exact-non-negative-integer?))
@@ -40,9 +41,10 @@
                         (make-i/o-filename-error path)))))
   
   (define current-directory
-    (case-lambda
-      (() (mz:path->string (mz:current-directory)))
-      ((x) (mz:current-directory x))))
+    (mz:make-parameter (mz:path->string (mz:current-directory))
+     (lambda (x)
+       (mz:current-directory x)
+       (mz:path->string (mz:current-directory)))))
   
   (define (directory-list path)
     (map mz:path->string 

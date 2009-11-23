@@ -11,6 +11,7 @@
     gensym
     time
     with-input-from-string with-output-to-string
+    system
     ;; TODO: add to as needed/appropriate
     )
   (import

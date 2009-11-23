@@ -28,7 +28,9 @@
 
   (not-implemented
    directory-enumerator directory-list delete-directory delete-file
-   make-directory make-symbolic-link change-mode file-mtime file-ctime
+   make-directory make-symbolic-link change-mode file-ctime
    file-exists? file-regular? file-directory? file-symbolic-link?
    file-readable? file-writable? file-executable? file-size rename-file)
+
+  (define (file-mtime _) #F)  ;; Just so (xitomatl include) can be used.
 )
