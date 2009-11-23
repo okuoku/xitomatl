@@ -7,7 +7,7 @@
 (library (xitomatl stack-lang core)
   (export
     Q S* S
-    define-λS λS λS/who
+    define-inlined define-λS λS λS/who
     stack #;pop #;push
     not-enough-values)
   (import
@@ -16,65 +16,9 @@
     (for (only (xitomatl macro-utils) formals-ok?/raise) expand)
     (xitomatl stack-lang unsafe))
 
-#|(define block-size 4000)  ;; Must be greater than 1.
-  (define max-index (- block-size 1))
-  (define (new-block lower)
-    (let ((b (make-vector block-size)))
-      (vector-set! b 0 lower)
-      b))
-  (define (new-stack)
-    (vector 1 (new-block #F)))
-  (define-syntax stack-index
-    (syntax-rules () ((_ s) ($vector-ref s 0))))
-  (define-syntax stack-index-set!
-    (syntax-rules () ((_ s v) ($vector-set! s 0 v))))
-  (define-syntax stack-block
-    (syntax-rules () ((_ s) ($vector-ref s 1))))
-  (define-syntax stack-block-set!
-    (syntax-rules () ((_ s v) ($vector-set! s 1 v))))
-  (define-syntax stack-lower-block
-    (syntax-rules () ((_ s) ($vector-ref (stack-block s) 0))))
-
-  (define-syntax %push
-    (lambda (stx)
-      (syntax-case stx ()
-        ((_ s v)
-         (identifier? (syntax s))
-         (syntax
-          (let ((i (stack-index s)))
-            (if ($fx= block-size i)
-              (let ((b (new-block (stack-block s))))
-                ($vector-set! b 1 v)
-                (stack-index-set! s 2)
-                (stack-block-set! s b))
-              (begin ($vector-set! (stack-block s) i v)
-                     (stack-index-set! ($fx+ 1 i))))))))))
-  
-  (define-syntax %pop
-    (lambda (stx)
-      (syntax-case stx ()
-        ((_ s)
-         (identifier? (syntax s))
-         (syntax
-          (let ((i ($fx- (stack-index s) 1)))
-            (if ($fx= 0 i)
-              (let ((b (stack-lower-block s)))
-                (if b
-                  (let ((x ($vector-ref b max-index)))
-                    ($vector-set! b max-index #F)
-                    (stack-index-set! s max-index)
-                    (stack-block-set! s b)
-                    x)
-                  (not-enough-values)))
-              (let* ((b (stack-block s))
-                     (x ($vector-ref b i)))
-                ($vector-set! b i #F)
-                (stack-index-set! s i)
-                x))))))))
-|#    
   ;; The reason for using a parameter is so that it's thread-local if
   ;; multi-threading happens.
-  (define stack (make-parameter (quote ()) #;(new-stack)))
+  (define stack (make-parameter (quote ())))
 
 #;(define (pop)
     (let* ((ds (stack))
@@ -123,6 +67,19 @@
       ((_ expr ...)
        (begin (stack (S* (stack) expr ...))
               (values)))))
+
+  (define-syntax define-inlined
+    (syntax-rules ()
+      ((_ (name s) . body)
+       (begin
+         (define (first-class s) . body)
+         (define-syntax name
+           (lambda (stx)
+             (syntax-case stx ()
+               ((_ expr)
+                (syntax (let ((s expr)) . body)))
+               (id (identifier? (syntax id))
+                (syntax first-class)))))))))
 
   (define not-enough-values
     (case-lambda
