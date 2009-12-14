@@ -20,7 +20,7 @@
      (check (guard (ex (else (and (i/o-filename-error? ex)
                                   (who-condition? ex)
                                   (list (condition-who ex)
-                                        (cleanse-path (i/o-error-filename ex))))))
+                                        (normalize-path (i/o-error-filename ex))))))
               expr
               'unexpected-return)
             => '(who fn)))))
@@ -57,10 +57,10 @@
 
 ;; current-directory 
 (current-directory "/tmp")
-(check (cleanse-path (current-directory)) => "/tmp")
+(check (normalize-path (current-directory)) => "/tmp")
 (make-test-tree)
 (current-directory "/tmp/xitomatl-tests")
-(check (cleanse-path (current-directory)) => "/tmp/xitomatl-tests")
+(check (normalize-path (current-directory)) => "/tmp/xitomatl-tests")
 ;; directory-enumerator
 (check (let-values ((vals
                      (fold/enumerator

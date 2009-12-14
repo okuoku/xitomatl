@@ -4,74 +4,86 @@
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
 
-;; TODO: Don't automatically normalize paths.
-;;       Rename cleanse-path to normalize-path.
-;;       Rename dir-sep-str to path-separator.
-;;       Remove dir-sep-char and root-dir-str.
-;;       Maybe more clean-up.
-
 (library (xitomatl file-system paths)
   (export
-    dir-sep-char dir-sep-str root-dir-str
-    path? absolute-path? relative-path? path=? 
-    path-join path-split cleanse-path)
+    path-style
+    path? absolute-path? relative-path? path=?
+    path-join path-split normalize-path)
   (import
     (rnrs)
+    (only (srfi :39 parameters) make-parameter)
+    (only (xitomatl define) define/AV)
     (xitomatl feature-cond)
-    (only (xitomatl define) define/?)
-    (xitomatl strings))
-  
-  ;; If anyone ever wants to use my libraries on Windows, we can feature-cond or
-  ;; something this library to work.
-  ;; TODO: Make run-time parameter to control if POSIX or Windows style is done;
-  ;;       this way, either platform can work with paths for the other.
-  
-  (define dir-sep-char #\/)
-  (define dir-sep-str (string dir-sep-char)) ;; must be length of 1
-  (define (root-dir-str) dir-sep-str)  ;; for Windows, could be parameter, to change drives
-  
-  (define (starts-with-root? p)
-    #;(string=? (root-dir-str) (substring p 0 (string-length (root-dir-str))))
-    (char=? dir-sep-char (string-ref p 0)))
-  
-  (define (path? x)
-    (and (string? x) (positive? (string-length x))))
-  
-  (define (absolute-path? x)
-    (and (path? x) (starts-with-root? x)))
-  
-  (define (relative-path? x)
-    (and (path? x) (not (starts-with-root? x))))
-  
-  (define (path=? x y . r)
-    (apply string=? (map cleanse-path (cons* x y r))))
-  
-  (define/? (path-join . #(ps (lambda (ps) (for-all string? ps))))
-    (let* ((ps (filter (lambda (p) (positive? (string-length p))) ps))
-           (r (string-intersperse (apply append (map _path-split ps))
-                                  dir-sep-str)))
-      (if (and (not (null? ps))
-               (absolute-path? (car ps)))  ;; Windows version wouldn't do this, just return r
-        (string-append dir-sep-str r)
-        r)))
-  
-  (define (_path-split p)
-    (string-split p dir-sep-str #F))
-  
-  (define (path-split p)
-    (let ((r (_path-split p)))
-      (if (absolute-path? p)  ;; Windows version wouldn't do this, just return r
-        (cons dir-sep-str r)
-        r)))
-  
-  (define (cleanse-path p)
-    (apply path-join (path-split p)))
-  
-  ;;--------------------------------------------------------------------------
+    (only (xitomatl strings) string-intersperse string-split))
 
-  (feature-cond
-    (posix)  ;; OK
-    (else (error "(library (xitomatl file-system paths))"
-                 "Only POSIX currently supported.")))
-  
+  (define/AV path-style
+    (make-parameter (feature-cond (posix 'posix) (windows 'windows))
+                    (lambda (x)
+                      (if (and (symbol? x)
+                               (memq x '(posix windows windows-/)))
+                        x
+                        (AV "not a symbol, or unknown" x)))))
+
+  (define (sep) (case (path-style) ((posix windows-/) "/") ((windows) "\\")))
+
+  (define (split-drive p)
+    (let ((len (string-length p)))
+      (let loop ((i 0))
+        (cond ((= len i) (values #F (and (< 0 len) p)))
+              ((and (< 0 i) (char=? #\: (string-ref p i)))
+               (let ((i (+ 1 i)))
+                 (values (substring p 0 i)
+                         (and (< i len) (substring p i len)))))
+              (else (loop (+ 1 i)))))))
+  (define (drive p) (let-values (((d r) (split-drive p))) d))
+  (define (no-drive p) (let-values (((d r) (split-drive p))) r))
+
+  (define (rooted-path? p)
+    (case (path-style)
+      ((posix) (char=? #\/ (string-ref p 0)))
+      ((windows) (char=? #\\ (string-ref (no-drive p) 0)))
+      ((windows-/) (char=? #\/ (string-ref (no-drive p) 0)))))
+
+  (define (path? x)
+    (and (string? x)
+         (case (path-style)
+           ((posix) (positive? (string-length x)))
+           ((windows windows-/) (and (no-drive x) #T)))))
+
+  (define (absolute-path? x) (and (path? x) (rooted-path? x)))
+
+  (define (relative-path? x) (and (path? x) (not (rooted-path? x))))
+
+  (define (path=? x y . r) (apply string=? (map normalize-path (cons* x y r))))
+
+  (define (normalize-path p) (apply path-join (path-split p)))
+
+  (define (path-join . components)
+    (define (split x) (string-split x s #F))
+    (define s (sep))
+    (let* ((c1 (filter (lambda (x) (positive? (string-length x))) components))
+           (c2 (apply append (map split c1)))
+           (c3 (if (and (pair? c1) (absolute-path? (car c1)))
+                 (case (path-style)
+                   ((posix) (if (pair? c2) (cons "" c2) (list "" "")))
+                   ((windows windows-/)
+                    (if (drive (car c1))
+                      (if (pair? (cdr c2)) c2 (list (car c2) ""))
+                      (if (pair? c2) (cons "" c2) (list "" "")))))
+                 c2)))
+      (string-intersperse c3 s)))
+
+  (define (path-split p)
+    (let* ((s (sep))
+           (c (string-split p s #F)))
+      (case (path-style)
+        ((posix)
+         (if (absolute-path? p) (cons s c) c))
+        ((windows windows-/)
+         (if (absolute-path? p)
+           (if (and (pair? c) (drive (car c)))
+             (cons (string-append (car c) s) (cdr c))
+             (cons s c))
+           c)))))
+
 )

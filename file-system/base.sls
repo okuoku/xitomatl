@@ -118,12 +118,10 @@
          (define abs
            ;; Get the absolute base path of now to use above so we are not vulnerable
            ;; to the current-directory changing while we are enumerating/folding.
-           (if (absolute-path? start-path)
-             (root-dir-str)
-             (current-directory)))
+           (if (absolute-path? start-path) "" (current-directory)))
          (unless (file-directory? start-path)
            (assertion-violation who "not a directory" start-path))
-         (walk (list (list start-path)) '() seeds)))))
+         (walk (list (list (normalize-path start-path))) '() seeds)))))
   
   (define (top-down/bottom-up? x)
     (memq x '(top-down bottom-up)))
