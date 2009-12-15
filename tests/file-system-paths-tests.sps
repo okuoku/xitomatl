@@ -232,6 +232,8 @@
        => #T)
 (check (path? "C:")
        => #F)
+(check (path? "")
+       => #F)
 
 (check (absolute-path? "C:")
        => #F)
@@ -391,6 +393,8 @@
 (check (path? "C:foo")
        => #T)
 (check (path? "C:")
+       => #F)
+(check (path? "")
        => #F)
 
 (check (absolute-path? "C:")
