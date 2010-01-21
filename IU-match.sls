@@ -100,7 +100,7 @@
   (import 
     (for (rnrs) run expand)
     (rnrs mutable-pairs)
-    (only (xitomatl common) add1 sub1)
+    (for (only (xitomatl common) add1 sub1) expand)
     (only (xitomatl lists) make-list last-pair)
     (srfi :39 parameters))
   

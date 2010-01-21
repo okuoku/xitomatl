@@ -10,7 +10,8 @@
     check-ids/prevent-dups-across
     check-ids/dups-okay)
   (import
-    (rnrs))
+    (rnrs)
+    (for (only (rnrs base) unquote) (meta -1)))
   
   (define (problem form-stx kw-name-stx msg subform)
     (syntax-violation #F msg
