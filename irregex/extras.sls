@@ -1,5 +1,5 @@
 #!r6rs
-;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
+;; Copyright (c) 2010 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
@@ -129,17 +129,17 @@
                               (if (negative? n)
                                 (lose-refs submatch-chunks)
                                 (loop (- n 1)
-                                      (cons* (irregex-match-start-chunk m n)
-                                             (irregex-match-end-chunk m n)
-                                             submatch-chunks))))))
-                       (assert (and (list? replacements)
-                                    (let ((l (length replacements)))
-                                      (and (>= l 2) (even? l)))))
-                       (let loop ((r replacements) (n 0))
-                         (unless (null? r)
-                           (irregex-match-start-chunk-set! m n (car r))
-                           (irregex-match-end-chunk-set! m n (cadr r))
-                           (loop (cddr r) (+ 1 n))))))
+                                      (if (irregex-match-valid-index? m n)
+                                        (cons (list n
+                                                    (irregex-match-start-chunk m n)
+                                                    (irregex-match-end-chunk m n))
+                                              submatch-chunks)
+                                        submatch-chunks))))))
+                       (for-each (lambda (x)
+                                   (let ((n (car x)) (s (cadr x)) (e (caddr x)))
+                                     (irregex-match-start-chunk-set! m n s)
+                                     (irregex-match-end-chunk-set! m n e)))
+                                 replacements)))
                    (let-values (((continue . next-seeds) (apply proc m seeds)))
                      (if continue
                        (if (or (not (eq? chk end-chunk))
@@ -199,11 +199,10 @@
       (case-lambda
         (() (values chunker make-chunk))
         ((submatch-chunks)
-         ;; submatch-chunks ::= (<submatch-0-start-chunk> <submatch-0-end-chunk>
-         ;;                      <submatch-1-start-chunk> <submatch-1-end-chunk>
-         ;;                      ...                      ...)
-         (let ((first (car submatch-chunks))
-               (last (cadr submatch-chunks)))
+         ;; submatch-chunks ::= ((0 <start-chunk> <end-chunk>)
+         ;;                      (X <start-chunk> <end-chunk>) ...)
+         (let ((first (cadar submatch-chunks))
+               (last (caddar submatch-chunks)))
            (let* ((reversed-chain
                    (let loop ((chain first) (rev '()))
                      (if (eq? chain last)
@@ -216,7 +215,10 @@
                        (let* ((o (car rev))
                               (nc (make-chunk o next)))
                          (loop (cdr rev) nc (cons (cons o nc) alist)))))))
-             (map (lambda (c) (and c (cdr (assq c correlated))))
+             (map (lambda (x)
+                    (list (car x)
+                          (cdr (assq (cadr x) correlated))
+                          (cdr (assq (caddr x) correlated))))
                   submatch-chunks)))))))
 
   (define (chunk-eqv? chunker)

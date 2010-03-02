@@ -1,5 +1,5 @@
 #!r6rs
-;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
+;; Copyright (c) 2010 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
@@ -372,14 +372,12 @@
          (counted-match-positions m 0))
         ((m n)
          (let ((c (source m n)))
-           (if c
-             (let-values (((char line column offset line-seps)
-                           (chunk-counts/counted
-                            (irregex-match-chunker m) c (index m n))))
-               (if (positive? offset)
-                 (values char (- line 1) #F)
-                 (values char line column)))
-             (values #F #F #F))))))
+           (let-values (((char line column offset line-seps)
+                         (chunk-counts/counted
+                          (irregex-match-chunker m) c (index m n))))
+             (if (positive? offset)
+               (values char (- line 1) #F)
+               (values char line column)))))))
     counted-match-positions)
 
   (define counted-match-start-positions

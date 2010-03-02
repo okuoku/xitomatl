@@ -1,5 +1,5 @@
 #!r6rs
-;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
+;; Copyright (c) 2010 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
@@ -62,8 +62,7 @@
     (printf " (~s ~s" line-num line)
     (let loop ((n 0))
       (if (<= n max)
-        (begin (printf "\n  (~s ~s ~s)" (irregex-match-substring m n)
-                       (irregex-match-start-index m n) (irregex-match-end-index m n))
+        (begin (printf "\n  ~s" (irregex-match-substring m n))
                (loop (+ 1 n)))
         (printf ")\n"))))
   (define-values (print-start print-end print-match)

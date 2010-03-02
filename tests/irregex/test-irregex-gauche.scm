@@ -1,6 +1,10 @@
 
 ;; derived from Gauche's regex tests
 
+(use srfi-1 test)
+(load "irregex.scm")
+(load "irregex-utils.scm")
+
 (define-syntax let1
   (syntax-rules ()
     ((let1 var val body ...)
@@ -360,10 +364,11 @@
        (match&list "[abc]b[abc]" "abc"))
 (test "a[bc]d" '("abd")
        (match&list "a[bc]d" "xyzaaabcaababdacd"))
-(test "a[ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab](wee|week)(knights|night)"
-       '("aaaaabaaaabaaaabaaaabweeknights" "wee" "knights")
-       (match&list "a[ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab](wee|week)(knights|night)"
-                   "aaaaabaaaabaaaabaaaabweeknights"))
+;; (test "a[ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab](wee|week)(knights|night)"
+;;        '("aaaaabaaaabaaaabaaaabweeknights" "wee" "knights")
+;;        (match&list "a[ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab][ab](wee|week)(knights|night)"
+;;                    "aaaaabaaaabaaaabaaaabweeknights"))
+;; shorter version for quicker testing
 (test "a[ab][ab][ab][ab][ab][ab][ab][ab][ab][ab](wee|week)(knights|night)"
        '("aaaaabaaaabweeknights" "wee" "knights")
        (match&list "a[ab][ab][ab][ab][ab][ab][ab][ab][ab][ab](wee|week)(knights|night)"

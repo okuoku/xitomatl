@@ -1,5 +1,5 @@
 #!r6rs
-;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
+;; Copyright (c) 2010 Derick Eddington.  All rights reserved.  Licensed under an
 ;; MIT-style license.  My license is in the file named LICENSE from the original
 ;; collection this file is distributed with.  If this file is redistributed with
 ;; some other collection, my license must also be included.
@@ -36,7 +36,7 @@
 
 ;;;; irregex-search/all
 
-(check (irregex-search/all "foobar" text0) 
+(check (irregex-search/all "foobar" text0)
        => '())
 (check (let ((ms (irregex-search/all "\\w+" text0)))
          (and (for-all irregex-match-data? ms)
@@ -54,7 +54,7 @@
 
 ;;;; irregex-search/all/strings
 
-(check (irregex-search/all/strings "foobar" text0) 
+(check (irregex-search/all/strings "foobar" text0)
        => '())
 (check (irregex-search/all/strings "\\w+" text0)
        => '("This" "is" "a" "sentence"))
@@ -69,48 +69,65 @@
 ;;;; make-lose-refs chunk-eqv? chunk-equal?
 ;; list-chunking-lose-refs uses make-lose-refs
 
-(let* ((chunk (apply list  ;; ensure we have newly allocated pairs and strings
-                     (map string-copy
-                          '("This" "is" "a" "test" "of" "losing" "refs"))))
-       (saved (apply list chunk))
-       (submatch-chunks (list chunk (cddddr chunk)
-                              (cdr chunk) (cdddr chunk)
-                              (cddr chunk) (cddddr chunk)
-                              #F #F
-                              (cddddr chunk) (cddddr chunk)))
-       (replacements (list-chunking-lose-refs submatch-chunks)))      
+(let* ((chunk (map string-copy ; newly-allocated pairs and strings
+                   '("This" "is" "a" "test" "of" "losing" "refs")))
+       (saved (let loop ((x chunk) (a '()))
+                (if (null? x)
+                  (reverse a)
+                  (loop (cdr x) (cons (list x (car x) (cdr x)) a)))))
+       (submatch-chunks (list (list 0 chunk (cddddr chunk))
+                              (list 1 (cdr chunk) (cdddr chunk))
+                              (list 2 (cddr chunk) (cddddr chunk))
+                              (list 4 (cddddr chunk) (cddddr chunk))))
+       (group car) (start cadr) (end caddr)
+       (replacements (list-chunking-lose-refs submatch-chunks)))
+  ;; original unaltered
+  (check (let loop ((x chunk) (y saved))
+           (and (eq? x (caar y))
+                (eq? (car x) (cadar y))
+                (eq? (cdr x) (caddar y))
+                (or (and (null? (cdr x)) (null? (cdr y)))
+                    (loop (cdr x) (cdr y)))))
+         => #T)
   (check chunk => '("This" "is" "a" "test" "of" "losing" "refs"))
-  (check (for-all eq? chunk saved) => #T)
+  ;; replacements correct
   (check (length replacements) => (length submatch-chunks))
-  (check (for-all eq? (map (lambda (x) (and x (car x))) replacements) 
-                      (map (lambda (x) (and x (car x))) submatch-chunks)) 
-         => #T)
-  (check (for-all (lambda (x y) (or (not x) ((chunk-eqv? list-chunker) x y)))
-                  replacements submatch-chunks)
-         => #T)
-  (check (for-all (lambda (x y) (or (not x) ((chunk-equal? list-chunker) x y)))
-                  replacements submatch-chunks)
-         => #T)
-  (check (exists (lambda (x y) (and x (eq? x y))) 
-                 replacements submatch-chunks)
+  (check (exists eq? replacements submatch-chunks)
          => #F)
-  (check (list-ref replacements 0) => '("This" "is" "a" "test" "of"))
-  (check (list-ref replacements 1) => '("of"))
-  (check (list-ref replacements 2) => '("is" "a" "test" "of"))
-  (check (list-ref replacements 3) => '("test" "of"))
-  (check (list-ref replacements 4) => '("a" "test" "of"))
-  (check (list-ref replacements 5) => '("of"))
-  (check (list-ref replacements 6) => #F)
-  (check (list-ref replacements 7) => #F)
-  (check (list-ref replacements 8) => '("of"))
-  (check (list-ref replacements 9) => '("of"))
+  (check (for-all (lambda (x y)
+                    (and (= (group x) (group y))
+                         (not (eq? (start x) (start y)))
+                         (eq? (car (start x)) (car (start y)))
+                         (not (eq? (end x) (end y)))
+                         (eq? (car (end x)) (car (end y)))))
+                  replacements submatch-chunks)
+         => #T)
+  (check (for-all (lambda (x y)
+                    (and ((chunk-eqv? list-chunker) (start x) (start y))
+                         ((chunk-eqv? list-chunker) (end x) (end y))))
+                  replacements submatch-chunks)
+         => #T)
+  (check (for-all (lambda (x y)
+                    (and ((chunk-equal? list-chunker) (start x) (start y))
+                         ((chunk-equal? list-chunker) (end x) (end y))))
+                  replacements submatch-chunks)
+         => #T)
+  (check (start (car replacements)) => '("This" "is" "a" "test" "of"))
+  (check (end (car replacements)) => '("of"))
+  (check (start (cadr replacements)) => '("is" "a" "test" "of"))
+  (check (end (cadr replacements)) => '("test" "of"))
+  (check (start (caddr replacements)) => '("a" "test" "of"))
+  (check (end (caddr replacements)) => '("of"))
+  (check (start (cadddr replacements)) => '("of"))
+  (check (end (cadddr replacements)) => '("of"))
   (let* ((get-next (chunker-get-next list-chunker))
          (last-chunk
           (lambda (ic)
             (let loop ((c ic))
               (let ((n (get-next c)))
                 (if n (loop n) c))))))
-    (check (last-chunk (car replacements)) (=> eq?) (cadr replacements)))
+    (check (last-chunk (start (car replacements)))
+           (=> eq?) (end (car replacements))))
   (let* ((get-next (chunker-get-next list-chunker))
          (chain-list
           (lambda (ic)
@@ -118,27 +135,29 @@
               (if c
                 (loop (get-next c) (cons c a))
                 (reverse a)))))
-         (chain-list (chain-list (car replacements))))
+         (chain-list (chain-list (start (car replacements)))))
     (check (for-all (lambda (x)
-                      (or (not x)
-                          (and (memq x chain-list) #T)))
+                      (and (memq (start x) chain-list)
+                           (memq (end x) chain-list)
+                           #T))
                     replacements)
            => #T))
-  (check (eq? (list-ref replacements 1) (list-ref replacements 5)) => #T)
-  (check (eq? (list-ref replacements 5) (list-ref replacements 8)) => #T)
-  (check (eq? (list-ref replacements 8) (list-ref replacements 9)) => #T)
+  (check (eq? (end (car replacements)) (end (caddr replacements))) => #T)
+  (check (eq? (end (caddr replacements)) (start (cadddr replacements))) => #T)
+  (check (eq? (start (cadddr replacements)) (end (cadddr replacements))) => #T)
   (let ((except
          (lambda (l i)
-           (append (sublist l 0 i) (sublist l (+ 1 i))))))
-    (check (memq (list-ref replacements 0) (except replacements 0)) => #F) 
-    (check (memq (list-ref replacements 2) (except replacements 2)) => #F)
-    (check (memq (list-ref replacements 3) (except replacements 3)) => #F)
-    (check (memq (list-ref replacements 4) (except replacements 4)) => #F)))
+           (let ((l (apply append (map cdr l))))
+             (append (sublist l 0 i) (sublist l (+ 1 i)))))))
+    (check (memq (start (list-ref replacements 0)) (except replacements 0)) => #F)
+    (check (memq (start (list-ref replacements 1)) (except replacements 2)) => #F)
+    (check (memq (end (list-ref replacements 1)) (except replacements 3)) => #F)
+    (check (memq (start (list-ref replacements 2)) (except replacements 4)) => #F)))
 
 ;;----------------------------------------------------------------------------
 
-(define chunked-text0 
-  '("Once u" "" "p" "on " "" "a time." "." ". " 
+(define chunked-text0
+  '("Once u" "" "p" "on " "" "a time." "." ". "
     " There was a string " "used for tes" "ting ch" "unks!" ""))
 
 ;;;; irregex-search/chunked/all
@@ -169,12 +188,12 @@
        => 12)
 (check (map irregex-match-substring
             (irregex-search/chunked/all "\\w+" list-chunker chunked-text0))
-       => '("Once" "upon" "a" "time" 
+       => '("Once" "upon" "a" "time"
             "There" "was" "a" "string" "used" "for" "testing" "chunks"))
 (check (map irregex-match-substring
             (irregex-search/chunked/all "\\w+" list-chunker chunked-text0
                                         list-chunking-lose-refs))
-       => '("Once" "upon" "a" "time" 
+       => '("Once" "upon" "a" "time"
             "There" "was" "a" "string" "used" "for" "testing" "chunks"))
 (check (map (lambda (m) (irregex-match-substring m 1))
             (irregex-search/chunked/all "[Oo](\\w)" list-chunker chunked-text0))
@@ -197,7 +216,7 @@
  (map irregex-match-substring
       (irregex-search/chunked/all "^.*$" list-chunker chunked-text0
                                   list-chunking-lose-refs)))
-(check (irregex-search/chunked/all "(?:(foo)|(bar))\\s*zab" list-chunker 
+(check (irregex-search/chunked/all "(?:(foo)|(bar))\\s*zab" list-chunker
                                    '("bar " " zab" "fo" "oza" "b")
                                    list-chunking-lose-refs
                                    (lambda (m)
@@ -219,7 +238,7 @@
               (length ms)))
        => 12)
 (check (irregex-search/chunked/all/strings "\\w+" list-chunker chunked-text0)
-       => '("Once" "upon" "a" "time" 
+       => '("Once" "upon" "a" "time"
             "There" "was" "a" "string" "used" "for" "testing" "chunks"))
 (check (irregex-search/chunked/all/strings "[Oo](\\w)" list-chunker chunked-text0)
        => '("On" "on" "or"))
@@ -268,21 +287,21 @@
             "QqRr" "SsTt" "UuVv" "WwXx" "YyZz"))
 
 ;;----------------------------------------------------------------------------
-    
+
 (check-AV (make-port-chunker 'oops))
 (check-AV (make-port-chunker 0))
 (check-AV (make-port-chunker -1))
 
-(define (make-sip) 
+(define (make-sip)
   (open-string-input-port
    "The best way to implement the future is to avoid having to predict it."))
 
-;;;; irregex-search-port/all 
+;;;; irregex-search-port/all
 
-(check (map irregex-match-substring 
+(check (map irregex-match-substring
             (irregex-search-port/all "([Tt]o).*?\\1" (make-sip)))
        => '("to implement the future is to"))
-(check (map irregex-match-substring 
+(check (map irregex-match-substring
             (irregex-search-port/all "\\s" (make-sip)))
        => '(" " " " " " " " " " " " " " " " " " " " " " " " " "))
 (check (irregex-search-port/all "([Tt]o).*?\\1" (make-sip) irregex-match-substring 1)
@@ -348,11 +367,11 @@
 ;; All the above procedures currently use the enumerators internally, so they test
 ;; most of the enumerators' logic.  The below only tests what the above has not.
 
-;;;; enumerators 
+;;;; enumerators
 
 (check (fold/enumerator (irregex-string-enumerator "(\\w+)-\\w+")
                         "this-will-search-until-stop-and-this-won't-be-seen"
-                        (lambda (m) 
+                        (lambda (m)
                           (let ((s (irregex-match-substring m 1)))
                             (or (not (string=? s "stop"))
                                 (values #F s)))))
@@ -423,7 +442,7 @@
        => '("iB" "iF" "iI"))
 (check (fold/enumerator (irregex-enumerator "i.")
                         (make-sip)
-                        (lambda (m i) 
+                        (lambda (m i)
                           (if (< i 3)
                             (values #T (+ 1 i))
                             (values #F (irregex-match-substring m))))
