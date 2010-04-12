@@ -1,8 +1,6 @@
 #!r6rs
-;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
-;; MIT-style license.  My license is in the file named LICENSE from the original
-;; collection this file is distributed with.  If this file is redistributed with
-;; some other collection, my license must also be included.
+;; Copyright 2009 Derick Eddington.  My MIT-style license is in the file named
+;; LICENSE from the original collection this file is distributed with.
 
 (library (xitomatl lexer)
   (export
@@ -19,7 +17,7 @@
     (rename (rnrs) (assert rnrs:assert))
     (only (xitomatl define) define/who)
     (except (xitomatl irregex) sre->irregex irregex-search/chunked)
-    (xitomatl regexp)
+    (xitomatl irregex)
     (xitomatl irregex extras)
     (xitomatl irregex counting)
     (only (xitomatl ports) textual-input-port?)
@@ -29,9 +27,6 @@
     (syntax-rules ()
       ((_ expr) (rnrs:assert expr))
       #;((_ expr) #F)))
-
-  (define (sre->irregex sre . _) (compile-SRE sre))
-  (define irregex-search/chunked regexp-search/chunked)
 
   ;;----------------------------------------------------------------------------
 
@@ -125,9 +120,7 @@
            (let ((m (irregex-search/chunked irx chunker chunk index)))
              (if m
                (begin
-                 ;; NOTE: assert commented-out because (xitomatl regexp) is
-                 ;; somewhat different.
-                 #;(assert (and (eq? (irregex-match-start-chunk m 0) chunk)
+                 (assert (and (eq? (irregex-match-start-chunk m 0) chunk)
                               (= (irregex-match-start-index m 0) index)))
                  (values (make-token m)
                          (irregex-match-end-chunk m 0)

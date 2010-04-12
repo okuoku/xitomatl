@@ -1,8 +1,6 @@
 #!r6rs
-;; Copyright (c) 2009 Derick Eddington.  All rights reserved.  Licensed under an
-;; MIT-style license.  My license is in the file named LICENSE from the original
-;; collection this file is distributed with.  If this file is redistributed with
-;; some other collection, my license must also be included.
+;; Copyright 2009 Derick Eddington.  My MIT-style license is in the file named
+;; LICENSE from the original collection this file is distributed with.
 
 (library (xitomatl R6RS-lexical-transformations)
   (export
@@ -21,7 +19,6 @@
     (only (xitomatl records) record-type-accessors)
     (only (xitomatl enumerators) fold)
     (only (xitomatl predicates) not?)
-    (only (xitomatl irregex) sre->irregex irregex-match)
     (only (xitomatl file-system base) directory-walk)
     (only (xitomatl file-system paths) path-join)
     (only (xitomatl common) printf)
