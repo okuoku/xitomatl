@@ -1,0 +1,27 @@
+nmosh notes:
+
+PLEASE PLASE do *NOT* send bug reports to upstream(Derick Eddington's launchpad) directly.
+All bugs are added by me(okuoku).
+
+- This repository may eventually deleted due to github's hosting limit(300MB)
+
+- You will need Git version of mosh and nmosh to run (xitomatl) libraries
+  see http://github.com/higepon/mosh for mosh and building instructions.
+  - notably, (nmosh gensym) and (core nmosh cache-control) are not supported
+    in 0.2.5.
+  - psyntax-mosh is not supported.
+
+- Additional prerequisites:
+  - dharmatech/surfage for (surfage private *) libraries
+    see http://github.com/okuoku/surfage for nmosh patched version
+    (srfi *) is reserved for SRFI-97 libraries and non-SRFI-97 library
+    which has (srfi *) name won't load future version of nmosh
+    (To support OSes which do not support symlinks esp. win32)
+
+- Cache disabled libraries:
+  Because nmosh basic design, any scheme objects(including syntactic objects
+  produced by syntax-case) are not preserved between expand phases.
+  (when ACC used)
+  Some libraries are ACC-disabled explicitly using nmosh's (core nmosh
+  cache-control) library.
+
